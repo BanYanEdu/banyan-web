@@ -1,0 +1,35 @@
+package com.inet.jobportal.service.sys;
+
+import com.inet.jobportal.model.sys.AppAbout;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import javax.inject.Named;
+import java.util.Map;
+
+@Named("jobportalaboutget")
+@XPortalDataService(description="Job Portal - App About")
+@XPortalPageRequest(uri="jobportal/sys/about/get",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class AppAboutDS extends PluginSubfirmAbstraction {
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        AppAbout result = new AppAbout();
+
+        result.setVersion("0.1.18");
+        result.setAuthor("Calista");
+        result.setReleaseDate("26 March 2019, 17:00:00");
+        result.setRemark("Renew App");
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

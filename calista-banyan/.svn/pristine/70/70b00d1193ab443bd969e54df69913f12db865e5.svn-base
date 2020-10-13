@@ -1,0 +1,103 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.product;
+
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.product.
+ *
+ * @author Phong Tran
+ * @version $Id: BarcodeUpdateService.java Jun 08, 2018 14:41 phongtt $
+ * @since 1.0
+ */
+@Named("posbarcodeupdate")
+@XPortalDataService(roles = {POSConstant.ROLE_PRODUCT}, description = POSConstant.ROLE_PRODUCT_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/barcode/update",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class BarcodeUpdateService extends POSProductAbstraction {
+
+    /*@Inject
+    private POSBarcodeBO barcodeBO;
+
+    @Inject
+    private POSScanCodeBO scanCodeBO;*/
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = StringUtils.EMPTY_STRING;
+
+        String prodId = XParamUtils.getString("prodId", params, StringUtils.EMPTY_STRING);
+
+        String sku = XParamUtils.getString("sku", params, StringUtils.EMPTY_STRING);
+
+        /*final POSBarcode barcode = barcodeBO.loadBySku(organId, outletId, sku);
+        if (barcode == null) {
+            logger.error("barcode {} is not found.", sku);
+            action.fieldError("BARCODE", "BARCODE_NOT_FOUND");
+        }
+
+        final JSONObject properties = new JSONObject();
+        for (String prop : params.keySet()) {
+            if (prop.startsWith("_")) {
+                properties.put(prop.substring(1), params.get(prop));
+            }
+        }
+        barcode.setProperties(properties);
+
+        if (CollectionUtils.isEmpty(barcode.getProperties().keySet())) {
+            logger.error("barcode properties is required!");
+            action.fieldError("BARCODE", "PROPERTIES_NOT_FOUND");
+        }
+
+        if (barcodeBO.propExists(organId, outletId, barcode.getProdCode(), params)) {
+            logger.error("barcode properties is duplicate!");
+            action.fieldError("BARCODE", "PROPERTIES_IS_DUPLICATE");
+        }
+
+        barcodeBO.update(barcode.getUuid(), barcode);
+
+        scanCodeBO.scanCodeInit(organId, outletId, barcode.getProdCode());
+
+        return new ObjectWebDataservice<>(barcode);*/
+
+        return new ObjectWebDataservice<>("FAIL");
+    }
+
+}

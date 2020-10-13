@@ -1,0 +1,37 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.cash.service.receipt;
+
+import com.inet.calista.erp.cash.data.ERPFITransCashType;
+import com.inet.calista.erp.cash.service.ERPFITransCashAbstraction;
+
+/**
+ * com.inet.calista.erp.cash.service.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPFITransCashCreateService.java Dec 07, 2018 16:36 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPFICashReceiptAbstraction extends ERPFITransCashAbstraction {
+
+    @Override
+    protected final ERPFITransCashType getTransCashType() {
+        return ERPFITransCashType.E_RECEIPT;
+    }
+}

@@ -1,0 +1,223 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.system.service;
+
+import com.inet.calista.erp.common.service.ERPCoreAbstraction;
+import com.inet.calista.erp.system.bo.ERPCounterBO;
+import com.inet.calista.erp.system.model.ERPCounter;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPCounterAbstraction.java Apr 26, 2018 14:53 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPCounterAbstraction extends ERPCoreAbstraction {
+    @Inject
+    protected ERPCounterBO counterBO;
+
+    /**
+     * @param params
+     * @return
+     */
+    protected String getCounterId(final Map<String, Object> params) {
+        return XParamUtils.getString("counterId", params, StringUtils.EMPTY_STRING);
+    }
+
+    /**
+     * @param params
+     * @return
+     */
+    protected long getDate(final Map<String, Object> params) {
+        return XParamUtils.getLong("counterDate", params, 0L);
+    }
+
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> counterKeys(final SiteDataModel siteData,
+                                    final SubFirmProfile subFirm,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+        return counterBO.counterIds(getOrganId(siteData, subFirm));
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final String counterBuilder(final SiteDataModel siteData,
+                                          final SubFirmProfile subFirm,
+                                          final AbstractBaseAction action,
+                                          final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String counterId = getCounterId(params);
+        long date = getDate(params);
+
+        return counterBO.builder(organId, counterId, date);
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @throws WebOSBOException
+     */
+    protected final void counterIncrease(final SiteDataModel siteData,
+                                         final SubFirmProfile subFirm,
+                                         final AbstractBaseAction action,
+                                         final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String counterId = getCounterId(params);
+        long date = getDate(params);
+
+        counterBO.increase(organId, counterId, date);
+    }
+
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @param prefix
+     * @throws WebOSBOException
+     */
+    protected final void counterInit(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params,
+                                     String prefix) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String counterId = getCounterId(params);
+
+        counterBO.initCounter(organId, counterId, prefix);
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPCounter counterAdd(final SiteDataModel siteData,
+                                          final SubFirmProfile subFirm,
+                                          final AbstractBaseAction action,
+                                          final Map<String, Object> params) throws WebOSBOException {
+
+        final ERPCounter counter = action.getModel(ERPCounter.class);
+        counter.setOrganId(getOrganId(siteData, subFirm));
+
+        final ERPCounter info = counterBO.loadCounter(counter.getOrganId(), counter.getCounterId());
+        if (info != null) {
+            logger.error("Counter {} is duplicate.", counter.getCounterId());
+            action.fieldError("COUNTER", "COUNTER_IS_DUPLICATE");
+        }
+
+        counter.setPattern(counterBO.patternBuilder(counter));
+        counter.setUuid(counterBO.add(counter));
+
+        return counter;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPCounter counterUpdate(final SiteDataModel siteData,
+                                             final SubFirmProfile subFirm,
+                                             final AbstractBaseAction action,
+                                             final Map<String, Object> params) throws WebOSBOException {
+
+        String counterId = getCounterId(params);
+        String organId = getOrganId(siteData, subFirm);
+
+        final ERPCounter info = counterBO.loadCounter(organId, counterId);
+        if (info == null) {
+            logger.error("Counter {} is not found.", counterId);
+            action.fieldError("COUNTER", "COUNTER_NOT_FOUND");
+        }
+
+        final ERPCounter counter = action.getModel(ERPCounter.class);
+        counter.setUuid(info.getUuid());
+        counter.setOrganId(organId);
+        counter.setPattern(counterBO.patternBuilder(counter));
+        counterBO.update(counter.getUuid(), counter);
+
+        return counter;
+    }
+
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final String counterDelete(final SiteDataModel siteData,
+                                         final SubFirmProfile subFirm,
+                                         final AbstractBaseAction action,
+                                         final Map<String, Object> params) throws WebOSBOException {
+
+        String counterId = getCounterId(params);
+        String organId = getOrganId(siteData, subFirm);
+
+        final ERPCounter info = counterBO.loadCounter(organId, counterId);
+        if (info == null) {
+            logger.error("Counter {} is not found.", counterId);
+            action.fieldError("COUNTER", "COUNTER_NOT_FOUND");
+        }
+
+        counterBO.remove(info.getUuid());
+
+        return counterId;
+    }
+
+}

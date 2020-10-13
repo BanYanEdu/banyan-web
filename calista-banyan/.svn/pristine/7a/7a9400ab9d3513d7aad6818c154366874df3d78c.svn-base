@@ -1,0 +1,360 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.cash.service;
+
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.cash.bo.ERPFIMDCashTransItemBO;
+import com.inet.calista.erp.cash.bo.ERPFITransCashVoucherBO;
+import com.inet.calista.erp.cash.data.ERPFITransCashLine;
+import com.inet.calista.erp.cash.data.ERPFITransCashType;
+import com.inet.calista.erp.cash.model.ERPFIMDCashTransItem;
+import com.inet.calista.erp.cash.model.ERPFITransCashVoucher;
+import com.inet.calista.erp.common.service.ERPCoreAbstraction;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.calista.erp.cash.service.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPFITransCashAbstraction.java Dec 07, 2018 17:19 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPFITransCashAbstraction extends ERPCoreAbstraction {
+
+    @Inject
+    protected ERPFITransCashVoucherBO voucherBO;
+
+    @Inject
+    protected ERPFIMDCashTransItemBO mdCashItemBO;
+
+
+    protected abstract ERPFITransCashType getTransCashType();
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPFIMDCashTransItem mdCashItemCreate(final SiteDataModel siteData,
+                                                 final SubFirmProfile subFirm,
+                                                 final AbstractBaseAction action,
+                                                 final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        final ERPFIMDCashTransItem info = action.getModel(ERPFIMDCashTransItem.class);
+        info.setOrganId(organId);
+        info.setCashTransType(getTransCashType().name());
+
+        mdCashItemCheck(info, action);
+
+        return info;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPFIMDCashTransItem mdCashItemUpdate(final SiteDataModel siteData,
+                                                 final SubFirmProfile subFirm,
+                                                 final AbstractBaseAction action,
+                                                 final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        String mdCashItemId = XParamUtils.getString("mdCashItemId", params, StringUtils.EMPTY_STRING);
+        if (!StringUtils.hasLength(mdCashItemId)) {
+            logger.error("mdCashItemId is required!");
+            action.fieldError("MD_CASH_ITEM", "MD_CASH_ITEM_MISS");
+        }
+
+        final ERPFIMDCashTransItem model = mdCashItemBO.loadById(organId, outletId, mdCashItemId);
+        if (model == null) {
+            logger.error("mdCashItemId {} is not found!", mdCashItemId);
+            action.fieldError("MD_CASH_ITEM", "MD_CASH_ITEM_NOT_FOUND");
+        }
+
+        final ERPFIMDCashTransItem info = action.getModel(ERPFIMDCashTransItem.class);
+        info.setUuid(model.getUuid());
+        info.setOrganId(organId);
+        info.setCashTransType(getTransCashType().name());
+
+        mdCashItemCheck(info, action);
+
+        return info;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public String mdCashItemDelete(final SiteDataModel siteData,
+                                   final SubFirmProfile subFirm,
+                                   final AbstractBaseAction action,
+                                   final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        String mdCashItemIds = XParamUtils.getString("mdCashItemIds", params, StringUtils.EMPTY_STRING);
+        String idDeleted = StringUtils.EMPTY_STRING;
+        for (String mdCashItemId : mdCashItemIds.split(";")) {
+            final ERPFIMDCashTransItem exists = mdCashItemBO.loadById(organId, outletId, mdCashItemId);
+            if (exists != null) {
+                mdCashItemBO.remove(exists.getUuid());
+                idDeleted += exists.getUuid() + ";";
+            }
+        }
+
+        return idDeleted;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPFIMDCashTransItem> mdCashItemLoad(final SiteDataModel siteData,
+                                                          final SubFirmProfile subFirm,
+                                                          final AbstractBaseAction action,
+                                                          final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        return mdCashItemBO.queryByType(organId, outletId, getTransCashType().name());
+    }
+
+
+    /**
+     * @param info
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void mdCashItemCheck(final ERPFIMDCashTransItem info, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            logger.error("code is required!");
+            action.fieldError("MD_CASH_ITEM", "CODE_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(info.getName())) {
+            logger.error("name is required!");
+            action.fieldError("MD_CASH_ITEM", "NAME_NOT_FOUND");
+        }
+
+        final ERPFIMDCashTransItem codeExists = mdCashItemBO.loadByCode(info.getOrganId(), info.getOutletId(), info.getCode());
+        if (codeExists != null && !codeExists.getUuid().equals(info.getUuid())) {
+            logger.error("masterdata cash {} is exists.", info.getCode());
+            action.fieldError("MD_CASH_ITEM", "CODE_EXISTS");
+        }
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPFITransCashVoucher voucherCreate(final SiteDataModel siteData,
+                                               final SubFirmProfile subFirm,
+                                               final AbstractBaseAction action,
+                                               final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        final ERPFITransCashVoucher info = action.getModel(ERPFITransCashVoucher.class);
+        info.setOrganId(organId);
+        info.setCashTransType(getTransCashType().name());
+
+        String counterId = StringUtils.EMPTY_STRING;
+        if (ERPFITransCashType.E_PAYMENT.equals(getTransCashType())) {
+            counterId = ERPConstant.COUNTER_ERP_FI_TRANS_CASH_PAYMENT;
+        } else if (ERPFITransCashType.E_RECEIPT.equals(getTransCashType())) {
+            counterId = ERPConstant.COUNTER_ERP_FI_TRANS_CASH_RECEIPT;
+        }
+        info.setCode(voucherBO.counterGenerate(organId, outletId, counterId, info.getCode()));
+
+        voucherCheck(info, action);
+
+        info.setUuid(voucherBO.add(info));
+
+        return info;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPFITransCashVoucher voucherUpdate(final SiteDataModel siteData,
+                                               final SubFirmProfile subFirm,
+                                               final AbstractBaseAction action,
+                                               final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+        String infoCode = XParamUtils.getString("infoCode", params, StringUtils.EMPTY_STRING);
+
+        final ERPFITransCashVoucher exists = voucherLoad(organId, outletId, infoCode);
+        if (exists == null) {
+            logger.error("code {} isn't found!");
+            action.fieldError("TRANS_CASH", "CODE_NOT_FOUND");
+        }
+
+        final ERPFITransCashVoucher info = action.getModel(ERPFITransCashVoucher.class);
+        info.setUuid(exists.getUuid());
+        info.setOrganId(exists.getOrganId());
+        info.setOutletId(exists.getOutletId());
+        info.setCashTransType(exists.getCashTransType());
+        info.setCode(exists.getCode());
+        info.setVoucherLines(exists.getVoucherLines());
+
+        voucherCheck(info, action);
+
+        voucherBO.update(info.getUuid(), info);
+
+        return info;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public String voucherDelete(final SiteDataModel siteData,
+                                final SubFirmProfile subFirm,
+                                final AbstractBaseAction action,
+                                final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+        String infoIds = XParamUtils.getString("infoIds", params, StringUtils.EMPTY_STRING);
+
+        String infoRemove = StringUtils.EMPTY_STRING;
+        for (String infoId : infoIds.split(ERPConstant.SPLIT_REGEX_CHR)) {
+            final ERPFITransCashVoucher exists = voucherBO.loadById(organId, outletId, infoId);
+            if (exists != null) {
+                voucherBO.remove(infoId);
+                infoRemove += infoId + ERPConstant.SPLIT_REGEX_CHR;
+            }
+        }
+
+        return infoRemove;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPFITransCashVoucher> voucherSearch(final SiteDataModel siteData,
+                                                          final SubFirmProfile subFirm,
+                                                          final AbstractBaseAction action,
+                                                          final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+        long from = XParamUtils.getLong("from", params, 0l);
+        long to = XParamUtils.getLong("to", params, 0l);
+        String keyword = XParamUtils.getString("keyword", params, StringUtils.EMPTY_STRING);
+
+        return voucherBO.search(organId, outletId, getTransCashType().name(), from, to, keyword);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPFITransCashVoucher voucherLoad(String organId, String outletId, String code) throws WebOSBOException {
+        return voucherBO.loadByCode(organId, outletId, code);
+    }
+
+    /**
+     * @param info
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void voucherCheck(final ERPFITransCashVoucher info, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            logger.error("code is required!");
+            action.fieldError("TRANS_CASH", "CODE_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(info.getUuid())) {
+            if (voucherBO.checkCodeExists(info.getOrganId(), info.getOutletId(), info.getCode())) {
+                logger.error("trans cash {} is exists.", info.getCode());
+                action.fieldError("TRANS_CASH", "CODE_EXISTS");
+            }
+        }
+
+        if (!StringUtils.hasLength(info.getCurrencyId())) {
+            info.setCurrencyId(ERPConstant.CURRENCY);
+            info.setRate(1);
+        }
+    }
+
+    /**
+     * @param item
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void lineCheck(final ERPFITransCashLine item, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(item.getUuid())) {
+            item.setUuid(new ObjectId().toHexString());
+
+            if (!StringUtils.hasLength(item.getCashTransItemId())) {
+                logger.error("CashTransItem is required!");
+                action.fieldError("TRANS_CASH", "CASH_ITEM_NOT_FOUND");
+            }
+        }
+    }
+}

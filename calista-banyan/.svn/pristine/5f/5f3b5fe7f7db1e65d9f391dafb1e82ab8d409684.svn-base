@@ -1,0 +1,54 @@
+package com.inet.jobportal.service.candidate.candidate_profile.working_record;
+
+import com.inet.jobportal.bo.candidate.CandidateProfileBO;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * Candidate Profile Working Record Delete DS.
+ *
+ * @author Duy Tan Nguyen
+ * @version $Id: CandidateProfileWorkingRecordDeleteDS.java Mar 5, 2019 11:50:48 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportalcandidateprofileworkingrecorddelete")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description="Candidate Profile Working Record - Delete Data Service")
+@XPortalPageRequest(uri="jobportal/candidate/profile/workingrecord/delete",
+        //transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CandidateProfileWorkingRecordDeleteDS extends JobPortalAbsractService {
+    @Inject
+    private CandidateProfileBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String usernameParam = XParamUtils.getString("username", params,"");
+        String username = SecurityUtil.getPrincipal();
+
+        if (!usernameParam.equals(username)) {
+            return new ObjectWebDataservice<>(usernameParam);
+        }
+
+        String uuid = XParamUtils.getString("profileId", params,"");
+        String workingRecordId = XParamUtils.getString("workingRecordId", params,"");
+
+        bo.deleteWorkingRecord(uuid, workingRecordId);
+        return new ObjectWebDataservice<>(workingRecordId);
+    }
+}

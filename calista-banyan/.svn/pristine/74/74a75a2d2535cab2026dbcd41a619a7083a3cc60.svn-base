@@ -1,0 +1,164 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbCountry;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * GlobalCountryBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalCountryBO.java May 20, 2019 12:06:49 PM $
+ * @since 1.0
+ */
+@Named("GlbCountryBO")
+public class GlbCountryBO extends GlbNoSqlBO<GlbCountry> implements BeanInitiateInvoke {
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    protected GlbCountryBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_country");
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(GlbCountry item) throws WebOSBOException {
+        GlbCountry info = loadByCode(item.getCode());
+        if (info != null)
+            return info.getUuid();
+        return super.add(item);
+    }
+
+    /**
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbCountry> search(String keyword, int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)));
+        }
+
+        return super.search((QueryImpl<JSONDB>) query, offset, limit);
+    }
+
+    /**
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlbCountry loadByCode(String code) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("code").equal(code);
+
+        return super.load((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbCountry> queryByCode(List<String> codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>().field("code").in(codes);
+        return query((QueryImpl<JSONDB>) query);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("code");
+        ensureIndex("name");
+        ensureIndex("code,name");
+
+        if (count() > 0)
+            return;
+
+        initCountry();
+    }
+
+    /**
+     *
+     */
+    public void initCountry() {
+        super.remove(new QueryImpl<>());
+
+        logger.debug("init country data from global-country.json file");
+        String json = ResourceUtil.getResourceAsString("global-country.json");
+        if (StringUtils.hasLength(json)) {
+            JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+            if (arrJson.size() > 0) {
+                for (int idx = 0; idx < arrJson.size(); idx++) {
+                    GlbCountry item = JSONUtil.json2Bean(GlbCountry.class,
+                            (JSONObject) arrJson.get(idx));
+
+                    if (StringUtils.hasLength(item.getName()) &&
+                            StringUtils.hasLength(item.getCode())) {
+                        try {
+                            item.setUuid(add(item));
+
+                            logger.debug("add country {} success.", JSONObject.fromObject(item));
+                        } catch (Exception e) {
+                            logger.error("init country {} - {} fail.", item.getCode(), item.getName());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlbCountry> getClassConvetor() {
+        return GlbCountry.class;
+    }
+}

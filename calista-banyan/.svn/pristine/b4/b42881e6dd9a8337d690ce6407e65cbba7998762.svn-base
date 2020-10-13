@@ -1,0 +1,241 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.project;
+
+import java.util.List;
+
+import com.mongodb.BasicDBObject;
+
+/**
+ * AdvanceSearchDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: AdvanceSearchDto.java May 22, 2018 2:58:12 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class AdvanceSearchDto {
+  private String code;
+  private String name;
+  private String desc;
+  private long startDateFrom;
+  private long startDateTo;
+  private long deadlineFrom;
+  private long deadlineTo;
+  private long completedDateFrom;
+  private long completedDateTo;
+  private String type;
+  private List<String> statuses;
+  private String assignerUname;
+  private List<BasicDBObject> members;
+  private List<String> tags;
+
+  /**
+   * @return the code
+   */
+  public String getCode() {
+    return code;
+  }
+
+  /**
+   * @param code the code to set
+   */
+  public void setCode(String code) {
+    this.code = code;
+  }
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the desc
+   */
+  public String getDesc() {
+    return desc;
+  }
+
+  /**
+   * @param desc the desc to set
+   */
+  public void setDesc(String desc) {
+    this.desc = desc;
+  }
+
+  /**
+   * @return the startDateFrom
+   */
+  public long getStartDateFrom() {
+    return startDateFrom;
+  }
+
+  /**
+   * @param startDateFrom the startDateFrom to set
+   */
+  public void setStartDateFrom(long startDateFrom) {
+    this.startDateFrom = startDateFrom;
+  }
+
+  /**
+   * @return the startDateTo
+   */
+  public long getStartDateTo() {
+    return startDateTo;
+  }
+
+  /**
+   * @param startDateTo the startDateTo to set
+   */
+  public void setStartDateTo(long startDateTo) {
+    this.startDateTo = startDateTo;
+  }
+
+  /**
+   * @return the deadlineFrom
+   */
+  public long getDeadlineFrom() {
+    return deadlineFrom;
+  }
+
+  /**
+   * @param deadlineFrom the deadlineFrom to set
+   */
+  public void setDeadlineFrom(long deadlineFrom) {
+    this.deadlineFrom = deadlineFrom;
+  }
+
+  /**
+   * @return the deadlineTo
+   */
+  public long getDeadlineTo() {
+    return deadlineTo;
+  }
+
+  /**
+   * @param deadlineTo the deadlineTo to set
+   */
+  public void setDeadlineTo(long deadlineTo) {
+    this.deadlineTo = deadlineTo;
+  }
+
+  /**
+   * @return the completedDateFrom
+   */
+  public long getCompletedDateFrom() {
+    return completedDateFrom;
+  }
+
+  /**
+   * @param completedDateFrom the completedDateFrom to set
+   */
+  public void setCompletedDateFrom(long completedDateFrom) {
+    this.completedDateFrom = completedDateFrom;
+  }
+
+  /**
+   * @return the completedDateTo
+   */
+  public long getCompletedDateTo() {
+    return completedDateTo;
+  }
+
+  /**
+   * @param completedDateTo the completedDateTo to set
+   */
+  public void setCompletedDateTo(long completedDateTo) {
+    this.completedDateTo = completedDateTo;
+  }
+
+  /**
+   * @return the type
+   */
+  public String getType() {
+    return type;
+  }
+
+  /**
+   * @param type the type to set
+   */
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  /**
+   * @return the statuses
+   */
+  public List<String> getStatuses() {
+    return statuses;
+  }
+
+  /**
+   * @param statuses the statuses to set
+   */
+  public void setStatuses(List<String> statuses) {
+    this.statuses = statuses;
+  }
+
+  /**
+   * @return the assignerUname
+   */
+  public String getAssignerUname() {
+    return assignerUname;
+  }
+
+  /**
+   * @param assignerUname the assignerUname to set
+   */
+  public void setAssignerUname(String assignerUname) {
+    this.assignerUname = assignerUname;
+  }
+
+  /**
+   * @return the members
+   */
+  public List<BasicDBObject> getMembers() {
+    return members;
+  }
+
+  /**
+   * @param members the members to set
+   */
+  public void setMembers(List<BasicDBObject> members) {
+    this.members = members;
+  }
+
+  /**
+   * @return the tags
+   */
+  public List<String> getTags() {
+    return tags;
+  }
+
+  /**
+   * @param tags the tags to set
+   */
+  public void setTags(List<String> tags) {
+    this.tags = tags;
+  }
+}

@@ -1,0 +1,203 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.order;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMOrderBO;
+import com.inet.calista.ecommerce.data.ECMModule;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.data.ECMOrderStatus;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.SecurityUtil;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: POSPriceListAbstraction.java May 07, 2018 14:08 phongtt $
+ * @since 1.0
+ */
+public abstract class ECMOrderAbstraction extends CommerceBaseAbstraction {
+
+    @Inject
+    protected ECMOrderBO orderBO;
+
+
+    /**
+     * @param info
+     * @param item
+     * @param action
+     */
+    public final void analysis(final ECMOrder info, final ECMOrderItem item, final AbstractBaseAction action) {
+        if (ConfigureLoader.INSTANCE.getAnalytics().dataLake()) {
+            logger.debug("analysis data beginning ...");
+            try {
+                final JSONObject data = new JSONObject();
+
+                data.put("country", action.getCountry());
+                data.put("city", StringUtils.EMPTY_STRING);
+                data.put("organId", info.getOrganId());
+                data.put("employeeId", info.getEmployeeId());
+                data.put("supplierId", StringUtils.EMPTY_STRING);
+
+                data.put("module", ECMModule.SALE_ECM.name());
+                data.put("voucherCode", info.getCode());
+
+                data.put("currencyId", info.getCurrencyId());
+                data.put("rate", info.getRate());
+
+                data.put("itemCode", item.getProdCode());
+                data.put("sku", item.getSku());
+                data.put("category", item.getGroup());
+
+                data.put("quantity", item.getQty());
+                data.put("price", item.getPrice());
+                data.put("amount", item.getAmount());
+
+                data.put("group1", StringUtils.EMPTY_STRING);
+                data.put("group2", StringUtils.EMPTY_STRING);
+                data.put("group3", StringUtils.EMPTY_STRING);
+                data.put("group4", StringUtils.EMPTY_STRING);
+                data.put("group5", StringUtils.EMPTY_STRING);
+
+                ConfigureLoader.INSTANCE.getAnalytics().events("retail_analytics", data);
+            } catch (Throwable ex) {
+                logger.error("analysis Data fail {}", ex);
+            }
+
+        }
+    }
+
+    /**
+     * @param info
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void invoiceCheck(final ECMOrder info, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            logger.error("code is required!");
+            action.fieldError("ORDERINFO", "CODE_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(info.getUuid())) {
+            if (orderBO.checkCodeExists(info.getOrganId(), StringUtils.EMPTY_STRING, info.getCode())) {
+                logger.error("saleecm retail {} is exists.", info.getCode());
+                action.fieldError("ORDERINFO", "CODE_EXISTS");
+            }
+        }
+
+        if (!StringUtils.hasLength(info.getCurrencyId())) {
+            info.setCurrencyId(ECMConstant.CURRENCY);
+            info.setRate(1);
+        }
+    }
+
+    /**
+     * @param item
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void itemCheck(final ECMOrderItem item, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(item.getUuid())) {
+            item.setUuid(orderBO.uuidRandom());
+
+            if (!StringUtils.hasLength(item.getProdCode())) {
+                logger.error("Code is required!");
+                action.fieldError("ORDERITEM", "CODE_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getProdName())) {
+                logger.error("Name is required!");
+                action.fieldError("ORDERITEM", "NAME_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getUnit())) {
+                logger.error("Unit is required!");
+                action.fieldError("ORDERITEM", "UNIT_NOT_FOUND");
+            }
+
+            if (item.getQty() <= 0) {
+                logger.error("Qty is greater than 0!");
+                action.fieldError("ORDERITEM", "QTY_GREATER_0");
+            }
+        }
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMOrder invoiceLoad(String organId, String outletId, String code) throws WebOSBOException {
+        return orderBO.loadByCode(organId, outletId, code);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMOrder invoiceLoad(String organId, String code) throws WebOSBOException {
+        return orderBO.loadByCode(organId, StringUtils.EMPTY_STRING, code);
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMOrder invoiceCreate(final CMSFirm cmsfirm,
+                                  final OrganizationDTO orgItem,
+                                  final AbstractBaseAction action,
+                                  final Map<String, Object> params) throws WebOSBOException {
+        String organId = orgItem.getOrganId();
+        String outletId = StringUtils.EMPTY_STRING;
+
+        final ECMOrder info = action.getModel(ECMOrder.class);
+        info.setOrganId(organId);
+        info.setEmployeeId(SecurityUtil.getPrincipal());
+        info.setEmployeeName(SecurityUtil.getAlias());
+        info.setCode(orderBO.counterGenerate(organId, outletId, info.getCode()));
+        info.setStatus(ECMOrderStatus.NEW.name());
+
+        invoiceCheck(info, action);
+
+        info.setUuid(orderBO.add(info));
+
+
+        return info;
+    }
+}

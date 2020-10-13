@@ -1,0 +1,30 @@
+package com.inet.calista.global.model.contact;
+
+import com.inet.calista.global.model.common.LicenseInfo;
+import com.inet.calista.global.model.common.TypeOfIndividualId;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * LegalRepresentative.
+ *
+ * @author thoangtran
+ * @version LegalRepresentative 2018 07-18 10:08
+ */
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+public class LegalRepresentative {
+  private String canonId; // link to contact
+  private String title;
+  private String fullName;
+  private String dateOfBirth;
+  private String ethnic;
+  private String nationality;
+  private String typeOfIndId = TypeOfIndividualId.identification_card.name();
+  private String regPlaceOfPerRes; // HO KHAU THUONG TRU
+  private LicenseInfo indIdInfo;
+}

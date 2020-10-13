@@ -1,0 +1,172 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.excel.bo;
+
+import com.inet.xportal.report.bo.ReportTemplateBO;
+import com.inet.xportal.report.model.ReportTemplate;
+import com.inet.xportal.web.util.MimeTypeUtil;
+import com.inet.xportal.web.util.ResourceUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.InputStream;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPExcelBO.java Sep 11, 2018 09:51 phongtt $
+ * @since 1.0
+ */
+@Named("ERPExcelBO")
+public class ERPExcelBO {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPExcelBO.class);
+
+    @Inject
+    private ReportTemplateBO templateBO;
+
+    /**
+     * @param organId
+     * @param application
+     * @param module
+     * @param type
+     * @param name
+     * @param description
+     * @param is
+     * @param mimeType
+     */
+    public void replaceTemplate(String organId, String application,
+                                String module, String type,
+                                String name, String description,
+                                InputStream is, String mimeType) {
+        if (is != null) {
+            final ReportTemplate rpSaved = loadTemplate(organId, application, module, type, name);
+            if (rpSaved != null) {
+                templateBO.remove(rpSaved.getUuid());
+            }
+
+            final ReportTemplate rpTemp = new ReportTemplate();
+            rpTemp.setSite(organId);
+            rpTemp.setApplication(application);
+            rpTemp.setModule(module);
+            rpTemp.setType(type);
+            rpTemp.setName(name);
+            rpTemp.setDescription(description);
+
+
+            logger.debug("Add template {} for organ {}", rpTemp.getName(), organId);
+            String tmpID = templateBO.add(rpTemp, is, mimeType);
+        }
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @param module
+     * @param type
+     * @param name
+     * @param description
+     * @param tmpPath
+     */
+    public void initTemplate(String organId, String application,
+                             String module, String type,
+                             String name, String description,
+                             String tmpPath) {
+
+        InputStream is = ResourceUtil.getResourceAsInputStream(tmpPath);
+        logger.debug("read resource {} with path {}", is, tmpPath);
+        String mimeType = MimeTypeUtil.getMimeTypeByFile(tmpPath);
+
+        replaceTemplate(organId, application, module,
+                type, name, description,
+                is, mimeType);
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @param module
+     * @param type
+     * @param name
+     * @return
+     */
+    public ReportTemplate loadTemplate(String organId, String application,
+                                       String module, String type,
+                                       String name) {
+        return templateBO.loadByApplication(
+                organId, application,
+                module, type, name);
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @param module
+     * @param type
+     * @param name
+     * @param description
+     * @param tmpPath
+     */
+    public void addTemplate(String organId, String application,
+                            String module, String type,
+                            String name, String description,
+                            String tmpPath) {
+        InputStream is = ResourceUtil.getResourceAsInputStream(tmpPath);
+        logger.debug("read resource {} with path {}", is, tmpPath);
+
+        if (is != null) {
+            final ReportTemplate rpSaved = loadTemplate(organId, application, module, type, name);
+
+            if (rpSaved == null) {
+                final ReportTemplate rpTemp = new ReportTemplate();
+                rpTemp.setSite(organId);
+                rpTemp.setApplication(application);
+                rpTemp.setModule(module);
+                rpTemp.setType(type);
+                rpTemp.setName(name);
+                rpTemp.setDescription(description);
+
+                logger.debug("Add template {} for organ {}", rpTemp.getName(), organId);
+
+                String mimeType = MimeTypeUtil.getMimeTypeByFile(tmpPath);
+                templateBO.add(rpTemp, is, mimeType);
+            }
+        }
+
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @param module
+     * @param type
+     * @param name
+     */
+    public void removeTemplate(String organId, String application,
+                               String module, String type,
+                               String name) {
+        final ReportTemplate rpSaved = loadTemplate(organId, application, module, type, name);
+
+        if (rpSaved != null) {
+            templateBO.remove(rpSaved.getUuid());
+        }
+    }
+}

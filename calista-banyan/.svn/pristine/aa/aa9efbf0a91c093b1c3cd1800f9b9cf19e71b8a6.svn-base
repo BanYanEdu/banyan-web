@@ -1,0 +1,41 @@
+package com.inet.jobportal.model.candidate;
+
+import com.inet.jobportal.model.common.Note;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * JobApp
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobApp.java Jan 10, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class JobApp {
+    private String uuid;
+    private String username;
+    private String candidateName;
+    private String candidateProfileTitle;
+    private String profileSourceCode;
+    private String applyIntroduction;
+    private Boolean hasIntroduction;
+    private String organId;
+    private String employerName;
+    private String employerLogoUrl;
+    private String jobpostId;
+    private String jobTitle;
+    private Long applyDueDate;
+    private Long appliedDate;
+    private JobAppStatus status;
+    private List<Note> notes  = new ArrayList<>();
+    private Boolean viewedByEmployer;
+    private Long viewedDate;
+    private Boolean hidden;
+}

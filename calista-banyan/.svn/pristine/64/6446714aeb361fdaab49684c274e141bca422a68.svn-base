@@ -1,0 +1,161 @@
+package com.inet.calista.crm.notify;
+
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.AppInfo;
+import com.inet.xportal.web.context.WebContext;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.commons.lang.StringUtils;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * NotifyDto.
+ *
+ * @author thoangtd
+ * @version $$Id: NotifyDto 7/14/16 9:26 AM thoangtd $$
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class NotifyDto {
+  //~ class properties =================================================
+  private String contextId;
+  private Map<String, String> urlParams = new HashMap<>();  // parameter in page url
+  private Map<String, String> urlDest; // open page
+  private Map<String, Object> variables; // data for fill in template
+  private String sender;
+  private List<String> receivers = new ArrayList<>();
+  private String category ; // template VIEW notify
+  private String feature;
+  private String application;
+  private boolean sendViaMail = false;
+
+  public NotifyDto(String contextId, Map<String, Object> variables, String sender){
+    this.contextId = contextId;
+    this.variables = variables;
+    this.sender = sender;
+  }
+  /**
+   * constructor send mesasge without view on page
+   * @param variables the given {@link Map}  data to fill on template
+   * @param sender the given {@link String} of sender
+   * @param receivers the given {@link java.util.Set} of {@link String} receivers
+   * @param category the given {@link String} category to get template message
+   */
+  public NotifyDto(String contextId, Map<String, Object> variables, String sender,
+                   List<String> receivers, String category, String feature ) {
+    this.contextId = contextId;
+    this.variables = variables;
+    this.receivers = receivers;
+    this.feature = feature;
+    this.sender = sender;
+    this.category = category;
+  }
+
+  /**
+   *
+   * @param urlParams
+   * @param urlDest
+   * @param variables
+   * @param sender
+   * @param receivers
+   * @param category
+   */
+  public NotifyDto(String contextId, Map<String, String> urlParams, Map<String, String> urlDest,
+                   Map<String, Object> variables, String sender, List<String> receivers,
+                   String category) {
+    this.contextId = contextId;
+    this.urlParams = urlParams;
+    this.urlDest = urlDest;
+    this.variables = variables;
+    this.sender = sender;
+    this.receivers = receivers;
+    this.category = category;
+  }
+
+  /**
+   * Add receiver
+   * @param receiver
+   * @return
+   */
+  public NotifyDto addReceiver(String receiver) {
+    if(Strings.isNullOrEmpty(receiver)){
+      this.receivers.add(receiver);
+    }
+    return this;
+  }
+
+  public NotifyDto withUrlDest(String shortcutURL, String redirectURL, String mShortcutURL, String mRedirectURL) {
+    if(this.getUrlDest() == null) {
+      this.urlDest = new HashMap<>();
+    }
+    this.urlDest.put("shortcutURL", shortcutURL);
+    this.urlDest.put("redirectURL", redirectURL);
+    this.urlDest.put("mshortcutURL", mShortcutURL);
+    this.urlDest.put("mredirectURL", mRedirectURL);
+    return this;
+  }
+
+  public NotifyDto withOrgId(String orgId){
+    if(this.urlParams == null) {
+      this.urlParams = new HashMap<>();
+    }
+    if(org.apache.shiro.util.StringUtils.hasLength(orgId)) {
+      this.urlParams.put("orgid", orgId);
+    }
+
+    return this;
+  }
+
+  public NotifyDto withTaskUrlParams(String uuid, String acode) {
+    if(this.urlParams == null) {
+      this.urlParams = new HashMap<>();
+    }
+    this.urlParams.put("id", uuid);
+    this.urlParams.put("receiverAcode", acode);
+    this.urlParams.put("social-subject", "REF#");
+    return this;
+  }
+
+  public NotifyDto withTaskMembers( String username, String acode ,String role) {
+    if(this.urlParams == null) {
+      this.urlParams = new HashMap<>();
+    }
+    if(org.apache.shiro.util.StringUtils.hasLength(username))
+      this.urlParams.put(username.replace(".","#"), acode);
+    if(org.apache.shiro.util.StringUtils.hasLength(acode))
+      this.urlParams.put(acode, role);
+
+    this.urlParams.put("social-subject", "REF#");
+    return this;
+  }
+
+  public String getApplication() {
+    application = AppInfo.APP_NAME;
+   if(org.apache.shiro.util.StringUtils.hasLength(WebContext.INSTANCE.cache().getApplication())){
+      application = WebContext.INSTANCE.cache().getApplication();
+    }
+    return application;
+  }
+
+
+  @Override
+  public String toString() {
+    return Objects.toStringHelper(getClass())
+      .add("urlParams", urlParams != null ? urlParams.toString() : StringUtils.EMPTY)
+      .add("urlDest",urlDest != null ? urlDest.toString() : StringUtils.EMPTY)
+      .add("variables",variables != null ? variables.toString() : StringUtils.EMPTY)
+      .add("sender",sender != null ? sender : StringUtils.EMPTY)
+      .add("receivers",receivers != null ? receivers.toString() : StringUtils.EMPTY )
+      .add("category",category)
+      .add("contextId",contextId)
+      .add("feature",feature)
+      .add("application",application)
+      .add("sendViaMail", sendViaMail).toString();
+  }
+}

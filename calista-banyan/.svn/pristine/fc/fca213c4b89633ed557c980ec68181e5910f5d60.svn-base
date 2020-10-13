@@ -1,0 +1,56 @@
+package com.inet.calista.crm.model.setting.configuration;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Date;
+
+/**
+ * Dictionary.
+ *
+ * @author thoangtran
+ * @version Dictionary 2018 04-10 10:11
+ */
+@Getter
+@Setter
+public class Dictionary extends NoSqlModel<Dictionary> {
+  public static final String SALUTATION = "SALUTATION";
+  public static final String SEX = "SEX";
+  public static final String CONTACT_STATUS = "CONTACT_STATUS";
+  public static final String CONTACT_TYPE = "CONTACT_TYPE";
+  public static final String CONTACT_LEAD_SOURCE = "CONTACT_LEAD_SOURCE";
+
+
+  private long modifiedDate = new Date().getTime();
+  private long createdDate = new Date().getTime();
+  private String modifiedBy;
+  private String key;
+  private String value;
+  private String description;
+
+  private String type  = Type.item.name();
+  private int order = -1;
+
+  public Dictionary() {
+  }
+
+  public Dictionary(String tenantId, String key, String value, String description,String type, int order) {
+    this.orgCode = tenantId;
+    this.key = key;
+    this.value = value;
+    this.description = description;
+    this.order = order;
+    this.type = type;
+  }
+
+  @Override
+  protected boolean equals(Dictionary other) {
+    return false;
+  }
+
+  public  enum Type{
+    item,
+    key
+  }
+}

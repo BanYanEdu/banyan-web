@@ -1,0 +1,118 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.data;
+
+import com.inet.calista.common.utils.DateUtils;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Calendar;
+
+/**
+ * com.inet.xportal.erp.model.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPDatePolicy.java Sep 24, 2018 09:43 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPDatePolicy {
+    private boolean useDates = false;
+    private long fromDate;
+    private long toDate;
+
+    private boolean useWeeks = false;
+    private int[] dayofweek;
+
+    private boolean useHours = false;
+    private long fromHours;
+    private long toHours;
+
+    public void validTime() {
+        if (!isUseDates()) {
+            setFromDate(0);
+            setToDate(0);
+        } else {
+            if (getFromDate() > 0) {
+                setFromDate(DateUtils.startTimeInMillisOf(getFromDate()));
+            }
+            if (getToDate() > 0) {
+                setToDate(DateUtils.endTimeInMillisOf(getToDate()));
+            }
+        }
+
+        if (!isUseHours()) {
+            setFromHours(0);
+            setFromHours(0);
+        } else {
+            long minHours = 0;
+            //23:59:59:999
+            long maxHours = (((((23 * 60) + 59) * 60) + 59) * 1000) + 999;
+
+            final Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            long timeX = cal.getTimeInMillis();
+
+            //Check From Hours
+            if (getFromHours() < minHours) {
+                setFromHours(0);
+            } else if (getFromHours() > maxHours) {
+                setFromHours(maxHours);
+            }
+
+            if (getFromHours() > 0) {
+                cal.setTimeInMillis(timeX + getFromHours());
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                long timeF = cal.getTimeInMillis();
+
+                setFromHours(timeF - timeX);
+            }
+
+            //Check To Hours
+            if (getToHours() < minHours) {
+                setToHours(0);
+            } else if (getToHours() > maxHours) {
+                setToHours(maxHours);
+            }
+
+            if (getToHours() > 0) {
+                cal.setTimeInMillis(timeX + getToHours());
+                cal.set(Calendar.SECOND, 59);
+                cal.set(Calendar.MILLISECOND, 999);
+                long timeT = cal.getTimeInMillis();
+
+                setToHours(timeT - timeX);
+            }
+        }
+
+        if (!isUseWeeks()) {
+            setDayofweek(new int[]{});
+        }
+
+
+        setUseDates(getFromDate() > 0 || getToDate() > 0);
+        setUseHours(getFromHours() > 0 || getToHours() > 0);
+        setUseWeeks(getDayofweek() != null && getDayofweek().length > 0);
+    }
+}

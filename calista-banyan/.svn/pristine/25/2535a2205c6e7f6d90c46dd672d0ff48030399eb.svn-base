@@ -1,0 +1,44 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * CandidateProfile
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: CandidateProfile.java Dec 21, 2018 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class CandidateProfile {
+    private String uuid;
+    private String username;
+    private String nameFull;
+    private AccountInfo accountInfo = new AccountInfo();
+    private Boolean accountInfoStatus;
+    private PersonalInfo personalInfo = new PersonalInfo();
+    private Boolean personalInfoStatus;
+    private JobInfo jobInfo = new JobInfo();
+    private Boolean jobInfoStatus;
+    private CareerInfo careerInfo = new CareerInfo();
+    private Boolean careerInfoStatus;
+    private List<WorkingRecord> workingRecords = new ArrayList<>();
+    private List<EduRecord> eduRecords = new ArrayList<>();
+    private List<ReferencePerson> referencePersons = new ArrayList<>();
+    private List<LanguageSkill> languageSkills = new ArrayList<>();
+    private List<ProfessionalSkill> professionalSkills = new ArrayList<>();
+    private String careerHighlights;
+    private Boolean inactive;       //
+    private Boolean completionStatus;          // ready to apply for job, ... (doing activities)
+    private Boolean ready;          // tempt
+    private Boolean searchable;     // available for search by employers
+    private Long createdDate;
+    private Long modifiedDate;
+}

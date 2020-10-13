@@ -1,0 +1,84 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.product;
+
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.product.
+ *
+ * @author Phong Tran
+ * @version $Id: ScanCodeUpdateService.java Jun 14, 2018 14:35 phongtt $
+ * @since 1.0
+ */
+@Named("posscancodeupdate")
+@XPortalDataService(roles = {POSConstant.ROLE_PRODUCT}, description = POSConstant.ROLE_PRODUCT_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/scancode/update",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ScanCodeUpdateService extends POSProductAbstraction {
+
+    //@Inject
+    //private POSScanCodeBO scanCodeBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = StringUtils.EMPTY_STRING;
+
+        String scanCodeIds = XParamUtils.getString("scanCodeIds", params, StringUtils.EMPTY_STRING);
+        int qtyPrint = XParamUtils.getInteger("qtyPrint", params, 0);
+
+        boolean printed = XParamUtils.getBoolean("printed", params, false);
+
+        /*if (StringUtils.hasLength(scanCodeIds)) {
+            scanCodeBO.updateQtyPrint(organId, outletId,
+                    CollectionUtils.asList(scanCodeIds.split(";")),
+                    qtyPrint, printed);
+        } else {
+            String group = XParamUtils.getString("group", params, StringUtils.EMPTY_STRING);
+            String keyword = XParamUtils.getString("keyword", params, StringUtils.EMPTY_STRING);
+            int type = XParamUtils.getInteger("type", params, -1);
+
+            scanCodeBO.updateQtyPrint(organId, StringUtils.EMPTY_STRING,
+                    type, group,
+                    keyword, qtyPrint, printed);
+        }*/
+
+        return new ObjectWebDataservice<>("SUCCESS");
+    }
+}

@@ -1,0 +1,84 @@
+package com.inet.calista.crm.service.essentials.entity;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.essentials.EntityBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.common.Address;
+import com.inet.calista.crm.model.essentials.Entity;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.calista.crm.util.JsonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Calendar;
+import java.util.Map;
+
+/**
+ * UpdateService.
+ *
+ * @author thoangtran
+ * @version UpdateService 2018 04-16 15:14
+ */
+@Named("crm_essentials_organizations_updateservice")
+@XPortalDataService(roles = { Roles.ESSENTIALS_CONTACT}, description = "Contact role")
+@XPortalPageRequest(uri = "crm/essentials/organizations/update", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class UpdateService extends CRMAbstractService {
+  @Inject
+  private EntityBo organizationBo;
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+
+      Entity organization = action.getModel(Entity.class);
+      final String uuid = organization.getUuid();
+      if(Strings.isNullOrEmpty(uuid)){
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      if(!organizationBo.isBelongOrg(uuid, firmProfile.getOrganiId())){
+        putError(action, CommonConstant.UUID, ErrorCode.not_belong_tenant);
+        return FAILURE_RESULT;
+      }
+
+      Entity exist = organizationBo.load(organization.getUuid());
+
+      organization.setModifiedDate(Calendar.getInstance().getTimeInMillis());
+      organization.setModifiedBy(SecurityUtil.getPrincipal());
+      organization.setOrgCode(firmProfile.getOrganiId());
+
+      if(params.containsKey(CommonConstant.OFFICE_ADDRESS_STR)){
+        organization.setOfficeAddress(Address.transform(JsonUtils.toJsonObject(XParamUtils.getString(CommonConstant.OFFICE_ADDRESS_STR, params))));
+      }
+      if(params.containsKey(CommonConstant.ASSIGN_TO_STR)) {
+        exist.setAssignTo(LinkTo.transform(JsonUtils.toJsonObject(XParamUtils.getString(CommonConstant.ASSIGN_TO_STR, params))));
+      }
+      organizationBo.update(organization.getUuid(), organization,firmProfile.getOrganiId());
+      return new ObjectWebDataservice<>(organizationBo.loadById(organization.getUuid(), firmProfile.getOrganiId()));
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during updating entity", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

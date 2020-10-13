@@ -1,0 +1,118 @@
+package com.inet.jobportal.service.candidate.candidate_profile;
+
+import com.inet.jobportal.bo.candidate.CandidateProfileBO;
+import com.inet.jobportal.model.candidate.CandidateProfile;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CandidateProfileSearchDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: CandidateProfileSearchDS.java Dec 21, 2018 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportalcandidateprofilesearch")
+@XPortalDataService(description="Candidate Profile Search service")
+@XPortalPageRequest(uri="jobportal/candidate/profile/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CandidateProfileSearchDS extends JobPortalAbsractService {
+    @Inject
+    private CandidateProfileBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String username = XParamUtils.getString("username", params,"");
+
+        String keyword = XParamUtils.getString("keyword", params,"");
+        String job_cat_01 = XParamUtils.getString("job_cat_01", params,"");
+        String job_cat_02 = XParamUtils.getString("job_cat_02", params,"");
+        String job_cat_03 = XParamUtils.getString("job_cat_03", params,"");
+        String location_01 = XParamUtils.getString("location_01", params,"");
+        String location_02 = XParamUtils.getString("location_02", params,"");
+        String location_03= XParamUtils.getString("location_03", params,"");
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("searchable").equal(true);
+
+        if (!username.equals("")) { query.field("username").equal(username); }
+        if (!keyword.equals("")) { query.field("jobInfo.jobTitle").containsIgnoreCase(keyword); }
+
+        Integer jobCatCount = 0;
+        if (!job_cat_01.equals("")) { jobCatCount = 1; }
+        if (!job_cat_02.equals("")) { jobCatCount = 2; }
+        if (!job_cat_03.equals("")) { jobCatCount = 3; }
+        if (jobCatCount == 1) {
+            query.field("jobInfo.jobCategories").contains(job_cat_01);
+        }
+        if (jobCatCount == 2) {
+            query.and(
+                    query.or(
+                            query.criteria("jobInfo.jobCategories").contains(job_cat_01),
+                            query.criteria("jobInfo.jobCategories").contains(job_cat_02)
+                    )
+            );
+        }
+        if (jobCatCount == 3) {
+            query.and(
+                    query.or(
+                            query.criteria("jobInfo.jobCategories").contains(job_cat_01),
+                            query.criteria("jobInfo.jobCategories").contains(job_cat_02),
+                            query.criteria("jobInfo.jobCategories").contains(job_cat_03)
+                    )
+            );
+        }
+        Integer locationCount = 0;
+        if (!location_01.equals("")) { locationCount = 1; }
+        if (!location_02.equals("")) { locationCount = 2; }
+        if (!location_03.equals("")) { locationCount = 3; }
+        if (locationCount == 1) {
+            query.field("jobInfo.locations.cityCode").equal(location_01);
+        }
+        if (locationCount == 2) {
+            query.and(
+                    query.or(
+                            query.criteria("jobInfo.locations.cityCode").equal(location_01),
+                            query.criteria("jobInfo.locations.cityCode").equal(location_02)
+                    )
+            );
+        }
+        if (locationCount == 3) {
+            query.and(
+                    query.or(
+                            query.criteria("jobInfo.locations.cityCode").equal(location_01),
+                            query.criteria("jobInfo.locations.cityCode").equal(location_02),
+                            query.criteria("jobInfo.locations.cityCode").equal(location_03)
+                    )
+            );
+        }
+
+        //Sorting
+        query.order("-modifiedDate");
+
+        SearchDTO<CandidateProfile> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

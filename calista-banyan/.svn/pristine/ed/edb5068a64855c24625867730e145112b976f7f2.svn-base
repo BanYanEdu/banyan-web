@@ -1,0 +1,58 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.model;
+
+import com.inet.calista.erp.inventory.model.ERPStockMovement;
+import com.inet.calista.pos.retail.data.POSStockMovementItem;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+/**
+ * com.inet.platform.pos.model.
+ *
+ * @author Phong Tran
+ * @version $Id: POSStockMovement.java Aug 17, 2018 15:07 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class POSStockMovement extends ERPStockMovement<POSStockMovementItem> {
+    /**
+     * @return
+     */
+    public POSStockMovement calc() {
+        float itemAmount = 0;
+        if (!CollectionUtils.isEmpty(this.getItems())) {
+            for (POSStockMovementItem item : this.getItems()) {
+                itemAmount += item.getAmount();
+            }
+        }
+        this.setTotalAmount(itemAmount);
+
+        //Calculator amount follow exchange rate of currency
+        if (this.getRate() < 0) {
+            this.setRate(1);
+        }
+
+        this.setTotalAmountEx(this.getTotalAmount() * this.getRate());
+
+        return this;
+    }
+}

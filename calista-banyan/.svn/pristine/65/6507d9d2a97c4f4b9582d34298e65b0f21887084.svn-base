@@ -1,0 +1,20 @@
+[
+  {
+    "emailCode": "ORGAN-INVITATION",
+    "emailName": "Thư mời tham gia",
+    "emailSubject": "WELCOME NEW MEMBER!",
+    "emailContent": "<p>Chào anh (chị)!&nbsp;</p>\n\n<p>Anh (chị) đã nhận được mời để tham gia vào&nbsp;<b>$organName</b></p>\n\n<p>Trong bức thư này, chúng tôi gởi đến bạn&nbsp;các thông tin lời mời&nbsp;để giúp anh (chị) chứng thực khi sử dụng dịch vụ Calista Platform. Chúng tôi khuyến cáo anh (chị) nên đọc (cẩn thận) những nguyên tắc sử dụng dịch vụ (như an toàn thông tin, ...) cũng như bản quyền cần thiết và giữ an toàn thông tin của mình.</p>\n\n<blockquote>Mã lời mời: {inviteCode}&nbsp;(Được sử dụng trong quá trình hỗ trợ)<br>\n<br>\nAnh (chị) vui lòng&nbsp;<a href=\"https://calista-dev.inetcloud.vn/calista/smartcloud/reg-cas/page/invitation.cpx?{secQryStr}\" target=\"_blank\">nhấp vào đây</a>&nbsp;để tiếp tục và hoàn tất quy trình</blockquote>\n\n<p>Chúng tôi sẵn lòng hỗ trợ anh (chị) để sử dụng tốt nhất dịch vụ và rất mong được sự quan tâm, góp ý của anh (chị). Nếu anh (chị) có những câu hỏi hoặc ý kiến đóng góp, vui lòng liên hệ với chúng tôi qua các địa chỉ trên trang web công ty tại:&nbsp;<a href=\"http://www.inetcloud.vn/\" target=\"_blank\">www.inetcloud.vn</a>&nbsp;hoặc qua số điện thoại tổng đài hỗ trợ&nbsp;<b>02873000126</b></p>\n\n<p>Trân trọng</p>\n\n<p>{sender}</p>\n\n<p>**** Đây là email gửi tự động. Xin vui lòng không trả lời email này.&nbsp;</p>",
+    "language": "vi",
+    "srvVariable": "glcontactprofileinviteparams",
+    "inactive": false
+  },
+  {
+    "emailCode": "ORGAN-INVITATION",
+    "emailName": "Thư mời tham gia",
+    "emailSubject": "WELCOME NEW MEMBER!",
+    "emailContent": "<p>Chào anh (chị)!&nbsp;</p>\n\n<p>Anh (chị) đã nhận được mời để tham gia vào&nbsp;<b>$organName</b></p>\n\n<p>Trong bức thư này, chúng tôi gởi đến bạn&nbsp;các thông tin lời mời&nbsp;để giúp anh (chị) chứng thực khi sử dụng dịch vụ Calista Platform. Chúng tôi khuyến cáo anh (chị) nên đọc (cẩn thận) những nguyên tắc sử dụng dịch vụ (như an toàn thông tin, ...) cũng như bản quyền cần thiết và giữ an toàn thông tin của mình.</p>\n\n<blockquote>Mã lời mời: {inviteCode}&nbsp;(Được sử dụng trong quá trình hỗ trợ)<br>\n<br>\nAnh (chị) vui lòng&nbsp;<a href=\"https://calista-dev.inetcloud.vn/calista/smartcloud/reg-cas/page/invitation.cpx?{secQryStr}\" target=\"_blank\">nhấp vào đây</a>&nbsp;để tiếp tục và hoàn tất quy trình</blockquote>\n\n<p>Chúng tôi sẵn lòng hỗ trợ anh (chị) để sử dụng tốt nhất dịch vụ và rất mong được sự quan tâm, góp ý của anh (chị). Nếu anh (chị) có những câu hỏi hoặc ý kiến đóng góp, vui lòng liên hệ với chúng tôi qua các địa chỉ trên trang web công ty tại:&nbsp;<a href=\"http://www.inetcloud.vn/\" target=\"_blank\">www.inetcloud.vn</a>&nbsp;hoặc qua số điện thoại tổng đài hỗ trợ&nbsp;<b>02873000126</b></p>\n\n<p>Trân trọng</p>\n\n<p>{sender}</p>\n\n<p>**** Đây là email gửi tự động. Xin vui lòng không trả lời email này.&nbsp;</p>",
+    "language": "en",
+    "srvVariable": "glcontactprofileinviteparams",
+    "inactive": false
+  }
+]

@@ -1,0 +1,43 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * Notify.
+ *
+ * @author thoangtran
+ * @version Notify 2018 04-13 17:30
+ */
+
+public interface Notify {
+
+  /**
+   *
+   * @return
+   */
+  String getCreatedBy();
+
+  /**
+   *
+   * @return
+   */
+  long getCreatedDate();
+  String getStatus();
+
+  /**
+   *
+   * @return
+   */
+  String getContent();
+
+  /**
+   *
+   * @return
+   */
+  String getModule();
+
+  /**
+   *
+   * @return
+   */
+  String getReferenceKey();
+
+}

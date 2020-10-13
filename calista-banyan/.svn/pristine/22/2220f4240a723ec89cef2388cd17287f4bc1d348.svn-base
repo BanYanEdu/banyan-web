@@ -1,0 +1,36 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.constants;
+
+/**
+ * Roles.
+ *
+ * @author Duyen Tang
+ * @version $Id: Roles.java Dec 28, 2017 3:25:58 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public interface Roles {
+  String ADMIN = "collatask.admin";
+  String SYS_COMMON = "collatask.sys.comm";
+  String BIZ_COMMON = "collatask.biz.comm";
+  String TASK = "collatask.task";
+  
+  String PROJECT = "collatask.project";
+  String PROJECT_VIEW = "collatask.project.view";
+  
+  String CUSTOM_QUERY = "collatask.customquery";
+}

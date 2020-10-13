@@ -1,0 +1,22 @@
+package com.inet.calista.crm.dto.search;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * TemplateSearchCriteria.
+ *
+ * @author thoangtran
+ * @version TemplateSearchCriteria 2019 01-29 16:13
+ */
+@Getter
+@Setter
+public class TemplateSearchCriteria {
+  private String ownerId;
+  private String module;
+  private String providerID;
+  private String keyword;
+  private String author;
+  private boolean mine = false;
+
+}

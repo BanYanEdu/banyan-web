@@ -1,0 +1,181 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.bo;
+
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.data.POSShiftItem;
+import com.inet.calista.pos.common.model.POSShift;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: POSShiftBO.java May 30, 2018 09:40 phongtt $
+ * @since 1.0
+ */
+@Named("POSShiftBO")
+public class POSShiftBO extends ERPBaseBO<POSShift> implements BeanInitiateInvoke {
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("items", POSShiftItem.class);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param contentBf
+     */
+    @Inject
+    public POSShiftBO(@ContentContext(context = POSConstant.DB_CONTEXT) MagicContentBF contentBf) {
+        super(contentBf, "pos_shift");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    protected Class<POSShift> getClassConvetor() {
+        return POSShift.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("code");
+        ensureIndex("organId,code,closeTime");
+        ensureIndex("organId,openEmpId");
+        ensureIndex("organId,openEmpId");
+    }
+
+
+    /**
+     * @param type
+     * @param from
+     * @param to
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSShift> query(int type, long from, long to, String keyword, int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+        String fieldEmpId = StringUtils.EMPTY_STRING;
+        String fieldEmpName = StringUtils.EMPTY_STRING;
+        String fieldTime = StringUtils.EMPTY_STRING;
+        if (type >= 0) {
+            switch (type) {
+                case 0: //find open shift
+                    fieldEmpId = "openEmpId";
+                    fieldEmpName = "openEmpName";
+                    fieldTime = "openTime";
+                    break;
+                case 1: //find close shift
+                    fieldEmpId = "closeEmpId";
+                    fieldEmpName = "closeEmpName";
+                    fieldTime = "closeTime";
+                    break;
+                case 2: //find confirm shift
+                    fieldEmpId = "receiverId";
+                    fieldEmpName = "receiverName";
+                    fieldTime = "confirmTime";
+                    break;
+            }
+        }
+
+        if (StringUtils.hasLength(fieldTime)) {
+            if (from > 0) {
+                query.field(fieldTime).greaterThanOrEq(from);
+            }
+
+            if (to > 0) {
+                query.field(fieldTime).lessThanOrEq(to);
+            }
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            if (StringUtils.hasLength(fieldEmpId) && StringUtils.hasLength(fieldEmpName)) {
+                query.and(query.or(
+                        query.criteria("code").like(keyword),
+                        query.criteria("brief").like(keyword),
+                        query.criteria("items.brief").like(keyword),
+                        query.criteria(fieldEmpId).like(keyword),
+                        query.criteria(fieldEmpName).like(keyword)
+                ));
+            } else {
+                query.and(query.or(
+                        query.criteria("code").like(keyword),
+                        query.criteria("brief").like(keyword),
+                        query.criteria("items.brief").like(keyword)
+                ));
+            }
+        }
+
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param userCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSShift loadOpenShift(String organId, String userCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("openEmpId").equal(userCode);
+        query.field("closeTime").lessThanOrEq(0);
+
+        return super.load(query);
+    }
+}

@@ -1,0 +1,18 @@
+package com.inet.calista.crm.service.template;
+
+import com.inet.calista.crm.bo.setting.TemplateBo;
+import com.inet.calista.crm.service.CRMAbstractService;
+
+import javax.inject.Inject;
+
+/**
+ * TemplateService.
+ *
+ * @author thoangtran
+ * @version TemplateService 2019 01-29 15:19
+ */
+public abstract class TemplateService extends CRMAbstractService {
+  @Inject
+  protected TemplateBo templateBo;
+
+}

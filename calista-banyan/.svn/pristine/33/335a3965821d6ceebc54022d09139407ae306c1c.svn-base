@@ -1,0 +1,59 @@
+package com.inet.calista.crm.service.setting.group;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.setting.GroupBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * RemoveMemberService.
+ *
+ * @author thoangtran
+ * @version RemoveMemberService 2018 04-12 09:17
+ */
+@Named("crm_setting_group_members_remservice")
+@XPortalDataService(roles = { Roles.SETTING_GROUP}, description = "Manage group")
+@XPortalPageRequest(uri = "crm/setting/group/members/remove", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class RemoveMemberService extends CRMAbstractService {
+  @Inject
+  private GroupBo groupBo;
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firm, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String uuid = XParamUtils.getString(CommonConstant.UUID, params);
+      if(Strings.isNullOrEmpty(uuid)){
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      final LinkTo linkTo = action.getModel(LinkTo.class);
+      groupBo.removeMember(uuid, linkTo, firm.getOrganiId());
+      return SUCCESS_RESULT;
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during remove member", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

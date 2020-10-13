@@ -1,0 +1,19 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * JobInfo
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobInfo.java Feb 14, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class AccountInfo {
+    private String statusCode;
+}

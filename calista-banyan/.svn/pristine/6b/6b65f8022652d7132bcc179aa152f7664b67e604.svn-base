@@ -1,0 +1,27 @@
+package com.inet.calista.global.model;
+
+import com.inet.calista.common.model.BaseModel;
+
+public abstract class AbstractModel<T extends AbstractModel<T>> extends BaseModel {
+  /**
+   * Check this object equal with other or not
+   *
+   * @param other the other object
+   * @return the result
+   */
+  protected abstract boolean equals(T other);
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public final boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    if (obj == null || !(obj.getClass().equals(this.getClass()))) {
+      return false;
+    }
+
+    return equals((T) obj);
+  }
+}

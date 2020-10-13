@@ -1,0 +1,30 @@
+package com.inet.calista.crm.model.activity;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * SMSEvent.
+ *
+ * @author thoangtran
+ * @version SMSEvent 2018 04-13 17:32
+ */
+@Getter
+@Setter
+public class SMSEvent  extends NoSqlModel<SMSEvent> implements Notify {
+  private long createdDate;
+  private String createdBy;
+  private long sentTime;
+  private String status = NotifyStatus.created.name();
+  private String contactId;
+  private String phoneNumber;
+  private String content;
+  private String module; // NGUON YEU CAU
+  private String referenceKey; // refer to module query
+
+  @Override
+  protected boolean equals(SMSEvent other) {
+    return false;
+  }
+}

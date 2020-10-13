@@ -1,0 +1,54 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.api;
+
+import com.inet.xportal.web.cache.ProxyServiceManager;
+
+/**
+ * com.inet.xportal.erp.api.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPFactoryManager.java Apr 26, 2018 10:04 phongtt $
+ * @since 1.0
+ */
+public enum ERPFactoryManager {
+    INSTANCE;
+
+    /**
+     * @return
+     */
+    public ERPFactory service() {
+        try {
+            return ProxyServiceManager.INSTANCE.service(ERPFactory.class);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    /**
+     * @return
+     */
+    public ERPFactoryCounter counter() {
+        try {
+            return ProxyServiceManager.INSTANCE.service(ERPFactoryCounter.class);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+}

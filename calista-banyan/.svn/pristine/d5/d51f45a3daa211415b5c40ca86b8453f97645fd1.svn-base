@@ -1,0 +1,351 @@
+/*****************************************************************
+   Copyright 2013 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.crm.util;
+
+import com.google.common.base.Strings;
+import com.inet.base.util.StringUtils;
+import com.mongodb.BasicDBList;
+import com.mongodb.BasicDBObject;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Date;
+import java.util.List;
+
+
+/**
+ * JsonUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: JsonUtils.java May 2013-05-10 14:13:47z tttduyen $
+ *
+ * @since 1.0
+ */
+public class JsonUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(JsonUtils.class);
+  
+  /**
+   * Return {@link JSONObject} from given {@link String}
+   * 
+   * @param value the given {@link String} value
+   * @return the {@link JSONObject}
+   */
+  public static JSONObject toJsonObject(String value) {
+    try {
+      return new JSONObject(value);
+    } catch (Exception ex) {
+      LOG.warn("Could not convert string [" + value + "] to json object", ex);
+      return null;
+    }
+  }
+  
+  /**
+   * Return the {@link JSONObject} with given key in given {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static JSONObject getJsonObject(JSONObject object, String key) {
+    if (object == null || !object.has(key)) {
+      return null;
+    }
+    
+    try {
+      return object.getJSONObject(key);
+//      return new JSONObject(getString(object, key));
+    } catch (Exception ex) {
+      LOG.warn("Could not get JSONObject with key [" + key + "] in object [" + object + "]" , ex);
+      return null;
+    }
+  }
+  
+  /**
+   * Return {@link JSONArray} from given {@link String} value
+   * 
+   * @param value the given {@link String} value
+   * @return the {@link JSONArray}
+   */
+  public static JSONArray toJsonArray(String value) {
+    try {
+      if (Strings.isNullOrEmpty(value)) {
+        return null;
+      }
+      
+      return new JSONArray(value);
+    } catch (Exception ex) {
+      LOG.warn("Could not convert string [" + value + "] to json array", ex);
+      return null;
+    }
+  }
+  
+  /**
+   * Return the {@link JSONArray} with given key in given {@link JSONObject}
+   * 
+   * @param object the given {@link JSONArray}
+   * @param key the given key
+   * @return the result
+   */
+  public static JSONArray getJsonArray(JSONObject object, String key) {
+    try {
+      if (object == null || !object.has(key)) {
+        return null;
+      }
+      
+      return object.getJSONArray(key);
+      //return new JSONArray(getString(object, key));
+    } catch (Exception ex) {
+      LOG.warn("Could not get JSONArray with key [" + key + "] in object [" + object + "]", ex);
+      return null;
+    }
+  }
+  
+  /**
+   * Return the {@link String} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the value
+   */
+  public static String getString(JSONObject object, String key, String defaultValue) {
+    if (object == null || !object.has(key)) {
+      return defaultValue;
+    }
+    
+    try {
+      return object.getString(key);
+    } catch (JSONException ex) {
+      LOG.warn("Could not get string value with key [" + key + "] in given object [" + object + "]", ex);
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Return the {@link String} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the value
+   */
+  public static String getString(JSONObject object, String key) {
+    return getString(object, key, StringUtils.EMPTY_STRING);
+  }
+  
+  /**
+   * Return the {@link List} of {@link String} in given {@link JSONObject} and key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static List<String> getStringArray(JSONObject object, String key) {
+    String value = getString(object, key);
+    
+    return CommonUtils.toStringList(value);
+  }
+  
+  /**
+   * Return the {@link Long} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the {@link Long} value
+   */
+  public static long getLong(JSONObject object, String key, long defaultValue) {
+    if (object == null || !object.has(key)) {
+      return defaultValue;
+    }
+    
+    try {
+      return object.getLong(key);
+    } catch (JSONException ex) {
+      LOG.warn("Could not get long value with key [" + key + "] in given object [" + object + "]", ex);
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Return the {@link Long} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the {@link Long} value
+   */
+  public static long getLong(JSONObject object, String key) {
+    return getLong(object, key, 0L);
+  }
+
+  /**
+   * Return the {@link List} of {@link Long} value in given {@link JSONObject} with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the {@link List} of {@link Long} value
+   */
+  public static List<Long> getLongArray(JSONObject object, String key) {
+    return CommonUtils.toLongArray(getString(object, key));
+  }
+  
+  
+  /**
+   * Return {@link Integer} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the {@link Integer} value
+   */
+  public static int getInt(JSONObject object, String key, int defaultValue) {
+    if (object == null || !object.has(key)) {
+      return defaultValue;
+    }
+    
+    try {
+      return object.getInt(key);
+    } catch (JSONException ex) {
+      LOG.warn("Could not get int value with key [" + key + "] in given object [" + object + "]", ex);
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Return {@link Integer} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the {@link Integer} value
+   */
+  public static int getInt(JSONObject object, String key) {
+    return getInt(object, key, 0);
+  }
+  
+  /**
+   * Return the {@link Double} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the {@link Double} value
+   */
+  public static double getDouble(JSONObject object, String key, double defaultValue) {
+    if (object == null || !object.has(key)) {
+      return defaultValue;
+    }
+    
+    try {
+      return object.getDouble(key);
+    } catch (JSONException ex) {
+      LOG.warn("Could not get double value with key [" + key + "] in given object [" + object + "]", ex);
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Return the {@link Double} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the {@link Double} value
+   */
+  public static double getDouble(JSONObject object, String key) {
+    return getDouble(object, key, 0);
+  }
+  
+  /**
+   * Return {@link Date} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultDate default {@link Date}
+   * @return the {@link Date}
+   */
+  public static Date getDate(JSONObject object, String key, Date defaultDate) {
+    String value = getString(object, key);
+    if (Strings.isNullOrEmpty(value)) {
+      return defaultDate;
+    }
+    
+    Date date = DateUtils.parse(value);
+    return date != null ? date : defaultDate;
+  }
+  
+  /**
+   * Return {@link Date} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the {@link Date}
+   */
+  public static Date getDate(JSONObject object, String key) {
+    return getDate(object, key, null);
+  }
+  
+  /**
+   * Return {@link Boolean} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the result
+   */
+  public static boolean getBoolean(JSONObject object, String key, boolean defaultValue) {
+    if (object == null || !object.has(key)) {
+      return defaultValue;
+    }
+    
+    try {
+      return object.getBoolean(key);
+    } catch (Exception ex) {
+      LOG.warn("Could not boolean value with key [" + key + "] in given object [" + object + "]", ex);
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Return {@link Boolean} value with given key in {@link JSONObject}
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static boolean getBoolean(JSONObject object, String key) {
+    return getBoolean(object, key, false);
+  }
+
+  /**
+   * Convert string to {@link BasicDBList}
+   * @param jsonString the given {@link String}
+   * @return BasicDBList
+   * @throws JSONException
+   */
+  public static BasicDBList toBasicDBList(String jsonString) throws JSONException {
+    JSONArray jsonArr = toJsonArray(jsonString);
+    System.out.println("JsonUtils::toBasicDBList:" + jsonArr);
+    if(jsonArr != null && jsonArr.length() > 0) {
+      BasicDBList documents = new BasicDBList();
+      for(int i = 0 ; i < jsonArr.length(); i++) {
+        documents.add(BasicDBObject.parse(jsonArr.get(i).toString()));
+      }
+      return documents;
+    }
+    return  null;
+  }
+}

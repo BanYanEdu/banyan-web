@@ -1,0 +1,78 @@
+package com.inet.calista.crm.model.setting.configuration;
+
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+/**
+ * WorkingDate.
+ *
+ * @author thoangtran
+ * @version WorkingDate 2018 04-06 10:29
+ */
+enum Day {
+  MONDAY(1) {
+    public Day next() { return TUESDAY; }   // each instance provides its implementation to abstract method
+  },
+  TUESDAY(2) {
+    public Day next() { return WEDNESDAY; }
+  },
+  WEDNESDAY(3) {
+    public Day next() { return THURSDAY; }
+  },
+  THURSDAY(4) {
+    public Day next() { return FRIDAY; }
+  },
+  FRIDAY(5) {
+    public Day next() { return SATURDAY; }
+  },
+  SATURDAY(6) {
+    public Day next() { return SUNDAY; }
+  },
+  SUNDAY(7) {
+    public Day next() { return MONDAY; }
+  },
+  UNKNOW(-1) {
+    public Day next() { return null; }
+  },;
+
+
+  public abstract Day next();
+
+  private final int dayNumber;
+
+  Day(int dayNumber) {   // constructor
+    this.dayNumber = dayNumber;
+  }
+
+  int getDayNumber() {
+    return dayNumber;
+  }
+
+  /**
+   *
+   * @param dayNumber
+   * @return
+   */
+  public static Day getDay(int dayNumber) {
+    switch (dayNumber) {
+      case 1: return MONDAY;
+      case 2: return TUESDAY;
+      case 3: return WEDNESDAY;
+      case 4: return THURSDAY;
+      case 5: return FRIDAY;
+      case 6: return SATURDAY;
+      case 7: return SATURDAY;
+    }
+   return UNKNOW;
+  }
+
+  public static Set<Day> getDays(Iterator<Integer> dayNumbers) {
+    final Set<Day> days = new HashSet<>();
+    while (dayNumbers.hasNext()) {
+      int dayNumber = dayNumbers.next();
+      days.add(Day.getDay(dayNumber));
+    }
+    return days;
+  }
+}

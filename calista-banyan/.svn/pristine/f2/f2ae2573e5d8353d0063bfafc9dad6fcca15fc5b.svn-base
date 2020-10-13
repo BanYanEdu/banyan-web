@@ -1,0 +1,105 @@
+package com.inet.calista.global.service.contact;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.common.utils.JsonUtils;
+import com.inet.calista.global.bo.contact.ContactInfoBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.exception.GlServiceException;
+import com.inet.calista.global.model.common.Address;
+import com.inet.calista.global.model.contact.ContactInfo;
+import com.inet.calista.global.service.GlAbstractService;
+
+import com.inet.xportal.common.profile.BaseUserModel;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.nosql.web.util.SiteProfileUtil;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.cache.DependencyServiceManager;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * UpdateService.
+ *
+ * @author thoangtran
+ * @version UpdateService 2018 04-14 11:38
+ */
+@Slf4j
+public class UpdateService  extends GlAbstractService {
+  @Inject
+  private ContactInfoBo contactInfoBo;
+
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      ContactInfo contact = action.getModel(ContactInfo.class);
+      if(Strings.isNullOrEmpty(contact.getUuid())){
+        putError(action, CommonConstant.UUID, ErrorCode.MUST_NOT_EMPTY);
+        return FAILURE_RESULT;
+      }
+      ContactInfo exist = contactInfoBo.load(contact.getUuid());
+      if(null == exist ){
+        putError(action, CommonConstant.UUID, ErrorCode.NOT_EXISTS);
+        return FAILURE_RESULT;
+      }
+      if(Strings.isNullOrEmpty(contact.getLastName())){
+        putError(action, CommonConstant.LAST_NAME, ErrorCode.MUST_NOT_EMPTY);
+        return FAILURE_RESULT;
+      }
+
+      contact.setCreatedBy(exist.getCreatedBy());
+      contact.setCreatedDate(exist.getCreatedDate());
+
+      contact.setModifiedDate(DateUtils.now().getTime());
+      contact.setModifiedBy(SecurityUtil.getPrincipal());
+      contact.setOwnerId(firmProfile.getOrganiId());
+
+      if(params.containsKey(CommonConstant.ADDRESS_STR)){
+        contact.setAddress(Address.transform(JsonUtils.toJsonObject(XParamUtils.getString(CommonConstant.ADDRESS_STR, params))));
+      }
+      contactInfoBo.saveOrUpdate(contact);
+
+      // update contact on lotus
+      final String orgDomainn  = SiteProfileUtil.getOrgDomain(site, action.getFirmPrefix());
+
+      final BaseUserModel baseUserModel = new BaseUserModel();
+      baseUserModel.setBrief(contact.getDescription());
+      baseUserModel.setFullname(contact.getFullName());
+      baseUserModel.setFname(contact.getFirstName());
+      baseUserModel.setLname(contact.getLastName());
+      baseUserModel.setMname(contact.getMiddleName());
+      baseUserModel.setPhone(contact.getMobilePhone());
+      baseUserModel.setBirthday(contact.getDateOfBirth());
+      baseUserModel.setEmail(contact.getPrimaryEmail());
+      baseUserModel.setTitle(contact.getTitle());
+      baseUserModel.setUsername(contact.getUserCode());
+      baseUserModel.setCode(contact.getUserCode());
+
+      if(null != contact.getAddress()) {
+        baseUserModel.setAddress(contact.getAddress().getAddress());
+        baseUserModel.setCountry(contact.getAddress().getCountryCode());
+        baseUserModel.setCity(contact.getAddress().getProvinceCode());
+        baseUserModel.setState(contact.getAddress().getStateCode());
+      }
+      DependencyServiceManager.INSTANCE.dependency("lotusUserSynch", new Object[] { orgDomainn,  baseUserModel});
+
+      return new ObjectWebDataservice<>(contactInfoBo.load(contact.getUuid()));
+    } catch (Exception ex) {
+
+      GlServiceException iex = new GlServiceException("Error occurs during updating contact", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    }
+  }
+}

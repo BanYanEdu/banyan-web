@@ -1,0 +1,467 @@
+/*****************************************************************
+   Copyright 2013 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.crm.util;
+
+import com.google.common.base.Strings;
+import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * DateUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: DateUtils.java 2013-05-08 10:10:08z tttduyen $
+ *
+ * @since 1.0
+ */
+public class DateUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(DateUtils.class);
+  public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+  public static final String VI_DATE_FORMAT = "dd/MM/yyyy";
+  public static final String VI_DATE_TIME_FORMAT = "dd/MM/yyyy HH:mm:ss";
+  public static final String DB_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
+  public static Date now() {
+    return new Date();
+  }
+  /**
+   * Parse given {@link String} with given format to {@link Date}
+   * 
+   * @param date the given date as {@link String}
+   * @param format the given format
+   * @return the date
+   */
+  public static Date parse(String date, String format) {
+    if (Strings.isNullOrEmpty(date)) {
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(format)) {
+      format = DEFAULT_DATETIME_FORMAT;
+    }
+    
+    // transform simple date format
+    SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+    
+    try {
+      return dateFormat.parse(date);
+    } catch (ParseException ex) {
+      LOG.warn("Could not parse [{" + date + "}] to date with given format [{" + format + "}] to date", ex);
+      return null;
+    }
+  }
+  
+  /**
+   * Parse given {@link String} with given format to {@link Date}
+   * 
+   * @param date the given date as {@link String}
+   * @param format the given format
+   * @return the date
+   */
+  public static Date parseSkipError(String date, String format) {
+    if (Strings.isNullOrEmpty(date)) {
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(format)) {
+      format = DEFAULT_DATETIME_FORMAT;
+    }
+    
+    // transform simple date format
+    SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+    
+    try {
+      return dateFormat.parse(date);
+    } catch (Exception ex) {
+      return null;
+    }
+  }
+
+
+  /**
+   * Parse given {@link String} with given format to {@link Date}
+   * 
+   * @param date the given date as {@link String}
+   * @return the date
+   */
+  public static Date parse(String date) {
+    return parse(date, DEFAULT_DATETIME_FORMAT);
+  }
+
+  /**
+   * * Parse given {@link Long} with given format to {@link Date}
+   * @param time the given date as {@link Long}
+   * @return the date
+   */
+  public static Date parse(long time) {
+    if(time <= 0) {
+      return null;
+    }
+    return new Date(time);
+  }
+
+  /**
+   * Format given {@link Date} to {@link String} with given format
+   * 
+   * @param date the given {@link Date}
+   * @param format the given format
+   * @return the date as {@link String}
+   */
+  public static String format(Date date, String format) {
+    if (date == null) {
+      return null;
+    }
+    if (Strings.isNullOrEmpty(format)) {
+      format = DEFAULT_DATETIME_FORMAT;
+    }
+    // transform simple date format
+    SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    
+    StringBuffer buffer = new StringBuffer(dateFormat.format(date));
+    
+    return buffer.insert(buffer.length() - 2, ':').toString();
+  }
+  
+  /**
+   * Format given {@link Date} to {@link String} with given format
+   * 
+   * @param date the given {@link Date}
+   * @param format the given format
+   * @return the date as {@link String}
+   */
+  public static String formatWithOutSep(Date date, String format) {
+    if (date == null) {
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(format)) {
+      format = DEFAULT_DATETIME_FORMAT;
+    }
+    
+    // transform simple date format
+    SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    
+    return dateFormat.format(date);
+  }
+  
+  /**
+   * Format given {@link Date} to {@link String} with given format
+   * 
+   * @param date the given {@link Date}
+   * @param format the given format
+   * @return the date as {@link String}
+   */
+  public static String formatWithOutTz(Date date, String format) {
+    if (date == null) {
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(format)) {
+      format = DEFAULT_DATETIME_FORMAT;
+    }
+    
+    // transform simple date format
+    SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+    
+    return dateFormat.format(date);
+  }
+  
+  /**
+   * Format given {@link Date} to {@link String} with given format
+   * 
+   * @param date the given {@link Date}
+   * @return the date as {@link String}
+   */
+  public static String format(Date date) {
+    return format(date, DEFAULT_DATETIME_FORMAT);
+  }
+
+  /**
+   * Format given {@link Date} to {@link String} with given format
+   *
+   * @param date the given {@link Long}
+   * @return the date as {@link String}
+   */
+  public static String format(long date){
+    if(date <= 0) return "";
+    return format(new Date(date), DEFAULT_DATETIME_FORMAT);
+  }
+  
+  /**
+   * Return the first time in given date
+   * 
+   * @param date the given {@link Date}
+   * @return the result
+   */
+  public static Date startTimeOf(Date date) {
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    // set time
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    
+    return calendar.getTime();
+  }
+  
+  /**
+   * Return the first time in given date
+   * 
+   * @param date the given {@link Date}
+   * @return the result
+   */
+  public static long startTimeInMillisOf(Date date) {
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    // set time
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    
+    return calendar.getTimeInMillis();
+  }
+  
+  /**
+   * Return the end time of given date
+   * 
+   * @param date the given {@link Date}
+   * @return the result
+   */
+  public static Date endTimeOf(Date date) {
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    // set time
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 23);
+    calendar.set(Calendar.MINUTE, 59);
+    calendar.set(Calendar.SECOND, 59);
+    
+    return calendar.getTime();
+  }
+  
+  /**
+   * Return the end time of given date
+   * 
+   * @param date the given {@link Date}
+   * @return the result
+   */
+  public static long endTimeInMillisOf(Date date) {
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    // set time
+    calendar.setTime(date);
+    calendar.set(Calendar.HOUR_OF_DAY, 23);
+    calendar.set(Calendar.MINUTE, 59);
+    calendar.set(Calendar.SECOND, 59);
+    calendar.set(Calendar.MILLISECOND, 0);
+    return calendar.getTimeInMillis();
+  }
+
+
+  /**
+   * Return year in given date
+   * 
+   * @param date the given date
+   * @return the year
+   */
+  public static int year(Date date) {
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(date);
+    
+    return calendar.get(Calendar.YEAR);
+  }
+  
+  /**
+   * Return default deadline date
+   * 
+   * @return the deadline date
+   */
+  public static Date defaultDeadline() {
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    // set time
+    calendar.set(Calendar.DAY_OF_MONTH, 1);
+    calendar.set(Calendar.MONTH, 1);
+    calendar.set(Calendar.YEAR, 2200);
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 1);
+    
+    return calendar.getTime();
+  }
+  
+  /**
+   * Parse deadline date
+   * 
+   * @param deadlineStr the given deadline string
+   * @return the deadline
+   */
+  public static Date parseDeadline(String deadlineStr) {
+    Date deadline = parse(deadlineStr);
+    
+    if (deadline == null) {
+      return defaultDeadline();
+    }
+    // get end date
+    deadline = endTimeOf(deadline);
+    
+    return deadline;
+  }
+  
+  /**
+   * Format deadline date
+   * 
+   * @param deadline the given deadline date
+   * @return the date as string
+   */
+  public static String formatDeadline(Date deadline) {
+    if (deadline == null) {
+      return null;
+    }
+    
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    calendar.setTime(deadline);
+    if (calendar.get(Calendar.YEAR) == 2200) {
+      return null;
+    }
+    
+    return format(deadline);
+  }
+  
+  /**
+   * Return real deadline
+   * 
+   * @param deadline the given deadline
+   * @return the real deadline
+   */
+  public static Date getDeadline(Date deadline) {
+    if (deadline == null) {
+      return null;
+    }
+    
+    // get calendar instance
+    Calendar calendar = Calendar.getInstance();
+    
+    calendar.setTime(deadline);
+    if (calendar.get(Calendar.YEAR) == 2200) {
+      return null;
+    }
+    
+    return deadline;
+  }
+  
+  /**
+   * Return the value of given calendar field
+   * 
+   * @param time the given time
+   * @param field the given field
+   * @return the result
+   */
+  public static int get(long time, int field) {
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTimeInMillis(time);
+    
+    return calendar.get(field);
+  }
+
+  /**
+   * Convert from long value to Date in MongoDB
+   * @param fieldConvert the given field will convert from long value
+   * @return Document query
+   */
+  public static Document convertToDate(String fieldConvert){
+    List convertToDateprojectDate = Arrays.asList(new Date(0),  fieldConvert );
+    return new Document().append("$add",convertToDateprojectDate );
+  }
+
+  /**
+   * get first number week in year
+   * @param year the given {@link Integer}
+   * @return 0 if not
+   */
+  public static int getFirstNumberWeekInYear(int year) {
+    // time begin in year
+    Calendar calendar = Calendar.getInstance();
+    calendar.set(Calendar.YEAR, year);
+    calendar.set(Calendar.MONTH, 0);
+    calendar.set(Calendar.DATE, 1);
+    calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+    // time of the first sunday in year
+    return year == calendar.get(Calendar.YEAR) ? 1 : 0;
+  }
+
+  /**
+   * Get week in mongodb from calendar
+   * @param calendar
+   * @return
+   */
+  public static int getWeekForMongo(Calendar calendar) {
+    if( 0 == DateUtils.getFirstNumberWeekInYear(calendar.get(Calendar.YEAR)))
+      return calendar.get(Calendar.WEEK_OF_YEAR) -1;
+    return calendar.get(Calendar.WEEK_OF_YEAR);
+  }
+
+  /**
+   * Get month for mongodb
+   * @param calendar
+   * @return
+   */
+  public static int getMonthForMongo(Calendar calendar) {
+    return calendar.get(Calendar.MONTH) + 1;
+  }
+
+
+  /**
+   * Get year for mongodb
+   * @param calendar
+   * @return
+   */
+  public static int getYearForMongo(Calendar calendar) {
+    return calendar.get(Calendar.YEAR);
+  }
+
+  /**
+   *
+   * @param docDate
+   * @return
+   */
+  public static String getDocDateStr(long docDate){
+    if(docDate > 0){
+      Calendar calendar = Calendar.getInstance();
+      calendar.setTimeInMillis(docDate);
+      return format(calendar.getTime(), VI_DATE_FORMAT);
+    }
+    return "";
+  }
+}

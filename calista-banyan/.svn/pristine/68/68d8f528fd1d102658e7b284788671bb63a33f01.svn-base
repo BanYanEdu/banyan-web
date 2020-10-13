@@ -1,0 +1,46 @@
+package com.inet.calista.crm.model.inventory;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Product.
+ *
+ * @author thoangtran
+ * @version Product 2018 04-06 16:03
+ */
+@Getter
+@Setter
+public class Product extends NoSqlModel<Product> {
+  private String createdBy;
+  private long createdDate;
+  private long modifiedDate;
+  private String name;
+  private String partNumber;
+  private boolean active;
+  private String category;
+  private String vendorId;
+  private String manufacturer;
+  private long saleStartDate = -1;
+  private long saleEndDate = -1;
+  private long supportStartDate = -1;
+  private long supportExpiryDate = -1;
+  private String serialNo;
+  private String website;
+
+  // pricing information
+  private Currency price;
+  private long commissionRate;
+  private long VAT;
+  private long sales;
+  private long services;
+  private Currency purchaseCost;
+
+  private String description;
+
+  @Override
+  protected boolean equals(Product other) {
+    return false;
+  }
+}

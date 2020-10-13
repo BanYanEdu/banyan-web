@@ -1,0 +1,82 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.service.currency;
+
+import com.inet.calista.global.bo.currency.GlobalCurrencyBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.exception.GlServiceException;
+import com.inet.calista.global.model.currency.GlobalCurrency;
+import com.inet.calista.global.service.GlAbstractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SaveService.
+ *
+ * @author thoangtran
+ * @version SaveService 2018 08-09 15:10
+ */
+@Named("glcurrencysave")
+@XPortalDataService(roles = {WebConstant.ROLE_ADMIN}, description = "Contry service")
+@XPortalPageRequest(uri = "gl/currency/save", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CurrencySaveService extends GlAbstractService {
+
+    @Inject
+    private GlobalCurrencyBo currencyBo;
+
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        try {
+            validateStringField(action, params, CommonConstant.NAME);
+            validateStringField(action, params, CommonConstant.CODE);
+
+            GlobalCurrency currency = action.getModel(GlobalCurrency.class);
+            currency.setUuid(StringUtils.EMPTY_STRING);
+            if (currencyBo.existByCode(currency.getCode(), StringUtils.EMPTY_STRING)) {
+                putError(action, CommonConstant.CODE, CommonConstant.existed);
+            }
+            if (action.getViolation().size() > 0)
+                return FAILURE_RESULT;
+
+            currency.setUuid(currencyBo.add(currency));
+            return new ObjectWebDataservice<>(currency);
+        } catch (Exception ex) {
+            GlServiceException iex = new GlServiceException("Error occurs during saving city", ex);
+
+            // log error
+            log.error(iex.getMessage(), iex);
+            putServiceError(action);
+
+            throw iex;
+        }
+    }
+}

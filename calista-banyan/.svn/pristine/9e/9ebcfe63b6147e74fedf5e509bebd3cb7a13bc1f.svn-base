@@ -1,0 +1,56 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.model;
+
+import com.inet.calista.erp.common.data.ERPPolicy;
+import com.inet.calista.erp.masterdata.data.ERPPriceItem;
+import com.inet.calista.erp.masterdata.data.ERPPriceStatus;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * com.inet.calista.erp.masterdata.model.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPPriceList.java Jan 04, 2019 14:59 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPPriceList extends ERPPolicy {
+    private String code;
+    private String name;
+    private String brief;
+    private String currencyId;
+
+    //SALE, PURCHASE
+    private String type;
+
+    //TEMP, UNUSED, USED
+    private String status = ERPPriceStatus.USED.name();
+
+    //price default
+    private boolean def;
+
+    //details
+    private List<ERPPriceItem> items = new ArrayList<>();
+}

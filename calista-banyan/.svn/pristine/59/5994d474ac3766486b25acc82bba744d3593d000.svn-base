@@ -1,0 +1,443 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.book.bo;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.inet.calista.erp.book.model.ERPStockBook;
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.inventory.data.ERPRptInvBalance;
+import com.inet.calista.erp.inventory.data.ERPRptInvStockCard;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.mongodb.BasicDBList;
+import com.mongodb.BasicDBObject;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPStockBookBO.java Apr 17, 2018 15:14 phongtt $
+ * @since 1.0
+ */
+@Named("ERPStockBookBO")
+public class ERPStockBookBO extends ERPBaseBO<ERPStockBook> implements BeanInitiateInvoke {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPStockBookBO.class);
+
+    @Inject
+    protected ERPStockBookBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_stock_book");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPStockBook> getClassConvetor() {
+        return ERPStockBook.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("outletId");
+        ensureIndex("module");
+        ensureIndex("voucherCode");
+        ensureIndex("voucherDate");
+
+        ensureIndex("prodCode");
+        ensureIndex("prodName");
+        ensureIndex("group");
+        ensureIndex("unit");
+    }
+
+    /**
+     * @param organId
+     * @param outletIds
+     * @param storeIds
+     * @param prodIds
+     * @param from
+     * @param to
+     * @return
+     * @throws WebOSBOException
+     */
+    public void rptCalcCogs(String organId, String outletIds, String storeIds, String prodIds, long from, long to) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("inOut").equal(0);
+
+        if (from > 0) {
+            query.field("voucherDate").greaterThanOrEq(from);
+        }
+        if (to > 0) {
+            query.field("voucherDate").lessThanOrEq(to);
+        }
+        if (StringUtils.hasLength(outletIds)) {
+            query.field("outletId").in(CollectionUtils.asList(outletIds.split(";")));
+        }
+        if (StringUtils.hasLength(storeIds)) {
+            query.field("storageId").in(CollectionUtils.asList(storeIds.split(";")));
+        }
+        if (StringUtils.hasLength(prodIds)) {
+            query.field("prodCode").in(CollectionUtils.asList(prodIds.split(";")));
+        }
+
+
+
+    }
+
+    /**
+     * @param organId
+     * @param outletIds
+     * @param storeIds
+     * @param prodIds
+     * @param from
+     * @param to
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPRptInvStockCard> rptStockCard(String organId, String outletIds,
+                                                      String storeIds, String prodIds,
+                                                      long from, long to,
+                                                      int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (from > 0) {
+            query.field("voucherDate").greaterThanOrEq(from);
+        }
+        if (to > 0) {
+            query.field("voucherDate").lessThanOrEq(to);
+        }
+        if (StringUtils.hasLength(outletIds)) {
+            query.field("outletId").in(CollectionUtils.asList(outletIds.split(";")));
+        }
+        if (StringUtils.hasLength(storeIds)) {
+            query.field("storageId").in(CollectionUtils.asList(storeIds.split(";")));
+        }
+        if (StringUtils.hasLength(prodIds)) {
+            query.field("prodCode").in(CollectionUtils.asList(prodIds.split(";")));
+        }
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+        if (limit >= 0) {
+            query.limit(limit);
+        }
+
+        query.order("prodCode,voucherDate,voucherCode");
+
+        return super.query(query, ERPRptInvStockCard.class);
+    }
+
+    /**
+     * @param organId
+     * @param outletIds
+     * @param from
+     * @param to
+     * @param storeIds
+     * @param prodIds
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPRptInvBalance> rptBalance(String organId, String outletIds, String storeIds, String prodIds, long from, long to) throws WebOSBOException {
+        final List<ERPRptInvBalance> datas = new ArrayList<>();
+
+        final SearchDTO<ERPRptInvBalance> opData = getBalance(organId, outletIds, storeIds, prodIds, 0, from - 1, 0);
+
+        if (opData != null && opData.getTotal() > 0) {
+            logger.debug("opData has {} item(s)", opData.getTotal());
+            for (ERPRptInvBalance data : opData.getItems()) {
+                int index = datas.indexOf(data);
+                if (index >= 0) {
+                    logger.debug("found opData {} at {}", JSONObject.fromObject(data), index);
+                    datas.get(index).setOpQty(data.getOpQty());
+                    datas.get(index).setOpAmount(data.getOpAmount());
+                } else {
+                    datas.add(new ERPRptInvBalance().copyData(data));
+                }
+            }
+        }
+
+        final SearchDTO<ERPRptInvBalance> inData = getBalance(organId, outletIds, storeIds, prodIds, from, to, 1);
+        if (inData != null && inData.getTotal() > 0) {
+            logger.debug("inData has {} item(s)", inData.getTotal());
+            for (ERPRptInvBalance data : inData.getItems()) {
+                int index = datas.indexOf(data);
+                if (index >= 0) {
+                    logger.debug("found inData {} at {}", JSONObject.fromObject(data), index);
+                    datas.get(index).setInQty(data.getInQty());
+                    datas.get(index).setInAmount(data.getInAmount());
+                } else {
+                    datas.add(new ERPRptInvBalance().copyData(data));
+                }
+            }
+        }
+
+        final SearchDTO<ERPRptInvBalance> outData = getBalance(organId, outletIds, storeIds, prodIds, from, to, 2);
+        if (outData != null && outData.getTotal() > 0) {
+            logger.debug("outData has {} item(s)", outData.getTotal());
+            for (ERPRptInvBalance data : outData.getItems()) {
+                int index = datas.indexOf(data);
+                if (index >= 0) {
+                    logger.debug("found outData {} at {}", JSONObject.fromObject(data), index);
+                    datas.get(index).setOutQty(data.getOutQty());
+                    datas.get(index).setOutAmount(data.getOutAmount());
+                } else {
+                    datas.add(new ERPRptInvBalance().copyData(data));
+                }
+            }
+        }
+
+        /*
+        final SearchDTO<ERPRptInvBalance> clData = getBalance(organId, outletIds, storeIds, prodIds, to + 1, 0, 3);
+        if (clData != null && clData.getTotal() > 0) {
+            for (ERPRptInvBalance data : clData.getItems()) {
+                int index = datas.indexOf(data);
+                if (index >= 0) {
+                    datas.get(index).setClQty(data.getClQty());
+                    datas.get(index).setClAmount(data.getClAmount());
+                } else {
+                    datas.add(new ERPRptInvBalance().copyData(data));
+                }
+            }
+        }
+        logger.debug("found clData {}, rptData has {} item(s)", clData, datas.size());
+        */
+
+        for (ERPRptInvBalance data : datas) {
+            data.calc();
+        }
+
+        return new SearchDTO<>(datas, datas.size());
+    }
+
+    /**
+     * @param organId
+     * @param outletIds
+     * @param from
+     * @param to
+     * @param storeIds
+     * @param prodIds
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPRptInvBalance> getBalance(String organId, String outletIds, String storeIds, String prodIds, long from, long to, int type) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (from > 0) {
+            query.field("voucherDate").greaterThanOrEq(from);
+        }
+        if (to > 0) {
+            query.field("voucherDate").lessThanOrEq(to);
+        }
+        if (StringUtils.hasLength(outletIds)) {
+            query.field("outletId").in(CollectionUtils.asList(outletIds.split(";")));
+        }
+        if (StringUtils.hasLength(storeIds)) {
+            query.field("storageId").in(CollectionUtils.asList(storeIds.split(";")));
+        }
+        if (StringUtils.hasLength(prodIds)) {
+            query.field("prodCode").in(CollectionUtils.asList(prodIds.split(";")));
+        }
+
+        Map<String, Object> group;
+        String jsonString = "";
+
+        final BasicDBList objects = new BasicDBList();
+        objects.add(new BasicDBObject("$match", query.getQueryObject()));
+
+        jsonString += "{";
+        jsonString += "_id: {";
+        jsonString += "prodId: '$prodId'";
+        jsonString += ",prodCode: '$prodCode'";
+        jsonString += ",prodName: '$prodName'";
+        jsonString += ",prodInfo: '$prodInfo'";
+        jsonString += ",scanCode: '$scanCode'";
+        jsonString += ",sku: '$sku'";
+        jsonString += ",group: '$group'";
+        jsonString += ",unit: '$unit'";
+        jsonString += " },";
+
+        jsonString += "prodId: {$max: '$prodId'},";
+        jsonString += "prodCode: {$max: '$prodCode'},";
+        jsonString += "prodName: {$max: '$prodName'},";
+        jsonString += "prodInfo: {$max: '$prodInfo'},";
+        jsonString += "scanCode: {$max: '$scanCode'},";
+        jsonString += "sku: {$max: '$sku'},";
+        jsonString += "group: {$max: '$group'},";
+        jsonString += "unit: {$max: '$unit'},";
+
+        if (type == 0) {
+            jsonString += "opQty: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$qty', else: '-1*$qty'}}},";
+            jsonString += "opAmount: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$amount', else: '-1*$amount'}}}";
+        } else if (type == 1) {
+            jsonString += "inQty: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$qty', else: 0}}},";
+            jsonString += "inAmount: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$amount', else: 0}}}";
+        } else if (type == 2) {
+            jsonString += "outQty: {$sum: {$cond: {if: {$eq:['$inOut',1]}, then: '$qty', else: 0}}},";
+            jsonString += "outAmount: {$sum: {$cond: {if: {$eq:['$inOut',1]}, then: '$amount', else: 0}}}";
+        } else if (type == 3) {
+            jsonString += "clQty: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$qty', else: '-1*$qty'}}},";
+            jsonString += "clAmount: {$sum: {$cond: {if: {$eq:['$inOut',0]}, then: '$amount', else: '-1*$amount'}}}";
+        }
+
+        jsonString += "}";
+
+        group = new Gson().fromJson(jsonString,
+                new TypeToken<HashMap<String, Object>>() {
+                }.getType());
+
+        objects.add(new BasicDBObject("$group", group));
+        query.pipeline(objects);
+
+        return query(query, ERPRptInvBalance.class);
+    }
+
+    /**
+     * @param book
+     * @return
+     * @throws WebOSBOException
+     */
+    public String stockBookAdd(final ERPStockBook book) throws WebOSBOException {
+        return super.add(book);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @throws WebOSBOException
+     */
+    public void stockBookRemove(String organId, String outletId, String module, String voucherCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = queryBuilder(organId, outletId, module, voucherCode);
+
+        super.remove(query);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBuilder(String organId, String outletId,
+                                          String module, String voucherCode) throws WebOSBOException {
+        String empty = StringUtils.EMPTY_STRING;
+
+        return queryBuilder(organId, outletId,
+                module, voucherCode,
+                empty, empty, empty);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @param prodCode
+     * @param scanCode
+     * @param sku
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBuilder(String organId, String outletId,
+                                          String module, String voucherCode,
+                                          String prodCode, String scanCode, String sku) throws WebOSBOException {
+        long timeZero = 0;
+
+        return queryBuilder(timeZero, timeZero,
+                organId, outletId,
+                module, voucherCode,
+                prodCode, scanCode, sku);
+    }
+
+    /**
+     * @param from
+     * @param to
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @param prodCode
+     * @param scanCode
+     * @param sku
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBuilder(long from, long to,
+                                          String organId, String outletId,
+                                          String module, String voucherCode,
+                                          String prodCode, String scanCode, String sku) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("module").equal(module);
+
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (StringUtils.hasLength(voucherCode)) {
+            query.field("voucherCode").equal(voucherCode);
+        }
+
+        if (from > 0) {
+            query.field("voucherDate").greaterThanOrEq(from);
+        }
+
+        if (to > 0) {
+            query.field("voucherDate").lessThanOrEq(to);
+        }
+
+        if (StringUtils.hasLength(prodCode)) {
+            query.field("prodCode").equal(prodCode);
+        }
+
+        if (StringUtils.hasLength(scanCode)) {
+            query.field("scanCode").equal(scanCode);
+        }
+
+        if (StringUtils.hasLength(sku)) {
+            query.field("sku").equal(sku);
+        }
+
+        return query;
+    }
+}

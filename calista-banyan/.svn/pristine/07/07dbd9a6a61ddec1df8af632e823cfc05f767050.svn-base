@@ -1,0 +1,102 @@
+package com.inet.calista.global.subfirmservice;
+
+import com.google.common.base.Strings;
+import com.google.gson.JsonObject;
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.bo.GlbReportTemplateBo;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.web.exception.WebOsException;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import org.apache.shiro.util.StringUtils;
+import org.bson.Document;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * DeleteService.
+ *
+ * @author thoangtran
+ * @version DeleteService 2019 07-02 16:10
+ */
+@Named("glexceltemplate_moduleservice")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/modules",
+    inherit = true, transaction = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ExcelTplModuleService extends GlbAbstraction {
+  private static final Logger logger = LoggerFactory.getLogger(ExcelTplModuleService.class);
+
+  @Inject
+  private GlbReportTemplateBo templateBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile firmProfile, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    String application = XParamUtils.getString("application", params);
+    if(Strings.isNullOrEmpty(application)) {
+      putError(action, "application", ErrorCode.MUST_NOT_EMPTY);
+      return FAILURE_RESULT;
+    }
+    try{
+      // check application had config {application}-report-module.json it will load
+      String jsonStr = ResourceUtil.getResourceAsString(String.format("%s-report-module.json", application));
+      logger.debug("Module config : {}", jsonStr);
+      if(StringUtils.hasLength(jsonStr)){
+        try{
+          return new ObjectWebDataservice<>(new JSONDB(Document.parse(jsonStr)));
+        }catch (Exception ex){
+          logger.warn("Can't get module from config file: {}", ex);
+        }
+      }
+      // try to get module and type from db
+      try{
+        List<String> modules = templateBo.listModules(application, getOrganId(siteDataModel, firmProfile));
+        JSONDB result = new JSONDB();
+        for (String module: modules) {
+          JSONDB data = new JSONDB();
+          List<String> types = templateBo.listTypes(application, module, getOrganId(siteDataModel, firmProfile));
+          JSONArray array = new JSONArray();
+          for (String type: types){
+            JSONObject typeObj = new JSONObject();
+            typeObj.append("type", type);
+            typeObj.append("name", type);
+            array.put(typeObj);
+          }
+          data.put("name", module);
+          data.put("types", array);
+          result.put(module, data);
+        }
+        return new ObjectWebDataservice<>(result);
+      }catch (Exception ex) {
+        logger.error("Can't get module: {}", ex);
+      }
+      return FAILURE_RESULT;
+    }catch (Throwable ex) {
+      ex.printStackTrace();
+      return FAILURE_RESULT;
+    }
+
+
+  }
+}

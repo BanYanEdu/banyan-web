@@ -1,0 +1,70 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.model;
+
+import com.inet.calista.erp.common.data.ERPBinaryModel;
+import com.inet.calista.erp.masterdata.model.ERPItem;
+import com.inet.xportal.cms.web.data.CMSTabBase;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+/**
+ * com.inet.calista.ecommerce.model.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMProduct.java Jan 03, 2019 10:25 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ECMItem extends ERPItem {
+
+    private boolean saleOnWeb = false;
+    private CMSTabBase cmsTab = new CMSTabBase();
+
+    @Override
+    public String getAvatar() {
+        if (!StringUtils.hasLength(super.getAvatar())) {
+            if (!CollectionUtils.isEmpty(getImages())) {
+                return getImages().get(0).getCode();
+            }
+        }
+        return super.getAvatar();
+    }
+
+    /**
+     * @return
+     */
+    public String getAvatarGridfsUUID() {
+        if (!StringUtils.hasLength(super.getAvatar())) {
+            if (!CollectionUtils.isEmpty(getImages())) {
+                return getImages().get(0).getGridfsUUID();
+            }
+        } else {
+            for (ERPBinaryModel cmsModel : getImages()) {
+                if (super.getAvatar().equals(cmsModel.getCode())) {
+                    return cmsModel.getGridfsUUID();
+                }
+            }
+        }
+        return StringUtils.EMPTY_STRING;
+    }
+}

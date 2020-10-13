@@ -1,0 +1,31 @@
+package com.inet.calista.crm.service.activity.event;
+
+import com.inet.calista.crm.dto.search.EventSearchCriteria;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.service.SearchService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import java.util.Map;
+
+/**
+ * FindByService.
+ *
+ * @author thoangtran
+ * @version FindByService 2019 02-15 15:30
+ */
+public class FindByService extends SearchService<EventSearchCriteria> {
+
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile subFirmProfile, AbstractBaseAction abstractBaseAction, Map<String, Object> map) throws WebOSBOException {
+    return null;
+  }
+
+  @Override
+  protected Class<EventSearchCriteria> getModelClass() {
+    return EventSearchCriteria.class;
+  }
+}

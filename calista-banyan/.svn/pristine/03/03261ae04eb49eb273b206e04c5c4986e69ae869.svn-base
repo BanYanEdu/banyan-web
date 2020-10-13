@@ -1,0 +1,31 @@
+package com.inet.calista.crm.service.template;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.bo.setting.TemplateBo;
+import com.inet.calista.crm.service.LoadByIdService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.context.WebContext;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+
+/**
+ * LoadTemplate.
+ *
+ * @author thoangtran
+ * @version LoadTemplate 2019 01-29 15:54
+ */
+@Named("crm_marketing_template_loadbyidService")
+@XPortalDataService(roles = { Roles.MARKETING}, description = "Marketing role")
+@XPortalPageRequest(uri = "crm/marketing/template/lbid", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class LoadTemplate extends LoadByIdService {
+
+  @Override
+  protected CRMNoSqlBo getNoSqlBo() {
+    return WebContext.INSTANCE.cache().getBean(TemplateBo.class);
+  }
+}

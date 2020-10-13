@@ -1,0 +1,281 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.pricelist;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMItemBO;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.masterdata.data.ERPPriceItem;
+import com.inet.calista.erp.masterdata.model.ERPItem;
+import com.inet.calista.erp.masterdata.model.ERPPriceList;
+import com.inet.calista.erp.masterdata.service.ERPPriceListAbstraction;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.JSONUtils;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.ecommerce.subfrmservice.pricelist.
+ *
+ * @author Phong Tran
+ * @version $Id: PriceCommerceAbstraction.java Sep 13, 2018 15:18 phongtt $
+ * @since 1.0
+ */
+public abstract class ECMPriceListAbstraction extends ERPPriceListAbstraction {
+    @Inject
+    protected ECMItemBO productBO;
+
+    @Override
+    protected final String priceListType() {
+        return ECMConstant.PRICELIST_SALE;
+    }
+
+    @Override
+    protected final String counterId() {
+        return ECMConstant.COUNTER_PRICELIST;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final List<ERPPriceItem> priceItemAdjusted(final SiteDataModel siteData,
+                                                         final SubFirmProfile subFirm,
+                                                         final AbstractBaseAction action,
+                                                         final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String infoId = XParamUtils.getString("policyId", params,
+                XParamUtils.getString("priceCode", params, StringUtils.EMPTY_STRING));
+
+        final ERPPriceList priceList = priceListBO.loadByInfo(organId, infoId);
+        if (priceList == null) {
+            logger.error("PriceList {} is not found", infoId);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        //adjusted: increase, decrease, equal
+        String adjusted = XParamUtils.getString("adjusted", params, StringUtils.EMPTY_STRING);
+        String prodCodes = XParamUtils.getString("prodCodes", params, StringUtils.EMPTY_STRING);
+        float amount = XParamUtils.getFloat("amount", params, 0F);
+
+        final List<String> products = CollectionUtils.asList(prodCodes.split(ERPConstant.SPLIT_REGEX_CHR));
+
+        int type = XParamUtils.getInteger("type", params, -1);
+        //0: amount, 1: percent
+        if (type == 0) {
+            priceListBO.adjustedAmount(organId, priceList.getCode(), products, ECMConstant.CURRENCY, adjusted, amount);
+        } else if (type == 1) {
+            priceListBO.adjustedPercent(organId, priceList.getCode(), products, ECMConstant.CURRENCY, adjusted, amount);
+        }
+
+        return new ArrayList<>();
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final List<ERPPriceItem> priceItemRemove(final SiteDataModel siteData,
+                                                       final SubFirmProfile subFirm,
+                                                       final AbstractBaseAction action,
+                                                       final Map<String, Object> params) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String infoId = XParamUtils.getString("policyId", params,
+                XParamUtils.getString("priceCode", params, StringUtils.EMPTY_STRING));
+
+        final ERPPriceList priceList = priceListBO.loadByInfo(organId, infoId);
+        if (priceList == null) {
+            logger.error("PriceList {} is not found", infoId);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        List<ERPPriceItem> priceItems = new ArrayList<>();
+        String itemData = XParamUtils.getString("itemData", params, StringUtils.EMPTY_STRING);
+        if (StringUtils.hasLength(itemData)) {
+            priceItems = priceItemRemove(priceList, priceItemBuilder(organId, itemData, 1), action, params);
+        } else {
+            final ERPPriceItem priceItem = priceItemRemove(priceList, priceItemBuilder(action), action, params);
+            if (priceItem != null) {
+                priceItems.add(priceItem);
+            }
+        }
+
+        return priceItems;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final List<ERPPriceItem> priceItemAdd(final SiteDataModel siteData,
+                                                    final SubFirmProfile subFirm,
+                                                    final AbstractBaseAction action,
+                                                    final Map<String, Object> params) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String infoId = XParamUtils.getString("policyId", params,
+                XParamUtils.getString("priceCode", params, StringUtils.EMPTY_STRING));
+
+        final ERPPriceList priceList = priceListBO.loadByInfo(organId, infoId);
+        if (priceList == null) {
+            logger.error("PriceList {} is not found", infoId);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        List<ERPPriceItem> priceItems = new ArrayList<>();
+
+        boolean prodNotExists = XParamUtils.getBoolean("prodNotExists", params, false);
+        if (prodNotExists) {
+            final List<String> products = priceListBO.productsExists(organId, priceList.getCode());
+
+            final SearchDTO<ECMItem> productDTO = productBO.excludeProducts(organId, products);
+
+            if (productDTO != null && productDTO.getTotal() > 0) {
+                final List<ERPPriceItem> datas = new ArrayList<>();
+                for (ERPItem product : productDTO.getItems()) {
+                    final ERPPriceItem data = new ERPPriceItem();
+                    data.setProdId(product.getUuid());
+                    data.setProdCode(product.getCode());
+                    data.setProdName(product.getName());
+                    data.setSku(product.getSku());
+                    data.setUOM(product.getUnit());
+                    data.setPrice(product.getPrice());
+                    data.setCurrencyId(ECMConstant.CURRENCY);
+                    datas.add(data);
+                }
+                priceItems = priceItemAdd(priceList, datas, action, params);
+            }
+        } else {
+            String itemData = XParamUtils.getString("itemData", params, StringUtils.EMPTY_STRING);
+
+            if (StringUtils.hasLength(itemData)) {
+                priceItems = priceItemAdd(priceList, priceItemBuilder(organId, itemData, 0), action, params);
+            } else {
+                final ERPPriceItem priceItem = priceItemAdd(priceList, priceItemBuilder(action), action, params);
+                if (priceItem != null) {
+                    priceItems.add(priceItem);
+                }
+            }
+        }
+
+        return priceItems;
+    }
+
+    /**
+     * @param action
+     * @return
+     */
+    private ERPPriceItem priceItemBuilder(final AbstractBaseAction action) {
+        ERPPriceItem data = action.getModel(ERPPriceItem.class);
+        if (!StringUtils.hasLength(data.getProdCode())) {
+            logger.error("prodCode is missed");
+            action.fieldError("PRICEITEM", "PROD_CODE_MISSED");
+        }
+
+        if (!StringUtils.hasLength(data.getProdName())) {
+            logger.error("prodName is missed");
+            action.fieldError("PRICEITEM", "PROD_NAME_MISSED");
+        }
+
+        if (!StringUtils.hasLength(data.getCurrencyId())) {
+            logger.error("CurrencyId is missed");
+            action.fieldError("PRICEITEM", "CURRENCY_MISSED");
+        }
+
+        return data;
+    }
+
+    /**
+     * @param jsonData
+     * @param buildType
+     * @return
+     */
+    private List<ERPPriceItem> priceItemBuilder(String organId, String jsonData, int buildType) {
+        final List<ERPPriceItem> datas = new ArrayList<>();
+
+        final JSONObject json = JSONObject.fromObject("{items:" + jsonData + "}");
+        final Object items = json.get("items");
+
+        if (items instanceof JSONArray) {
+            int size = ((JSONArray) items).size();
+            for (int index = 0; index < size; index++) {
+                try {
+                    final ERPPriceItem priceItem = JSONUtils.magicObject(
+                            ((JSONArray) items).getJSONObject(index),
+                            ERPPriceItem.class);
+
+
+                    if (StringUtils.hasLength(priceItem.getProdCode())) {
+                        //add item into pricelist
+                        if (buildType == 0) {
+                            final ERPItem product = productBO.loadByCode(organId, priceItem.getProdCode());
+                            priceItem.setProdId(product.getUuid());
+                            priceItem.setProdCode(product.getCode());
+                            priceItem.setProdName(product.getName());
+                            priceItem.setSku(product.getSku());
+                            priceItem.setUOM(product.getUnit());
+                            if (priceItem.getPrice() == 0) {
+                                priceItem.setPrice(product.getPrice());
+                            }
+                            if (!StringUtils.hasLength(priceItem.getCurrencyId())) {
+                                priceItem.setCurrencyId(ECMConstant.CURRENCY);
+                            }
+                            datas.add(priceItem);
+
+                        } else if (buildType == 1) { //remove item of pricelist
+                            if (StringUtils.hasLength(priceItem.getCurrencyId())) {
+                                datas.add(priceItem);
+                            }
+                        }
+                    }
+                } catch (Throwable ex) {
+                    logger.error("magic object price item index {} fail!", index, ex);
+                }
+            }
+        }
+
+        return datas;
+    }
+}

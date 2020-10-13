@@ -1,0 +1,128 @@
+package com.inet.jobportal.bo.employer;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.jobportal.model.common.Address;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Job Portal JobPost BO.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPostBO.java Dec 23, 2018 3:24:24 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("JobPostBO")
+public class JobPostBO extends MagicContentBO<JobPost> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(JobPost.class);
+
+    @Inject
+    public JobPostBO(@ContentContext(context = AppConstants.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "jobportal_employer_jobpost");
+    }
+
+    @Override
+    public String add(JobPost item) throws WebOSBOException {
+        return super.add(item);
+    }
+
+    @Override
+    public void update(String uuid, JobPost item) throws WebOSBOException {
+        super.update(uuid, item);
+    }
+
+    public SearchDTO<JobPost> search(Query<JSONDB> query) throws WebOSBOException {
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    public void countVisitor(String uuid, String username) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        JobPost jobPost = this.search(query).getItems().get(0);
+
+        Integer currentCount = jobPost.getVisitCount();
+        if (currentCount != null) {
+            currentCount++;
+        } else {
+            currentCount = 1;
+        }
+
+        jobPost.setVisitCount(currentCount);
+        super.update(uuid, jobPost);
+    }
+
+    public void addLocations(String uuid, String tempLocationCodes, String tempLocationNames, String countryCode){
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        JobPost jobPost = this.search(query).getItems().get(0);
+
+        // Split
+        String[] arrayCodes = tempLocationCodes.split("\\|");
+        String[] arrayNames = tempLocationNames.split("\\|");
+        List<Address> locations = new ArrayList<>();
+
+        for (int i=0;i<arrayCodes.length;i++){
+            Address address = new Address();
+            address.setCountryCode(countryCode);
+            address.setCityCode(arrayCodes[i]);
+            address.setCityName(arrayNames[i]);
+            locations.add(address);
+        }
+        jobPost.setLocations(locations);
+        super.update(jobPost.getUuid(), jobPost);
+    }
+
+    public void countJobapp(String uuid, String username) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        JobPost jobPost = this.search(query).getItems().get(0);
+
+        Integer currentCount = jobPost.getJobappCount();
+        if (currentCount != null) {
+            currentCount++;
+        } else {
+            currentCount = 1;
+        }
+
+        jobPost.setJobappCount(currentCount);
+        super.update(uuid, jobPost);
+    }
+
+    @Override
+    public void init() {
+//        ensureIndex("uuid");
+        ensureIndex("organId");
+        ensureIndex("employerName");
+        ensureIndex("jobCategories");
+        ensureIndex("tags");
+        ensureIndex("jobTypeCode");
+        ensureIndex("jobEduLevelCode");
+        ensureIndex("locations.cityCode");
+        ensureIndex("locations.countryCode");
+        ensureIndex("salaryTermCode");
+        ensureIndex("salaryAmountTo");
+        ensureIndex("expiryDate");
+        ensureIndex("inactive");
+        ensureIndex("jobLevelCode");
+        ensureIndex("searchable");
+        ensureIndex("jobCode");
+    }
+
+    @Override
+    protected Class<JobPost> getClassConvetor() {
+        return JobPost.class;
+    }
+}

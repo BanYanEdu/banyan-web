@@ -1,0 +1,67 @@
+package com.inet.calista.crm.bo.activity;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.dto.SearchCriteria;
+import com.inet.calista.crm.dto.search.EventSearchCriteria;
+import com.inet.calista.crm.model.activity.Event;
+import com.inet.calista.crm.model.common.Communication;
+import com.inet.calista.crm.model.common.Responsible;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * EventBo.
+ *
+ * @author thoangtran
+ * @version EventBo 2019 01-22 15:36
+ */
+@Named("crm.eventBo")
+@Slf4j
+public class EventBo extends CRMNoSqlBo<Event> implements BeanInitiateInvoke {
+
+  @Inject
+  public EventBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_event");
+  }
+
+  public SearchDTO<Event> find(SearchCriteria<EventSearchCriteria> criteria, String orgCode) {
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    return null;
+  }
+  @Override
+  protected Class<Event> getClassConvetor() {
+    return Event.class;
+  }
+
+  @Override
+  protected Map<String, Class<?>> childrenConvertMap() {
+    final Map<String, Class<?>> children = new HashMap<>();
+    children.put("communications", Communication.class);
+    children.put("responsible", Responsible.class);
+    return children;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+
+  private void createIndex(){
+    ensureIndex("parentId");
+    ensureIndex("name");
+    ensureIndex("orgCode");
+    ensureIndex("contactId");
+    ensureIndex("entityId");
+  }
+}

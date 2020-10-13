@@ -1,0 +1,107 @@
+package com.inet.calista.crm.model.admin.configuration;
+
+
+import com.inet.calista.crm.model.NoSqlModel;
+
+/**
+ * SystemConfiguration.
+ *
+ * @author thoangtd
+ * @version $$Id: SystemConfiguration 6/2/16 10:01 AM thoangtd $$
+ * @since 1.0
+ */
+public class SystemConfiguration extends NoSqlModel<SystemConfiguration> {
+  /**
+   * System configuration
+   */
+  public static final String ITEM_PER_PAGE = "item_per_page";
+  public static final String ITEM_PER_HOME_PAGE = "item_per_home_page";
+  public static final String MAX_SIZE_UPLOAD = "max_size_upload";
+  public static final String FILE_UPLOAD_FORMAT = "file_upload_format";
+  public static final String MESSAGE_TIME_OUT = "message_time_out";
+
+
+  /**
+   * Configuration for task
+   */
+  public static final String SYSTEM_STARTUP_DATE = "system_startup_date";
+  public static final String HELPER_URL = "helper_url";
+
+
+  // class properties ==================================================
+  private String key;
+  private String value;
+  private String description;
+  private boolean visible = true;
+
+  //~ class members ================================================
+  /**
+   * Create {@link SystemConfiguration} instance
+   */
+  public SystemConfiguration() {}
+
+  /**
+   * Create {@link SystemConfiguration} instance from given information
+   *
+   * @param key the given key
+   * @param value the given value
+   * @param description the given description
+   */
+  public SystemConfiguration(String key, String value, String description) {
+    this.key = key;
+    this.value = value;
+    this.description = description;
+  }
+
+  /**
+   * Create {@link SystemConfiguration} instancebf
+   *
+   * @param key the given key
+   * @param value the given value
+   * @param description the given description
+   * @param visible visible or not
+   */
+  public SystemConfiguration(String key, String value, String description, boolean visible) {
+    this.key = key;
+    this.value = value;
+    this.description = description;
+    this.visible = visible;
+  }
+
+  public String getKey() {
+    return key;
+  }
+
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  public String getValue() {
+    return value;
+  }
+
+  public void setValue(String value) {
+    this.value = value;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public boolean isVisible() {
+    return visible;
+  }
+
+  public void setVisible(boolean visible) {
+    this.visible = visible;
+  }
+
+  @Override
+  protected boolean equals(SystemConfiguration other) {
+    return false;
+  }
+}

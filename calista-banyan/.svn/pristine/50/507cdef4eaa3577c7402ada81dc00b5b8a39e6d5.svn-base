@@ -1,0 +1,289 @@
+package com.inet.calista.crm.bo.essentials;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.bo.setting.DictionaryBo;
+import com.inet.calista.crm.dto.FullContact;
+import com.inet.calista.crm.dto.SearchCriteria;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.model.common.Address;
+import com.inet.calista.crm.model.essentials.Contact;
+import com.inet.calista.crm.model.setting.configuration.Dictionary;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.data.SearchResult;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.util.JSONUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * ContactBo.
+ *
+ * @author thoangtran
+ * @version ContactBo 2018 04-14 09:37
+ */
+@Named("crm.contactBo")
+@Slf4j
+public class ContactBo extends CRMNoSqlBo<Contact> implements BeanInitiateInvoke {
+  //private ContactInfoBo contactInfoBo;
+
+  @Inject
+  public ContactBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, Contact.COLLECTION);
+  }
+
+  /**
+   *
+   * @param contact
+   * @return
+   */
+  public Contact save(Contact contact, String ownerId){
+    contact.setOrgCode(ownerId);
+    contact.setUuid(this.add(contact));
+    return contact;
+  }
+
+  /**
+   *
+   * @param uuid
+   * @param contact
+   * @param ownerId
+   * @return
+   */
+  public Contact update(String uuid, Contact contact, String ownerId) {
+    contact.setOrgCode(ownerId);
+    this.update(uuid, contact);
+    return this.load(uuid);
+  }
+
+  /**
+   *
+   * @param contact
+   * @return
+   */
+  public void updateInfo(Contact contact, String ownerId){
+    // load exist
+    Contact exist = this.loadById(contact.getUuid(), ownerId);
+    if(null != exist){
+      contact.setCreatedDate(exist.getCreatedDate());
+      contact.setCreatedBy(contact.getCreatedBy());
+      contact.setUserCode(contact.getUserCode());
+      contact.setOrgCode(exist.getOrgCode());
+      this.update(contact.getUuid(), contact);
+    }
+  }
+
+  /**
+   * Load full contact
+   * @param uuid
+   * @param ownerId
+   * @return
+   */
+  public FullContact loadFullContact(String uuid, String ownerId) {
+    final QueryImpl query = getQueryOwner(ownerId);
+    query.field("_id").equal(new ObjectId(uuid));
+    query.limit(1);
+    SearchResult<JSONDB> result = this.rawQuery(query);
+    if(result.getTotal() > 0){
+      JSONDB data = result.getItems().get(0);
+      FullContact fcontact = JSONUtil.transfer(data, FullContact.class, this.childrenConvertMap());
+      return buildFullContact(fcontact);
+    }
+    return null;
+  }
+
+  /**
+   * Build full information for contact
+   * @param fcontact
+   * @return
+   */
+  private FullContact buildFullContact( FullContact fcontact){
+    if(null == fcontact)
+      return null;
+    try{
+
+      if(StringUtils.hasLength(fcontact.getSalutationType())) {
+        fcontact.setSalutationTypeText(WebContext.INSTANCE.cache().getBean(DictionaryBo.class).getItemText(Dictionary.SALUTATION, fcontact.getSalutationType(), fcontact.getOrgCode()));
+      }
+      if(StringUtils.hasLength(fcontact.getSex())){
+        fcontact.setSexText(WebContext.INSTANCE.cache().getBean(DictionaryBo.class).getItemText(Dictionary.SEX, fcontact.getSex(), fcontact.getOrgCode()));
+      }
+      if(StringUtils.hasLength(fcontact.getType())) {
+        fcontact.setTypeText(WebContext.INSTANCE.cache().getBean(DictionaryBo.class).getItemText(Dictionary.CONTACT_TYPE, fcontact.getType(), fcontact.getOrgCode()));
+      }
+      if(StringUtils.hasLength(fcontact.getLeadSource())){
+        fcontact.setLeadSource(WebContext.INSTANCE.cache().getBean(DictionaryBo.class).getItemText(Dictionary.CONTACT_LEAD_SOURCE, fcontact.getLeadSource(), fcontact.getOrgCode()));
+      }
+      if(StringUtils.hasLength(fcontact.getStatus())){
+        fcontact.setLeadSource(WebContext.INSTANCE.cache().getBean(DictionaryBo.class).getItemText(Dictionary.CONTACT_STATUS, fcontact.getStatus(), fcontact.getOrgCode()));
+      }
+      return fcontact;
+    }catch (Throwable ex){
+      log.error("Could not convert contact to full: {}", ex);
+      return null;
+    }
+  }
+
+  /**
+   * Quick search criteria
+   * @param criteria
+   * @return
+   */
+  /*public SearchResult<JSONDB> search(SearchCriteria<QSearchCriteria> criteria) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    final QueryImpl<JSONDB> queryTn = getQueryOwner(criteria.getTenantId());
+    queryTn.field("deleted").notEqual(true);
+
+    query.pipeline("$match", queryTn.getQueryObject());
+    // lookup to global
+    final QueryImpl<JSONDB> queryInGlobal = new QueryImpl<>();
+    QSearchCriteria qSearchCriteria = criteria.getCriteria();
+    if(null != qSearchCriteria && StringUtils.hasLength(qSearchCriteria.getKeywords())) {
+      queryInGlobal.or(
+          queryInGlobal.criteria("lastName").startsWith(qSearchCriteria.getKeywords()),
+          queryInGlobal.criteria("firstName").startsWith(qSearchCriteria.getKeywords()),
+          queryInGlobal.criteria("mobilePhone").startsWith(qSearchCriteria.getKeywords()),
+          queryInGlobal.criteria("description").startsWith(qSearchCriteria.getKeywords())
+      );
+    }
+    //lookup("gl_contact","canonId","uuid", query, queryInGlobal, new Document(), true);
+    return this.search(query, criteria.getPageSize(), criteria.getPageNumber());
+  }*/
+  public SearchDTO<FullContact> search(SearchCriteria<QSearchCriteria> criteria, String ownerId) {
+    log.debug("Search by criteria: {}", criteria);
+    if(Strings.isNullOrEmpty(ownerId)){
+      throw new NullPointerException("orgCode");
+    }
+    final QueryImpl<JSONDB> query = getQueryOwner(ownerId);
+    query.field("deleted").notEqual(true);
+
+    //query.pipeline("$match", queryTn.getQueryObject());
+    // lookup to global
+    //final QueryImpl<JSONDB> queryInGlobal = new QueryImpl<>();
+    QSearchCriteria qSearchCriteria = criteria.getCriteria();
+    if(null != qSearchCriteria && StringUtils.hasLength(qSearchCriteria.getKeyword())) {
+      query.or(
+          query.criteria("fullName").like(qSearchCriteria.getKeyword()),
+          query.criteria("mobilePhone").startsWith(qSearchCriteria.getKeyword())
+      );
+    }
+    query.order("firstName");
+    //lookup("gl_contact","canonId","uuid", query, queryInGlobal, new Document(), true);
+    query.offset( criteria.getPageNumber() * criteria.getPageSize()).limit(criteria.getPageSize());
+    log.debug("Query: {}", query.getQueryObject().toJson());
+    SearchDTO<FullContact> items = this.query(query, FullContact.class, this.childrenConvertMap());
+    if(items.getTotal() > 0) {
+      List<Dictionary> dictionaries = WebContext.INSTANCE.cache().getBean(DictionaryBo.class).findByKey(Dictionary.CONTACT_TYPE, ownerId);
+      Map<String, String> mapDicts = dictionaries.stream().collect(Collectors.toMap(Dictionary::getValue, Dictionary::getDescription));
+      Iterator<FullContact> iterator = items.getItems().iterator();
+      while (iterator.hasNext()) {
+          FullContact fcontact = iterator.next();
+          if(StringUtils.hasLength(fcontact.getType())){
+            fcontact.setTypeText(mapDicts.getOrDefault(fcontact.getTypeText(), StringUtils.EMPTY_STRING));
+          }
+      }
+    }
+    return items;
+  }
+
+
+/**
+  @Deprecated
+  public ContactDto save(ContactDto contactDto){
+    final Contact contact = contactDto.getContact();
+    final ContactInfo info = contactDto.getInfo();
+    if(Strings.isNullOrEmpty(contact.getCanonId())){
+      getContactInfoBo().saveOrUpdate(info);
+    }
+    contact.setCanonId(info.getUuid());
+    contact.setUuid(this.add(contact));
+    return this.loadDtoById(contact.getUuid(), contact.getOrgCode());
+  }
+  **/
+  /**
+   * Save or update contact
+   * @param contactDto
+   * @return
+   */
+  /**
+  @Deprecated
+  public ContactDto update(ContactDto contactDto){
+    final Contact contact = contactDto.getContact();
+    final ContactInfo info = contactDto.getInfo();
+    final Contact exist = this.load(contact.getUuid());
+    if(null != exist){
+      contact.setCanonId(exist.getCanonId());
+      info.setUuid(exist.getCanonId());
+      getContactInfoBo().saveOrUpdate(info);
+      this.update(contact.getUuid(), contact);
+    }
+
+    return this.loadDtoById(contact.getUuid(), contact.getOrgCode());
+  }
+
+
+
+
+  @Deprecated
+  /*public ContactDto loadDtoById(String uuid, String orgCode){
+    final ContactDto contactDto = new ContactDto();
+    final Contact contact = super.loadById(uuid, orgCode);
+
+    if(contact == null)
+      return  null;
+    contactDto.setContact(contact);
+    if(StringUtils.hasLength(contact.getCanonId())){
+      contactDto.setInfo(getContactInfoBo().loadById(contact.getCanonId()));
+    }
+    return contactDto;
+  }
+*/
+
+  @Override
+  protected Class<Contact> getClassConvetor() {
+    return Contact.class;
+  }
+
+  @Override
+  protected Map<String, Class<?>> childrenConvertMap() {
+    final Map<String, Class<?>> children = new HashMap<>();
+    children.put("address", Address.class);
+    children.put("assignTo", LinkTo.class);
+    return super.childrenConvertMap();
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+  private void createIndex(){
+    ensureIndex("uuid");
+    ensureIndex("lastName,firstName,mobilePhone,description,deleted");
+  }
+
+/*  *//**
+   * Get instance of contactInfoBo
+   * @return
+   *//*
+  private ContactInfoBo getContactInfoBo(){
+    if(null == this.contactInfoBo){
+      contactInfoBo = WebContext.INSTANCE.cache().getBean(ContactInfoBo.class);
+    }
+    return contactInfoBo;
+  }*/
+}

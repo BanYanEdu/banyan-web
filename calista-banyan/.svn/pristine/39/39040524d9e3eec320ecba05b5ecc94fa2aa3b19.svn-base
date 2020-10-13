@@ -1,0 +1,108 @@
+package com.inet.calista.global.subfirmservice;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * 
+ * ExcelTplModuleService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ExcelTplModuleService.java Feb 11, 2020 1:50:31 PM $
+ *
+ * @since 1.0
+ */
+@Named("glexceltmplmodules")
+@XPortalDataService(roles = { NoSQLConstant.ROLE_SUBADMIN }, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/modules", 
+	inherit = true, 
+	result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ExcelTplModuleService extends ExcelTplAbstraction {
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	@Override
+	protected GlbReportTemplate loadTemplate(String organId, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String application = XParamUtils.getString("application", params);
+		if (Strings.isNullOrEmpty(application)) 
+		{
+			putError(action, "application", ErrorCode.MUST_NOT_EMPTY);
+		}
+		
+		GlbReportTemplate template = new GlbReportTemplate();
+		template.setApplication(application);
+		template.setOrganId(organId);
+		
+		return template;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.subfirmservice.ExcelTplAbstraction#service(java.lang.String, com.inet.calista.global.model.GlbReportTemplate, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(String organId,
+			final GlbReportTemplate template, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		List<String> modules = templateBo.listModules(organId, template.getApplication());
+		JSONObject result = new JSONObject();
+		if (!CollectionUtils.isEmpty(modules))
+		{
+			for (String module : modules) 
+			{
+				JSONObject data = new JSONObject();
+				List<String> types = templateBo.listTypes(organId, template.getApplication(), module);
+				
+				JSONArray array = new JSONArray();
+				if (!CollectionUtils.isEmpty(types))
+				{
+					for (String type : types) 
+					{
+						JSONObject typeObj = new JSONObject();
+						typeObj.put("type", type);
+						typeObj.put("name", type);
+						array.add(typeObj);
+					}
+				}
+				
+				data.put("name", module);
+				data.put("types", array);
+				
+				result.put(module, data);
+			}
+		}
+		
+		return new ObjectWebDataservice<>(result);
+	}
+}

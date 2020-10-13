@@ -1,0 +1,33 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * MatchedJobPost
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: MatchedJobPost.java March 26, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class MatchedJobPost {
+    private String uuid;
+    private String candidateId;
+    private String candidateName;
+    private String candidateProfileTitle;
+    private String employerId;
+    private String employerName;
+    private String employerLogoUrl;
+    private String jobpostId;
+    private String jobTitle;
+    private Long applyDueDate;
+    private Long expiryDate;
+    private String salaryTermCode;
+    private Double salaryAmountFrom;
+    private Double salaryAmountTo;
+    private Long matchedDate;
+}

@@ -1,0 +1,268 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.task;
+
+/**
+ * AdvanceLookUpDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: AdvanceLookUpDto.java Mar 26, 2018 4:10:55 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class AdvanceLookUpDto {
+  private String name;
+  private String desc;
+  private String priorities;
+  private long startDateFrom;
+  private long startDateTo;
+  private long deadlineFrom;
+  private long deadlineTo;
+  private String statuses;
+  private long completeDateFrom;
+  private long completeDateTo;
+  private String assigneeUname;
+  private String coordinatorUname;
+  private String watcherUname;
+  private String coordWatchUname;
+  private String creatorUname;
+  private String projectUuid;
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the desc
+   */
+  public String getDesc() {
+    return desc;
+  }
+
+  /**
+   * @param desc the desc to set
+   */
+  public void setDesc(String desc) {
+    this.desc = desc;
+  }
+
+  /**
+   * @return the priorities
+   */
+  public String getPriorities() {
+    return priorities;
+  }
+
+  /**
+   * @param priorities the priorities to set
+   */
+  public void setPriorities(String priorities) {
+    this.priorities = priorities;
+  }
+
+  /**
+   * @return the statuses
+   */
+  public String getStatuses() {
+    return statuses;
+  }
+
+  /**
+   * @param statuses the statuses to set
+   */
+  public void setStatuses(String statuses) {
+    this.statuses = statuses;
+  }
+
+  /**
+   * @return the startDateFrom
+   */
+  public long getStartDateFrom() {
+    return startDateFrom;
+  }
+
+  /**
+   * @param startDateFrom the startDateFrom to set
+   */
+  public void setStartDateFrom(long startDateFrom) {
+    this.startDateFrom = startDateFrom;
+  }
+
+  /**
+   * @return the startDateTo
+   */
+  public long getStartDateTo() {
+    return startDateTo;
+  }
+
+  /**
+   * @param startDateTo the startDateTo to set
+   */
+  public void setStartDateTo(long startDateTo) {
+    this.startDateTo = startDateTo;
+  }
+
+  /**
+   * @return the deadlineFrom
+   */
+  public long getDeadlineFrom() {
+    return deadlineFrom;
+  }
+
+  /**
+   * @param deadlineFrom the deadlineFrom to set
+   */
+  public void setDeadlineFrom(long deadlineFrom) {
+    this.deadlineFrom = deadlineFrom;
+  }
+
+  /**
+   * @return the deadlineTo
+   */
+  public long getDeadlineTo() {
+    return deadlineTo;
+  }
+
+  /**
+   * @param deadlineTo the deadlineTo to set
+   */
+  public void setDeadlineTo(long deadlineTo) {
+    this.deadlineTo = deadlineTo;
+  }
+
+  /**
+   * @return the completeDateFrom
+   */
+  public long getCompleteDateFrom() {
+    return completeDateFrom;
+  }
+
+  /**
+   * @param completeDateFrom the completeDateFrom to set
+   */
+  public void setCompleteDateFrom(long completeDateFrom) {
+    this.completeDateFrom = completeDateFrom;
+  }
+
+  /**
+   * @return the completeDateTo
+   */
+  public long getCompleteDateTo() {
+    return completeDateTo;
+  }
+
+  /**
+   * @param completeDateTo the completeDateTo to set
+   */
+  public void setCompleteDateTo(long completeDateTo) {
+    this.completeDateTo = completeDateTo;
+  }
+
+  /**
+   * @return the assigneeUname
+   */
+  public String getAssigneeUname() {
+    return assigneeUname;
+  }
+
+  /**
+   * @param assigneeUname the assigneeUname to set
+   */
+  public void setAssigneeUname(String assigneeUname) {
+    this.assigneeUname = assigneeUname;
+  }
+
+  /**
+   * @return the coordinatorUname
+   */
+  public String getCoordinatorUname() {
+    return coordinatorUname;
+  }
+
+  /**
+   * @param coordinatorUname the coordinatorUname to set
+   */
+  public void setCoordinatorUname(String coordinatorUname) {
+    this.coordinatorUname = coordinatorUname;
+  }
+
+  /**
+   * @return the watcherUname
+   */
+  public String getWatcherUname() {
+    return watcherUname;
+  }
+
+  /**
+   * @param watcherUname the watcherUname to set
+   */
+  public void setWatcherUname(String watcherUname) {
+    this.watcherUname = watcherUname;
+  }
+
+  /**
+   * @return the coordWatchUname
+   */
+  public String getCoordWatchUname() {
+    return coordWatchUname;
+  }
+
+  /**
+   * @param coordWatchUname the coordWatchUname to set
+   */
+  public void setCoordWatchUname(String coordWatchUname) {
+    this.coordWatchUname = coordWatchUname;
+  }
+
+  /**
+   * @return the creatorUname
+   */
+  public String getCreatorUname() {
+    return creatorUname;
+  }
+
+  /**
+   * @param creatorUname the creatorUname to set
+   */
+  public void setCreatorUname(String creatorUname) {
+    this.creatorUname = creatorUname;
+  }
+
+  /**
+   * @return the projectUuid
+   */
+  public String getProjectUuid() {
+    return projectUuid;
+  }
+
+  /**
+   * @param projectUuid the projectUuid to set
+   */
+  public void setProjectUuid(String projectUuid) {
+    this.projectUuid = projectUuid;
+  }
+  
+}

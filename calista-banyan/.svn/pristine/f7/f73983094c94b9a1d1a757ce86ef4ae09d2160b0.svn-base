@@ -1,0 +1,201 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.bo;
+
+import com.inet.calista.erp.inventory.bo.ERPStockMovementBase;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.bo.POSProductBO;
+import com.inet.calista.pos.common.model.POSItem;
+import com.inet.calista.pos.retail.data.POSModule;
+import com.inet.calista.pos.retail.data.POSProdStockMovement;
+import com.inet.calista.pos.retail.data.POSStockMovementItem;
+import com.inet.calista.pos.retail.model.POSStockMovement;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: POSStockMovementBO.java Aug 17, 2018 15:20 phongtt $
+ * @since 1.0
+ */
+@Named("POSStockMovementBO")
+public class POSStockMovementBO extends ERPStockMovementBase<POSStockMovement> implements BeanInitiateInvoke {
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<String, Class<?>>();
+        childrenConvert.put("items", POSStockMovementItem.class);
+    }
+
+    @Inject
+    protected POSStockMovementBO(@ContentContext(context = POSConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    @Override
+    protected Class<POSStockMovement> getClassConvetor() {
+        return POSStockMovement.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("outletId");
+        ensureIndex("code");
+        ensureIndex("createDate");
+
+        ensureIndex("organId,outletId,code,createDate");
+    }
+
+    /**
+     * @param stockMovement
+     * @return
+     */
+    public String getModule(String stockMovement) {
+        if (StringUtils.hasLength(stockMovement)) {
+            return POSModule.valueOf(stockMovement).name();
+        }
+
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSProdStockMovement loadProdStockMovement(String organId, String outletId, int type, String code) throws WebOSBOException {
+        final POSProductBO itemBO = WebContext.INSTANCE.cache().getBean(POSProductBO.class);
+
+        final POSItem product = itemBO.loadByCode(organId, code);
+
+        logger.debug("found product {} with code {}", product, code);
+
+        if (product != null) {
+            return new POSProdStockMovement()
+                    .withProduct(product)
+                    .withBarcode(itemBO.loadBarcode(product, code));
+        }
+
+        return new POSProdStockMovement();
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param keyword
+     * @param status
+     * @param stockMovement
+     * @param empIds
+     * @param supIds
+     * @param custIds
+     * @param from
+     * @param to
+     * @param limit
+     * @param offset
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSStockMovement> query(String organId, String outletId,
+                                             String keyword, int status, String stockMovement,
+                                             final List<String> empIds,
+                                             final List<String> supIds,
+                                             final List<String> custIds,
+                                             long from, long to,
+                                             int limit, int offset) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("module").equal(stockMovement);
+
+        if (status >= 0) {
+            query.field("status").equal(status);
+        }
+
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (!CollectionUtils.isEmpty(empIds)) {
+            query.field("employeeId").in(empIds);
+        }
+
+        if (POSModule.RECEIPT_RETAIL.name().equals(stockMovement)) {
+            if (!CollectionUtils.isEmpty(supIds)) {
+                query.field("partnerId").in(supIds);
+            }
+        } else if (POSModule.ISSUE_RETAIL.name().equals(stockMovement)) {
+            if (!CollectionUtils.isEmpty(custIds)) {
+                query.field("partnerId").in(custIds);
+            }
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("employeeName").like(keyword)
+            ));
+        }
+
+        if (from > 0) {
+            query.field("createDate").greaterThanOrEq(from);
+        }
+
+        if (to > 0) {
+            query.field("createDate").lessThanOrEq(to);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        return super.query(query);
+    }
+}

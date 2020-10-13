@@ -1,0 +1,62 @@
+package com.inet.jobportal.bo.candidate;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.jobportal.model.candidate.SavedJobPost;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * Job Portal Saved JobPost BO.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedJobPostBO.java Jan 10, 2019 3:24:24 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("SavedJobPostBO")
+public class SavedJobPostBO extends MagicContentBO<SavedJobPost> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(SavedJobPost.class);
+
+    @Inject
+    public SavedJobPostBO(@ContentContext(context = AppConstants.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "jobportal_candidate_saved_jobpost");
+    }
+
+    @Override
+    public String add(SavedJobPost item) throws WebOSBOException {
+        return super.add(item);
+    }
+
+    @Override
+    public void update(String uuid, SavedJobPost item) throws WebOSBOException {
+        super.update(uuid, item);
+    }
+
+    public SearchDTO<SavedJobPost> search(Query<JSONDB> query) throws WebOSBOException {
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("organId");
+        //ensureIndex("description");
+    }
+
+    @Override
+    protected Class<SavedJobPost> getClassConvetor() {
+        return SavedJobPost.class;
+    }
+}

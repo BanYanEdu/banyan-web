@@ -1,0 +1,87 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.thesis.ai.AIEngineClientBO;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.ecommerce.shopservice.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopRecommendService.java Apr 06, 2018 11:09 phongtt $
+ * @since 1.0
+ */
+@Named("shoprecommend")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/recommend",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShopRecommendService extends CommerceBaseAbstraction {
+
+    @Inject
+    private AIEngineClientBO aiEngineBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        if (StringUtils.hasLength(SecurityUtil.getPrincipal())) {
+            try {
+                logger.debug("AI recommendation running .....");
+
+                if (CollectionUtils.isEmpty(params)) {
+                    params.put("user", SecurityUtil.getPrincipal());
+                    params.put("num", 10);
+                }
+
+                String service = ECMConstant.AI_SERVICE;
+                String type = ECMConstant.AI_TYPE;
+
+                return new ObjectWebDataservice<>(aiEngineBO.query(service, type, params));
+            } catch (Exception ex) {
+                logger.error("recommendation fail {}", ex);
+            }
+        }
+        return new ObjectWebDataservice<>("no idea for u ^.^");
+    }
+}

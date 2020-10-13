@@ -1,0 +1,338 @@
+[
+  {
+    "code": "01",
+    "name": "Kinh",
+    "otherName": "Việt",
+    "country": "VN"
+  },
+  {
+    "code": "02",
+    "name": "Tày",
+    "otherName": "Thổ, Ngạn, Phén, Thù Lao, Pa Dí, Tày Khao",
+    "country": "VN"
+  },
+  {
+    "code": "03",
+    "name": "Thái",
+    "otherName": "Tày Đăm, Tày Mười, Tày Thanh, Mán Thanh, Hàng Bông, Tày Mường, Pa Thay, Thổ Đà Bắc",
+    "country": "VN"
+  },
+  {
+    "code": "04",
+    "name": "Hoa",
+    "otherName": "Hán, Triều Châu, Phúc Kiến, Quảng Đông, Hải Nam, Hạ, Xạ Phạng",
+    "country": "VN"
+  },
+  {
+    "code": "05",
+    "name": "Khơ-me",
+    "otherName": "Cur, Cul, Cu, Thổ, Việt gốc Miên, Krôm",
+    "country": "VN"
+  },
+  {
+    "code": "06",
+    "name": "Mường",
+    "otherName": "Mol, Mual, Mọi, Mọi Bi, Ao Tá, Ậu Tá",
+    "country": "VN"
+  },
+  {
+    "code": "07",
+    "name": "Nùng",
+    "otherName": "Xuồng, Giang, Nùng An, Phàn Sinh, Nùng Cháo, Nùng Lòi, Quý Rim, Khèn Lài",
+    "country": "VN"
+  },
+  {
+    "code": "08",
+    "name": "HMông",
+    "otherName": "Mèo, Hoa, Mèo Xanh, Mèo Đỏ, Mèo Đen, Ná Mẻo, Mán Trắng",
+    "country": "VN"
+  },
+  {
+    "code": "09",
+    "name": "Dao",
+    "otherName": "Mán, Động, Trại, Xá, Dìu, Miên, Kiềm, Miền, Quần Trắng, Dao Đỏ, Quần Chẹt, Lô Giang, Dao Tiền, Thanh Y, Lan Tẻn, Đại Bản, Tiểu Bản, Cóc Ngáng, Cóc Mùn, Sơn Đầu",
+    "country": "VN"
+  },
+  {
+    "code": "10",
+    "name": "Gia-rai",
+    "otherName": "Giơ-rai, Tơ-buăn, Chơ-rai, Hơ-bau, Hđrung, Chor",
+    "country": "VN"
+  },
+  {
+    "code": "11",
+    "name": "Ngái",
+    "otherName": "Xín, Lê, Đản, Khách Gia",
+    "country": "VN"
+  },
+  {
+    "code": "12",
+    "name": "Ê-đê",
+    "otherName": "Ra-đê, Đê, Kpạ, A-đham, Krung, Ktul, Đliê Ruê, Blô, Epan, Mđhur, Bih",
+    "country": "VN"
+  },
+  {
+    "code": "13",
+    "name": "Ba na",
+    "otherName": "Giơ-lar. Tơ-lô, Giơ-lâng, Y-lăng, Rơ-ngao, Krem, Roh, ConKđe, A-la Công, Kpăng Công, Bơ-nâm",
+    "country": "VN"
+  },
+  {
+    "code": "14",
+    "name": "Xơ-Đăng",
+    "otherName": "Xơ-teng, Hđang, Tơ-đra, Mơ-nâm, Ha-lăng, Ca-dong, Kmrâng, ConLan, Bri-la, Tang",
+    "country": "VN"
+  },
+  {
+    "code": "15",
+    "name": "Sán Chay",
+    "otherName": "Cao Lan, Sán Chỉ, Mán Cao Lan, Hờn Bạn, Sơn Tử",
+    "country": "VN"
+  },
+  {
+    "code": "16",
+    "name": "Cơ-ho",
+    "otherName": "Xrê, Nốp, Tu-lốp, Cơ-don, Chil, Lat, Lach, Trinh",
+    "country": "VN"
+  },
+  {
+    "code": "17",
+    "name": "Chăm",
+    "otherName": "Chàm, Chiêm Thành, Hroi",
+    "country": "VN"
+  },
+  {
+    "code": "18",
+    "name": "Sán Dìu",
+    "otherName": "Sán Dẻo, Trại, Trại Đất, Mán, Quần Cộc",
+    "country": "VN"
+  },
+  {
+    "code": "19",
+    "name": "Hrê",
+    "otherName": "Chăm Rê, Chom, Krẹ Luỹ",
+    "country": "VN"
+  },
+  {
+    "code": "20",
+    "name": "Mnông",
+    "otherName": "Pnông, Nông, Pré, Bu-đâng, ĐiPri, Biat, Gar, Rơ-lam, Chil",
+    "country": "VN"
+  },
+  {
+    "code": "21",
+    "name": "Ra-glai",
+    "otherName": "Ra-clây, Rai, Noang, La-oang",
+    "country": "VN"
+  },
+  {
+    "code": "22",
+    "name": "Xtiêng",
+    "otherName": "Xa-điêng",
+    "country": "VN"
+  },
+  {
+    "code": "23",
+    "name": "Bru-Vân Kiều",
+    "otherName": "Bru, Vân Kiều, Măng Coong, Tri Khùa",
+    "country": "VN"
+  },
+  {
+    "code": "24",
+    "name": "Thổ",
+    "otherName": "Kẹo, Mọn, Cuối, Họ, Đan Lai, Ly Hà, Tày Pọng, Con Kha, Xá Lá Vàng",
+    "country": "VN"
+  },
+  {
+    "code": "25",
+    "name": "Giáy",
+    "otherName": "Nhắng, Dẩng, Pầu Thìn Nu Nà, Cùi Chu, Xa",
+    "country": "VN"
+  },
+  {
+    "code": "26",
+    "name": "Cơ-tu",
+    "otherName": "Ca-tu, Cao, Hạ, Phương, Ca-tang",
+    "country": "VN"
+  },
+  {
+    "code": "27",
+    "name": "Gié Triêng",
+    "otherName": "Đgiéh, Tareb, Giang Rẫy Pin, Triêng, Treng, Ta-riêng, Ve, Veh, La-ve, Ca-tang",
+    "country": "VN"
+  },
+  {
+    "code": "28",
+    "name": "Mạ",
+    "otherName": "Châu Mạ, Mạ Ngăn, Mạ Xóp, Mạ Tô, Mạ Krung",
+    "country": "VN"
+  },
+  {
+    "code": "29",
+    "name": "Khơ-mú",
+    "otherName": "Xá Cẩu, Mứn Xen, Pu Thênh, Tềnh, Tày Hay",
+    "country": "VN"
+  },
+  {
+    "code": "30",
+    "name": "Co",
+    "otherName": "Cor, Col, Cùa, Trầu",
+    "country": "VN"
+  },
+  {
+    "code": "31",
+    "name": "Tà-ôi",
+    "otherName": "Tôi-ôi, Pa-co, Pa-hi, Ba-hi",
+    "country": "VN"
+  },
+  {
+    "code": "32",
+    "name": "Chơ-ro",
+    "otherName": "Dơ-ro, Châu-ro",
+    "country": "VN"
+  },
+  {
+    "code": "33",
+    "name": "Kháng",
+    "otherName": "Xá Khao, Xá Súa, Xá Dón, Xá Dẩng, Xá Hốc, Xá Ái, Xá Bung, Quảng Lâm",
+    "country": "VN"
+  },
+  {
+    "code": "34",
+    "name": "Xinh-mun",
+    "otherName": "Puộc, Pụa",
+    "country": "VN"
+  },
+  {
+    "code": "35",
+    "name": "Hà Nhì",
+    "otherName": "U Ni, Xá U Ni",
+    "country": "VN"
+  },
+  {
+    "code": "36",
+    "name": "Chu ru",
+    "otherName": "Chơ-ru, Chu",
+    "country": "VN"
+  },
+  {
+    "code": "37",
+    "name": "Lào",
+    "otherName": "Là Bốc, Lào Nọi",
+    "country": "VN"
+  },
+  {
+    "code": "38",
+    "name": "La Chí",
+    "otherName": "Cù Tê, La Quả",
+    "country": "VN"
+  },
+  {
+    "code": "39",
+    "name": "La Ha",
+    "otherName": "Xá Khao, Khlá Phlạo",
+    "country": "VN"
+  },
+  {
+    "code": "40",
+    "name": "Phù Lá",
+    "otherName": "Bồ Khô Pạ, Mu Di Pạ Xá, Phó, Phổ, Va Xơ",
+    "country": "VN"
+  },
+  {
+    "code": "41",
+    "name": "La Hủ",
+    "otherName": "Lao, Pu Đang, Khù Xung, Cò Xung, Khả Quy",
+    "country": "VN"
+  },
+  {
+    "code": "42",
+    "name": "Lự",
+    "otherName": "Lừ, Nhuồn, Duôn",
+    "country": "VN"
+  },
+  {
+    "code": "43",
+    "name": "Lô Lô",
+    "otherName": "Mun Di",
+    "country": "VN"
+  },
+  {
+    "code": "44",
+    "name": "Chứt",
+    "otherName": "Sách, Máy, Rục, Mã-liêng, A-rem, Tu vang, Pa-leng, Xơ-Lang, Tơ-hung, Chà-củi, Tắc-củi, U-mo, Xá Lá Vàng",
+    "country": "VN"
+  },
+  {
+    "code": "45",
+    "name": "Mảng",
+    "otherName": "Mảng Ư, Xá Lá Vàng",
+    "country": "VN"
+  },
+  {
+    "code": "46",
+    "name": "Pà Thẻn",
+    "otherName": "Pà Hưng, Tống",
+    "country": "VN"
+  },
+  {
+    "code": "47",
+    "name": "Co Lao",
+    "otherName": "",
+    "country": "VN"
+  },
+  {
+    "code": "48",
+    "name": "Cống",
+    "otherName": "Xắm Khống, Mấng Nhé, Xá Xeng",
+    "country": "VN"
+  },
+  {
+    "code": "49",
+    "name": "Bố Y",
+    "otherName": "Chủng Chá, Trọng Gia, Tu Di, Tu Din",
+    "country": "VN"
+  },
+  {
+    "code": "50",
+    "name": "Si La",
+    "otherName": "Cù Dề Xừ, Khả pẻ",
+    "country": "VN"
+  },
+  {
+    "code": "51",
+    "name": "Pu Péo",
+    "otherName": "Ka Pèo, Pen Ti Lô Lô",
+    "country": "VN"
+  },
+  {
+    "code": "52",
+    "name": "Brâu",
+    "otherName": "Brao",
+    "country": "VN"
+  },
+  {
+    "code": "53",
+    "name": "Ơ Đu",
+    "otherName": "Tày Hạt",
+    "country": "VN"
+  },
+  {
+    "code": "54",
+    "name": "Rơ măm",
+    "otherName": "",
+    "country": "VN"
+  },
+  {
+    "code": "55",
+    "name": "Người nước ngoài",
+    "otherName": "",
+    "country": "VN"
+  },
+  {
+    "code": "99",
+    "name": "Không rõ",
+    "otherName": "",
+    "country": "VN"
+  }
+]

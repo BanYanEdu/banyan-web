@@ -1,0 +1,26 @@
+package com.inet.calista.global.model.localtion;
+
+import com.inet.calista.global.model.NoSqlModel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class GlobalRegion extends NoSqlModel<GlobalRegion> implements GlobalLocation {
+    private String code;
+    private String name;
+
+    // uuid of country
+    private String countryID;
+    // optional location
+    private Double longitude;
+    private Double latitude;
+    @Override
+    protected boolean equals(GlobalRegion other) {
+        return false;
+    }
+}

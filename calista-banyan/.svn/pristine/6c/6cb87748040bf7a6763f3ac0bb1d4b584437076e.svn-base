@@ -1,0 +1,145 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.dataservice;
+
+import com.inet.calista.common.service.CalAbstraction;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+
+/**
+ * GlAbstractService.
+ *
+ * @author thoangtran
+ * @version GlAbstractService 2018 04-04 15:59
+ */
+public abstract class GlbAbstraction extends CalAbstraction {
+    protected static final Logger logger = LoggerFactory.getLogger(GlbAbstraction.class);
+    protected static final ObjectWebDataservice<Boolean> SUCCESS_RESULT = new ObjectWebDataservice<Boolean>(true);
+    protected static final ObjectWebDataservice<Boolean> FAILURE_RESULT = new ObjectWebDataservice<Boolean>(false);
+
+    /**
+     * Put error to {@link AbstractBaseAction}
+     *
+     * @param action the given action
+     * @param field  the given field
+     * @param error  the given error
+     */
+    public static void putError(AbstractBaseAction action, String field, String error) {
+        action.getViolation().add(createViolationDto(field, error));
+    }
+
+    /**
+     * Put service error to {@link AbstractBaseAction}
+     *
+     * @param action the given action
+     */
+    public static void putServiceError(AbstractBaseAction action) {
+        action.getViolation().add(createViolationDto("service", ErrorCode.SERVICE_ERROR));
+    }
+
+    /**
+     * Create {@link ViolationDTO} from given information
+     *
+     * @param field the given field
+     * @param error the given error
+     * @return the result
+     */
+    public static ViolationDTO createViolationDto(String field, String error) {
+        return new ViolationDTO(field, error, 0, "");
+    }
+
+    /**
+     * @param params
+     * @return
+     */
+    protected String getUuid(Map<String, Object> params) {
+        return XParamUtils.getString(GlobalConstant.UUID, params);
+    }
+
+    /**
+     * @param action
+     * @return
+     */
+    protected final String validateUUid(AbstractBaseAction action, Map<String, Object> params) {
+        String uuid = getUuid(params);
+        if (!StringUtils.hasLength(uuid)) {
+            putError(action, GlobalConstant.UUID, ErrorCode.MUST_NOT_EMPTY);
+        }
+        return uuid;
+    }
+
+    protected final String validateStringField(AbstractBaseAction action, Map<String, Object> params, String field) {
+        String value = XParamUtils.getString(field, params);
+        if (!StringUtils.hasLength(value)) {
+            putError(action, field, ErrorCode.MUST_NOT_EMPTY);
+        }
+        return value;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////// LOG HELPER //////////////////////////////////////////
+
+    /**
+     * Log for beginning operation
+     *
+     * @param log       the given {@link Logger}
+     * @param operation the given operation
+     */
+    protected void logBeginOperation(final Logger log, final String operation) {
+        if (log.isInfoEnabled()) {
+            log.info("<<< CRM >>> BEGIN: " + operation);
+        }
+    }
+
+    /**
+     * Log for end operation
+     *
+     * @param log       the given {@link Logger}
+     * @param operation the given operation
+     */
+    protected void logEndOperation(final Logger log, final String operation) {
+        if (log.isInfoEnabled()) {
+            log.info("<<< CRM >>> END: " + operation);
+        }
+    }
+
+    /**
+     * Log information
+     *
+     * @param log         the given {@link Logger}
+     * @param information the given information
+     */
+    protected void logInfo(final Logger log, final String information) {
+        if (log.isInfoEnabled()) {
+            log.info("<<< CRM >>> INFO: " + information);
+        }
+    }
+
+
+}

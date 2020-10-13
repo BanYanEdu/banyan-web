@@ -1,0 +1,31 @@
+package com.inet.jobportal.provider;
+
+import com.inet.xportal.nosql.web.provider.CloudConfigAbstraction;
+import com.inet.xportal.nosql.web.provider.NoSQLConfigProviderAbstraction;
+import com.inet.xportal.web.annotation.XPortalBigData;
+import com.inet.xportal.web.context.ApplicationContext;
+
+import javax.inject.Inject;
+
+@ApplicationContext(context = "NoSQLCloudJobPortalProvider")
+@XPortalBigData(context = "cloud_jobportal_database")
+public class NoSQLCloudJobPortalProvider extends NoSQLConfigProviderAbstraction {
+    /**
+     *
+     * @param cloudCfg
+     */
+    @Inject
+    protected NoSQLCloudJobPortalProvider(@ApplicationContext(context = "CloudJobPortalConfigBF") CloudConfigAbstraction cloudCfg)
+    {
+        super(cloudCfg);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.provider.NoSQLConfigProvider#contextEnabled()
+     */
+    @Override
+    public boolean contextEnabled() {
+        return false;
+    }
+}

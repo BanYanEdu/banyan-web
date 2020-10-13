@@ -1,0 +1,272 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.data.task.History;
+import com.inet.calista.collatask.data.task.Modification;
+import com.inet.calista.collatask.data.task.Modification.Action;
+import com.inet.calista.collatask.model.project.Activity;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.collatask.util.FieldModificationUtils;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+
+/**
+ * UpdateService.
+ *
+ * @author Duyen Tang
+ * @version $Id: UpdateService.java Jan 25, 2018 1:37:46 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_updateservice")
+@XPortalDataService(roles = { Roles.TASK }, description = "")
+@XPortalPageRequest(uri = "colla/tasks/update", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class UpdateService extends TaskService {
+	private static final Logger LOG = LoggerFactory.getLogger(UpdateService.class);
+	@Inject
+	private TaskBO taskBo;
+
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		try {
+			// get task information
+			Task task = action.getModel(Task.class);
+
+			// validate require field
+			ViolationDTO error = null;
+			if ((error = isEmpty(CollaTaskJsonConstants.UUID, task.getUuid())) != null
+					&& (error = isEmpty(CollaTaskJsonConstants.NAME, task.getName())) != null) {
+				action.getViolation().add(error);
+				return FAILURE_RESULT;
+			}
+
+			// load task by UUID
+			Task existed = taskBo.findByUuid(getOrgCode(site, subFirm), task.getUuid());
+			if (!this.canUpdate(existed)) {
+				LOG.warn("The user with user name [{}] don't have permission to update on task [{}]", getUsername(),
+						existed.getUuid());
+				putError(action, CollaTaskJsonConstants.CONSTRAINT, ErrorCode.forbidden);
+				return FAILURE_RESULT;
+			}
+
+			// get coordinators
+			String coordinatorsStr = XParamUtils.getString(CollaTaskJsonConstants.COORDINATORS_STR, params);
+			if (!Strings.isNullOrEmpty(coordinatorsStr)) {
+				JSONArray coodinatorsArray = JSONArray.fromObject(coordinatorsStr);
+				task.setCoordinators(getExecutor(coodinatorsArray));
+			}
+
+			// get watchers
+			String watchersStr = XParamUtils.getString(CollaTaskJsonConstants.WATCHERS_STR, params);
+			if (!Strings.isNullOrEmpty(watchersStr)) {
+				JSONArray watcherArray = JSONArray.fromObject(watchersStr);
+				task.setWatchers(getExecutor(watcherArray));
+			}
+
+			// create history
+			History history = createHistory(task, existed);
+			if (history != null) {
+				existed.addHistory(history);
+			}
+
+			String oldProjUuid = existed.getProjectUuid();
+
+			// the old watchers and coordinators
+			List<Executor> oldWatchers = existed.getWatchers();
+			List<Executor> oldCoordinators = existed.getCoordinators();
+
+			// refill information
+			existed.setName(task.getName());
+			existed.setDesc(task.getDesc());
+			existed.setAssignerName(task.getAssignerName());
+			existed.setAssignerUname(task.getAssignerUname());
+			existed.setStartDate(task.getStartDate());
+			existed.setDeadline(task.getDeadline());
+			existed.setCoordinators(task.getCoordinators());
+			existed.setWatchers(task.getWatchers());
+			existed.setPriority(task.getPriority());
+			existed.setPhaseUuid(task.getPhaseUuid());
+			existed.setPhaseName(task.getPhaseName());
+			existed.setProjectUuid(task.getProjectUuid());
+
+			// update task information
+			taskBo.update(existed.getUuid(), existed);
+
+			// update member for social activity
+			if (history != null && (!CommonUtils.isEqualCollection(oldWatchers, existed.getWatchers())
+					|| !CommonUtils.isEqualCollection(oldCoordinators, existed.getCoordinators()))) {
+				updateSocialMembers(action, existed);
+			}
+
+			// update information for project
+			updateProject(oldProjUuid, existed);
+
+			return SUCCESS_RESULT;
+		} catch (ValidationException ex) {
+			action.getViolation().add(ex.getError());
+
+			return FAILURE_RESULT;
+		}
+	}
+
+	/**
+	 * Update more information for project which given task depend on
+	 * 
+	 * @param existedProjUuid
+	 *            the given existed project UUID
+	 * @param task
+	 *            the given task information
+	 */
+	public void updateProject(String existedProjUuid, Task task) {
+		if (Strings.isNullOrEmpty(existedProjUuid)) {
+			// add existed task to project
+			if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+				// add project activity
+				addProjectActivity(Activity.Action.add, task, "");
+
+				if (task.getSpentTime() > 0) {
+					// add spent time for project
+					taskBo.getProjectBo().increaseSpentTime(task.getProjectUuid(), task.getSpentTime());
+				}
+			}
+		} else {
+			if (existedProjUuid.equals(task.getProjectUuid())) { // don't change project for task
+				// add project activity
+				addProjectActivity(Activity.Action.update, task, "");
+			} else {
+				/**
+				 * delete task out of old project
+				 */
+				// add project activity for remove task out of project
+				projActivityBo.add(new Activity(existedProjUuid, getUsername(), getFullname(),
+						System.currentTimeMillis(), Activity.Action.remove.name(), ReferenceType.task.name(),
+						task.getUuid(), task.getName(), ""));
+
+				if (task.getSpentTime() > 0) {
+					// decrease spent time for project
+					taskBo.getProjectBo().increaseSpentTime(existedProjUuid, -task.getSpentTime());
+				}
+
+				if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+					// add project activity
+					addProjectActivity(Activity.Action.add, task, "");
+
+					if (task.getSpentTime() > 0) {
+						// add spent time for project
+						taskBo.getProjectBo().increaseSpentTime(task.getProjectUuid(), task.getSpentTime());
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Create {@link History} from given new {@link Task} information
+	 * 
+	 * @param task
+	 *            the given {@link Task} information
+	 * @param existed
+	 *            the given existed {@link Task} information
+	 * @return the {@link History} information
+	 */
+	private History createHistory(Task task, Task existed) {
+		List<Modification> mods = new ArrayList<>();
+
+		CommonUtils.putIfNotNull(mods, FieldModificationUtils.modify("name", existed.getName(), task.getName()));
+		CommonUtils.putIfNotNull(mods, FieldModificationUtils.modify("desc", existed.getDesc(), task.getDesc()));
+		CommonUtils.putIfNotNull(mods,
+				FieldModificationUtils.modify("startDate", existed.getStartDate(), task.getStartDate()));
+		CommonUtils.putIfNotNull(mods,
+				FieldModificationUtils.modify("deadline", existed.getDeadline(), task.getDeadline()));
+		// CommonUtils.putIfNotNull(mods, FieldModificationUtils.modify("assignerName",
+		// existed.getAssignerName(), task.getAssignerName()));
+		CommonUtils.putIfNotNull(mods,
+				FieldModificationUtils.modify("priority", existed.getPriority(), task.getPriority()));
+
+		// add history for new watchers
+		Collection<Executor> newWatchers = CommonUtils.subtract(task.getWatchers(), existed.getWatchers());
+		if (!CollectionUtils.isEmpty(newWatchers)) {
+			newWatchers.forEach(watcher -> {
+				mods.add(new Modification("watchers", null, watcher.getName(), Action.add));
+			});
+		}
+
+		// add history for remove watcher
+		Collection<Executor> removeWatchers = CommonUtils.subtract(existed.getWatchers(), task.getWatchers());
+		if (!CollectionUtils.isEmpty(removeWatchers)) {
+			removeWatchers.forEach(watcher -> {
+				mods.add(new Modification("watchers", null, watcher.getName(), Action.delete));
+			});
+		}
+
+		// add history for new coordinators
+		Collection<Executor> newCoordinators = CommonUtils.subtract(task.getCoordinators(), existed.getCoordinators());
+		if (!CollectionUtils.isEmpty(newCoordinators)) {
+			newCoordinators.forEach(coordinator -> {
+				mods.add(new Modification("coordinators", null, coordinator.getName(), Action.add));
+			});
+		}
+
+		// add history for remove coordinators
+		Collection<Executor> removeCoordinators = CommonUtils.subtract(existed.getCoordinators(),
+				task.getCoordinators());
+		if (!CollectionUtils.isEmpty(removeCoordinators)) {
+			removeCoordinators.forEach(coordinator -> {
+				mods.add(new Modification("coordinators", null, coordinator.getName(), Action.delete));
+			});
+		}
+
+		if (mods.isEmpty()) {
+			return null;
+		}
+
+		return new History(task.getCreatorUname(), task.getCreatorName(), mods);
+	}
+
+}

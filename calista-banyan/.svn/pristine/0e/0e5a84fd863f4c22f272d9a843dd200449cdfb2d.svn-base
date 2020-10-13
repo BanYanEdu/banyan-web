@@ -1,0 +1,45 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.service;
+
+import com.inet.calista.erp.common.service.ERPCoreAbstraction;
+import com.inet.calista.erp.masterdata.bo.ERPItemBO;
+
+import javax.inject.Inject;
+import java.util.List;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPItemAbstraction.java May 16, 2018 09:48 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPItemAbstraction extends ERPCoreAbstraction {
+    @Inject
+    private ERPItemBO productBO;
+
+    /**
+     * @param organId
+     * @return
+     */
+    public List<String> placePublished(String organId) {
+        return productBO.placePublished();
+    }
+}

@@ -1,0 +1,166 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model;
+
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * LogTime.
+ *
+ * @author Duyen Tang
+ * @version $Id: LogTime.java Mar 2, 2018 2:54:08 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class LogTime extends BaseModel {
+  private String authUname;
+  private String authName;
+  private long date = System.currentTimeMillis();
+  private double time;
+  private String note;
+  
+  private String refUuid;
+  private String refType;
+
+  /**
+   * Create {@link LogTime} instance
+   */
+  public LogTime() {}
+  
+  /**
+   * Create {@link LogTime} instance from given information
+   * 
+   * @param authUname the given author user name
+   * @param authName the given author name
+   * @param time the given time
+   * @param note the given note
+   */
+  public LogTime(String authUname, String authName, double time, String note) {
+    this.authUname = authUname;
+    this.authName = authName;
+    this.time = time;
+    this.note = note;
+  }
+
+  /**
+   * @return the authUname
+   */
+  public String getAuthUname() {
+    return authUname;
+  }
+
+  /**
+   * @param authUname the authUname to set
+   */
+  public void setAuthUname(String authUname) {
+    this.authUname = authUname;
+  }
+
+  /**
+   * @return the authName
+   */
+  public String getAuthName() {
+    return authName;
+  }
+
+  /**
+   * @param authName the authName to set
+   */
+  public void setAuthName(String authName) {
+    this.authName = authName;
+  }
+
+  /**
+   * @return the date
+   */
+  public long getDate() {
+    return date;
+  }
+
+  /**
+   * @param date the date to set
+   */
+  public void setDate(long date) {
+    this.date = date;
+  }
+
+  /**
+   * @return the time
+   */
+  public double getTime() {
+    return time;
+  }
+
+  /**
+   * @param time the time to set
+   */
+  public void setTime(double time) {
+    this.time = time;
+  }
+
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+
+  /**
+   * @return the refUuid
+   */
+  public String getRefUuid() {
+    return refUuid;
+  }
+
+  /**
+   * @param refUuid the refUuid to set
+   */
+  public void setRefUuid(String refUuid) {
+    this.refUuid = refUuid;
+  }
+
+  /**
+   * @return the refType
+   */
+  public String getRefType() {
+    return refType;
+  }
+
+  /**
+   * @param refType the refType to set
+   */
+  public void setRefType(String refType) {
+    this.refType = refType;
+  }
+  
+  /**
+   * Set reference information for log times
+   * 
+   * @param refUuid the given reference UUID
+   * @param refType the given reference type
+   */
+  public void setRef(String refUuid, String refType) {
+    this.refUuid = refUuid;
+    this.refType = refType;
+  }
+}

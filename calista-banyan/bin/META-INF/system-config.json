@@ -1,0 +1,8 @@
+{key:'default_country', value:'5a2a7572bc147d67968cdaef', description:'Quốc gia mặc định', visible: true},
+{key:'message_time_out', value:'4000', description:'Thời gian hiển thị thông báo (giây)', visible: true},
+{key:'max_size_upload', value:'10485760', description:'Kích thước tối đa của tập tin tải lên (MB)', visible: true},
+{key:'file_upload_format', value: 'rtf;txt;csv;odt;ods;odp;odg;odf;odb;doc;docx;pdf;xls;xlsx;ppt;pptx;png;jpg', description: 'Định dạng tập tin tải lên', visible:true},
+{key:'item_per_page', value:'20', description:'Số phần tử trên một trang', visible:true},
+{key:'exchange_max_error_transfer', value:'5', description:'Số lần tối đa cho phép khi liên thông bị lỗi', visible: true},
+{key:'system_startup_date', description:'Thời gian bắt đầu sử dụng hệ thống (có dạng ngày/tháng/năm ví dụ: 01/01/2016)', value:"true", visible:true},
+{key:'helper_url', value:'www.inetcloud.vn/download/documents/ikepler/index.html' ,description:'URL hướng dẫn sử dụng', visible: true},

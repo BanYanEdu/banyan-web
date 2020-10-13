@@ -1,0 +1,54 @@
+package com.inet.calista.crm.service;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Map;
+
+/**
+ * LoadByIdService.
+ *
+ * @author thoangtran
+ * @version LoadByIdService 2019 01-29 15:58
+ */
+@Slf4j
+public abstract class LoadByIdService extends CRMAbstractService {
+  protected CRMNoSqlBo noSqlBo;
+
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String uuid = XParamUtils.getString(params, CommonConstant.UUID);
+      if(Strings.isNullOrEmpty(uuid)){
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      final Object template = this.getNoSqlBo().loadById(uuid, firmProfile.getOrganiId());
+      if(null == template){
+        putError(action, CommonConstant.UUID, ErrorCode.not_existed);
+        return FAILURE_RESULT;
+      }
+      return new ObjectWebDataservice<>(template);
+    } catch (Exception ex) {
+      final CRMBusinessException iex = new CRMBusinessException("Error occurs during loading by id", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+  protected abstract CRMNoSqlBo getNoSqlBo();
+}

@@ -1,0 +1,222 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.data.ECMSaleItem;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.ecommerce.model.ECMSaleWeb;
+import com.inet.calista.erp.analytics.message.SalesAnalyticsMessage;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import org.apache.shiro.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Named;
+
+/**
+ * CommerceAnalyticsBO.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceAnalyticsBO.java Dec 02, 2017 09:46 phongtt $
+ * @since 1.0
+ */
+@Named("ECMAnalyticsBO")
+public class ECMAnalyticsBO {
+    private static final Logger logger = LoggerFactory.getLogger(ECMAnalyticsBO.class);
+
+    /**
+     * @param orderInfo
+     * @throws WebOSBOException
+     */
+    public void analytics(final ECMOrder orderInfo, final AbstractBaseAction action) throws WebOSBOException {
+        if (orderInfo != null && !CollectionUtils.isEmpty(orderInfo.getItems())) {
+
+        }
+    }
+
+
+    /**
+     * @param saleInfo
+     * @throws WebOSBOException
+     */
+    public void analytics(final ECMSaleWeb saleInfo, final AbstractBaseAction action) throws WebOSBOException {
+        SalesAnalyticsMessage msg;
+
+        if (saleInfo != null && !CollectionUtils.isEmpty(saleInfo.getItems())) {
+            logger.debug("ECMSaleWeb {} analytics beginning ....", saleInfo);
+
+            msg = new SalesAnalyticsMessage();
+            msg.setCountry(action.getCountry());
+            //msg.setCity(action.)
+            //private String sex;
+            //private long age;
+
+            //organId, outletId exists class ERPBaseMessage
+            msg.setOrganId(saleInfo.getOrganId());
+            msg.setOutletId(saleInfo.getOutletId());
+            msg.setUserCode(saleInfo.getEmployeeId()); //sales person
+            //private String supplierId;
+            msg.setCustomerId(saleInfo.getCustomerId());
+
+            msg.setSaleType(SalesAnalyticsMessage.SaleType.Retail.name());
+            msg.setSaleGroup(SalesAnalyticsMessage.SaleGroup.Master.name());
+
+            //Sale: Retail, Commerce, Invoice, v.v...
+            msg.setVoucherModule(saleInfo.getModule());
+            msg.setVoucherType(saleInfo.getType());
+            msg.setVoucherCode(saleInfo.getCode());
+
+            msg.setCurrencyId(saleInfo.getCurrencyId());
+
+            //private String itemId;
+            //private String itemCode;
+            //private String itemSku;
+
+            //private String itemCategory;
+            //private String itemBrand;
+            //private String itemColor;
+            //private String itemSize;
+            //private String itemMaterial;
+
+            //return
+            //private String itemReturn;
+
+            //private float qty = 0F;
+            //private float price = 0F;
+            //qty * price
+            msg.setRevenue(saleInfo.getTotalAmountEx());
+
+            //private float cogs = 0F;
+            //qty * cogs
+            //private float investment = 0F; //investment
+
+            //private String vatCode;
+            msg.setVat(saleInfo.getTotalVATAmountEx());
+
+            //private String taxCode;
+            //private float tax = 0F;
+
+            //private String shipCode;
+            //private float ship = 0F;
+
+            //private String discountCode;
+            msg.setDiscount(saleInfo.getTotalDiscAmountEx());
+
+            //private String promotionCode;
+            //private float promotion = 0F;
+
+            //private String commissionCode;
+            //private float commission = 0F;
+
+            //costAmount = commission + discount + vat + tax + promotion + ship
+            //revenue - (investment + cost)
+            msg.setProfit(saleInfo.getTotalPaymentEx());
+
+            msg.execute();
+
+            for (ECMSaleItem item : saleInfo.getItems()) {
+                msg = new SalesAnalyticsMessage();
+                msg.setCountry(action.getCountry());
+                //msg.setCity(action.)
+                //private String sex;
+                //private long age;
+
+                //organId, outletId exists class ERPBaseMessage
+                msg.setOrganId(saleInfo.getOrganId());
+                msg.setOutletId(saleInfo.getOutletId());
+                msg.setUserCode(saleInfo.getEmployeeId()); //sales person
+                //private String supplierId;
+                msg.setCustomerId(saleInfo.getCustomerId());
+
+                msg.setSaleType(SalesAnalyticsMessage.SaleType.Retail.name());
+                msg.setSaleGroup(SalesAnalyticsMessage.SaleGroup.Detail.name());
+
+                //Sale: Retail, Commerce, Invoice, v.v...
+                msg.setVoucherModule(saleInfo.getModule());
+                msg.setVoucherType(saleInfo.getType());
+                msg.setVoucherCode(saleInfo.getCode());
+
+                msg.setCurrencyId(saleInfo.getCurrencyId());
+
+                msg.setItemId(item.getProdId());
+                msg.setItemCode(item.getProdCode());
+                msg.setItemSku(item.getSku());
+
+                if (item.getProdInfo() != null) {
+                    if (item.getProdInfo().has("category")) {
+                        msg.setItemCategory(item.getProdInfo().getString("category"));
+                    }
+
+                    if (item.getProdInfo().has("brand")) {
+                        msg.setItemBrand(item.getProdInfo().getString("brand"));
+                    }
+
+                    if (item.getProdInfo().has("color")) {
+                        msg.setItemColor(item.getProdInfo().getString("color"));
+                    }
+
+                    if (item.getProdInfo().has("size")) {
+                        msg.setItemSize(item.getProdInfo().getString("size"));
+                    }
+
+                    if (item.getProdInfo().has("material")) {
+                        msg.setItemMaterial(item.getProdInfo().getString("material"));
+                    }
+                }
+
+                //return
+                //private String itemReturn;
+
+                //private float qty = 0F;
+                //private float price = 0F;
+                //qty * price
+                msg.setRevenue(item.getQty() * item.getPrice());
+
+                //private float cogs = 0F;
+                //qty * cogs
+                //private float investment = 0F; //investment
+
+                //private String vatCode;
+                msg.setVat(item.getVatAmount());
+
+                //private String taxCode;
+                //private float tax = 0F;
+
+                //private String shipCode;
+                //private float ship = 0F;
+
+                //private String discountCode;
+                msg.setDiscount(item.getDiscAmount());
+
+                //private String promotionCode;
+                //private float promotion = 0F;
+
+                //private String commissionCode;
+                //private float commission = 0F;
+
+                //costAmount = commission + discount + vat + tax + promotion + ship
+                //revenue - (investment + cost)
+                msg.setProfit(item.getAmount());
+
+                msg.execute();
+            }
+        }
+    }
+}

@@ -1,0 +1,113 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo.project;
+
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.collatask.bo.CollaborationTaskBO;
+import com.inet.calista.collatask.model.project.Activity;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * ActivityBO.
+ *
+ * @author Duyen Tang
+ * @version $Id: ActivityBO.java Apr 3, 2018 4:53:10 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("collatask_activitybo")
+public class ActivityBO extends CollaborationTaskBO<Activity> implements BeanInitiateInvoke {
+
+	/**
+	 * Create {@link ActivityBO} instance
+	 * 
+	 * @param contentBf
+	 *            the given {@link MagicContentBF} instance
+	 */
+	@Inject
+	protected ActivityBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+		super(contentBf, "collatask_proj_activity");
+	}
+
+	/**
+	 * Find {@link Activity} by {@link Project} UUID and date range
+	 * 
+	 * @param projectUuid
+	 *            the given {@link Project} UUID
+	 * @param dateFrom
+	 *            the given date from
+	 * @param dateTo
+	 *            the given date to
+	 * @return the activities
+	 */
+	public List<Activity> findBy(String projectUuid, long dateFrom, long dateTo) {
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("projectUuid").equal(projectUuid);
+
+		if (dateFrom > 0) {
+			query.field("date").greaterThanOrEq(DateUtils.startTimeInMillisOf(dateFrom));
+		}
+
+		if (dateTo > 0) {
+			query.field("date").lessThanOrEq(DateUtils.startTimeInMillisOf(dateTo));
+		}
+
+		return query(query).getItems();
+	}
+
+	/**
+	 * Delete {@link Activity} by {@link Project} UUID
+	 * 
+	 * @param projectUuid
+	 *            the given {@link Project} UUID
+	 */
+	public void deleteByProjectUuid(String projectUuid) {
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("projectUuid").equal(projectUuid);
+
+		remove(query);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<Activity> getClassConvetor() {
+		return Activity.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() {
+		ensureIndex("projectUuid");
+		ensureIndex("projectUuid,date");
+	}
+}

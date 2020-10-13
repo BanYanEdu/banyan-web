@@ -1,0 +1,67 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.dto;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.inet.xportal.xdb.util.JSONUtil;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Address.
+ *
+ * @author thoangtran
+ * @version Address 2018 04-05 17:26
+ */
+@Getter
+@Setter
+public class GLAddress {
+    private String address;
+    private String districtCode;
+    private String districtName;
+    private String provinceCode;
+    private String provinceName;
+    private String countryCode;
+    private String countryName;
+
+    private String stateCode;
+    private String stateName;
+    private String postcode;
+
+    /**
+     * 
+     * @param jsonObject
+     * @return
+     * @throws JSONException
+     */
+    public static GLAddress transform(final JSONObject jsonObject) throws JSONException {
+
+        if (jsonObject == null) 
+        		return null;
+        
+        try {
+        		return JSONUtil.transfer(net.sf.json.JSONObject.fromObject(jsonObject), GLAddress.class);
+        } catch (Throwable ex) {
+        		return null;
+        }
+    }
+}

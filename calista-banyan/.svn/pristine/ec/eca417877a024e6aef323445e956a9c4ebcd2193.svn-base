@@ -1,0 +1,18 @@
+package com.inet.calista.crm.model.marketing;
+
+import com.inet.calista.crm.model.NoSqlModel;
+
+/**
+ * Segment.
+ *
+ * @author thoangtran
+ * @version Segment 2019 01-30 09:55
+ */
+public class Segment extends NoSqlModel<Segment> {
+  private String name;
+
+  @Override
+  protected boolean equals(Segment other) {
+    return false;
+  }
+}

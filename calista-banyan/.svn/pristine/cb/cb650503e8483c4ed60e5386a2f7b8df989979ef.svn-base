@@ -1,0 +1,154 @@
+/*****************************************************************
+ Copyright 2013 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+ Licensed under the iNet Solutions Corp.,;
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.inetcloud.vn/licenses
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.bo.currency;
+
+import com.inet.calista.global.bo.GLNoSqlBo;
+import com.inet.calista.global.model.currency.GlobalCurrency;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.BusinessException;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * GlobalCurrencyBo.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalCurrencyBo.java Aug 20, 2013 3:29:22 PM nguyen_dv $
+ * @since 1.0
+ */
+@Named("GlobalCurrencyBo")
+public class GlobalCurrencyBo extends GLNoSqlBo<GlobalCurrency> implements BeanInitiateInvoke {
+
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    public GlobalCurrencyBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_currency");
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(GlobalCurrency info) throws WebOSBOException {
+        return super.add(info, "code");
+    }
+
+    /**
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlobalCurrency loadByCode(String code) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>().field("code").equal(code);
+
+        return super.load((QueryImpl<JSONDB>) query);
+    }
+
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<GlobalCurrency> loadByCodes(List<String> codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>().field("code").in(codes);
+
+        return query((QueryImpl<JSONDB>) query).getItems();
+    }
+
+    /**
+     * @param uuid
+     */
+    public void removeById(String uuid) {
+        final GlobalCurrency currency = this.load(uuid);
+        if (currency != null) {
+            super.remove(currency.getUuid());
+        }
+    }
+
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("code");
+
+        if (count() > 0)
+            return;
+
+        logger.debug("init currecy data from currency-data.json file");
+
+        String json = ResourceUtil.getResourceAsString("currency-data.json");
+        if (StringUtils.hasLength(json)) {
+            JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+            if (arrJson.size() > 0) {
+                logger.debug("load {} items", arrJson.size());
+
+                for (int idx = 0; idx < arrJson.size(); idx++) {
+                    GlobalCurrency item = JSONUtil.json2Bean(GlobalCurrency.class,
+                            (JSONObject) arrJson.get(idx));
+
+                    if (StringUtils.hasLength(item.getCode())) {
+                        try {
+                            // load this item
+                            GlobalCurrency dbitem = loadByCode(item.getCode());
+
+                            // update this item
+                            if (dbitem == null || !StringUtils.hasLength(dbitem.getUuid())) {
+                                // add new item
+                                super.add(item);
+                            }
+                        } catch (BusinessException e) {
+                            logger.debug("Load from database fail.", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlobalCurrency> getClassConvetor() {
+        return GlobalCurrency.class;
+    }
+
+}

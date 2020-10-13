@@ -1,0 +1,21 @@
+package com.inet.calista.crm.dto;
+
+import com.inet.calista.crm.model.essentials.Contact;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * FullContact.
+ *
+ * @author thoangtran
+ * @version FullContact 2019 01-18 14:10
+ */
+@Getter
+@Setter
+public class FullContact extends Contact {
+  private String salutationTypeText;
+  private String sexText;
+  private String typeText;
+  private String statusText;
+  private String leadSourceText;
+}

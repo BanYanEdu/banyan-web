@@ -1,0 +1,62 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.product;
+
+import com.inet.calista.erp.excel.service.ExcelExportAbstraction;
+import com.inet.calista.erp.masterdata.bo.ERPItemPropertyBO;
+import com.inet.calista.erp.masterdata.model.ERPItemProperty;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.product.
+ *
+ * @author Phong Tran
+ * @version $Id: ProductExcelGetTplService.java Sep 11, 2018 09:32 phongtt $
+ * @since 1.0
+ */
+@Named("posepexcelproducttmp")
+public class ProductExcelGetTplService extends ExcelExportAbstraction {
+
+    @Inject
+    private ERPItemPropertyBO propertyBO;
+
+    @Override
+    protected Object invoke(final SiteDataModel siteData,
+                            final FirmInformation firmInfo,
+                            final Map<String, Object> params,
+                            final Map<String, Object> reports) {
+
+        final SearchDTO<ERPItemProperty> data = propertyBO.queryByOrgan(firmInfo.getOrganId(), StringUtils.EMPTY_STRING);
+        if (data != null && data.getTotal() > 0) {
+            reports.put("properties", data.getItems());
+        } else {
+            reports.put("properties", new ArrayList<>());
+        }
+
+        return reports;
+    }
+}

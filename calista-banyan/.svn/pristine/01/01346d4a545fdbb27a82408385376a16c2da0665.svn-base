@@ -1,0 +1,64 @@
+package com.inet.calista.global.subfirmservice;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.bo.GlbReportTemplateBo;
+import com.inet.calista.global.bo.GlbObjectDocumentBo;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * DeleteService.
+ *
+ * @author thoangtran
+ * @version DeleteService 2019 07-02 16:10
+ */
+@Named("glexceltemplate_deleteservice")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/delete",
+    inherit = true, transaction = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ExcelTplDeleteService extends GlbAbstraction {
+  @Inject
+  private GlbReportTemplateBo templateBo;
+  @Inject
+  private GlbObjectDocumentBo documentBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile firmProfile, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    String uuid = XParamUtils.getString(GlobalConstant.UUID, params);
+    if(Strings.isNullOrEmpty(uuid)) {
+      putError(action, GlobalConstant.UUID, ErrorCode.MUST_NOT_EMPTY);
+      return FAILURE_RESULT;
+    }
+    try{
+      GlbReportTemplate template = templateBo.load(uuid, getOrganId(siteDataModel, firmProfile));
+      if(null == template) {
+        putError(action, GlobalConstant.UUID, ErrorCode.NOT_EXISTS);
+        return FAILURE_RESULT;
+      }
+      templateBo.remove(template.getUuid());
+      documentBo.remove(template.getContentUid());
+      return SUCCESS_RESULT;
+    }catch (Throwable ex) {
+      ex.printStackTrace();
+      throw new WebOSBOException("Bad request!!!");
+    }
+
+  }
+}

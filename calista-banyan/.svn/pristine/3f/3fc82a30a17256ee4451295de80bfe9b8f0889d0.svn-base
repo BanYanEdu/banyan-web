@@ -1,0 +1,87 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.pricelist;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.erp.masterdata.model.ERPPriceList;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.ecommerce.subfrmservice.
+ *
+ * @author Phong Tran
+ * @version $Id: PriceItemAdjustedService.java May 09, 2018 09:41 phongtt $
+ * @since 1.0
+ */
+@Named("commercepriceitemadjusted")
+@XPortalDataService(roles = {ECMConstant.ROLE_PRICELIST}, description = ECMConstant.ROLE_PRICELIST_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/priceitem/adjusted",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class PriceItemAdjustedService extends ECMPriceListAbstraction {
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String priceCode = XParamUtils.getString("priceCode", params, StringUtils.EMPTY_STRING);
+
+        final ERPPriceList priceList = priceListBO.loadByInfo(organId, priceCode);
+        if (priceList == null) {
+            logger.error("PriceList {} is not found", priceCode);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        //adjusted: increase, decrease, equal
+        String adjusted = XParamUtils.getString("adjusted", params, StringUtils.EMPTY_STRING);
+        String prodCodes = XParamUtils.getString("prodCodes", params, StringUtils.EMPTY_STRING);
+        float amount = XParamUtils.getFloat("amount", params, 0F);
+
+        final List<String> products = (StringUtils.hasLength(prodCodes)) ?
+                CollectionUtils.asList(prodCodes.split(";")) :
+                new ArrayList<>();
+
+        int type = XParamUtils.getInteger("type", params, -1);
+        //0: amount, 1: percent,
+        if (type == 0) {
+            priceListBO.adjustedAmount(organId, priceCode, products, ECMConstant.CURRENCY, adjusted, amount);
+        }
+
+        return new ObjectWebDataservice<>("SUCCESS");
+    }
+}

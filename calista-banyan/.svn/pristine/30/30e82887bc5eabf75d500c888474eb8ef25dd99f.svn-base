@@ -1,0 +1,12 @@
+package com.inet.calista.global.model.common;
+
+/**
+ * TypeOfIndividualId.
+ *
+ * @author thoangtran
+ * @version TypeOfIndividualId 2018 07-18 10:10
+ */
+public enum TypeOfIndividualId {
+  identification_card,
+  passport
+}

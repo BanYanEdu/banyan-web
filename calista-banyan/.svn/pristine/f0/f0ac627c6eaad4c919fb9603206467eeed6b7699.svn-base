@@ -1,0 +1,56 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.hbase.bo;
+
+import com.inet.calista.erp.hbase.model.sd.ERPSDTransSOLine;
+import com.inet.xportal.thesis.hbase.bf.HBaseBaseBF;
+import com.inet.xportal.thesis.hbase.bo.HBaseAbstractBO;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * com.inet.calista.erp.hbase.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPSDTransSaleOrderBO.java Nov 14, 2018 14:01 phongtt $
+ * @since 1.0
+ */
+@Named("ERPSDTransSOLineHBBO")
+public class ERPSDTransSOLineHBBO extends HBaseAbstractBO<ERPSDTransSOLine> implements BeanInitiateInvoke {
+
+    @Inject
+    protected ERPSDTransSOLineHBBO(HBaseBaseBF magicBF) {
+        super(magicBF, WebContext.INSTANCE.cache().getWebContext(), "erp_sd_sale_order_line");
+    }
+
+    @Override
+    protected Class<ERPSDTransSOLine> getClassConvetor() {
+        return ERPSDTransSOLine.class;
+    }
+
+    @Override
+    protected void fieldsIndex() {
+        ensureIndex("docNo");
+        ensureIndex("itemId");
+        ensureIndex("docNo,itemId");
+    }
+}

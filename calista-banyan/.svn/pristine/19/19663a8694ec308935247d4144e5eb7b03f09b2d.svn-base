@@ -1,0 +1,118 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMOrderBO;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.IdentityDTO;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ShopOrderItemRemoveService.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopOrderItemRemoveService.java Dec 02, 2017 09:16 phongtt $
+ * @since 1.0
+ */
+@Named("shoporderitemremove")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/order/item/remove",
+        inherit = true,
+        expose = 2,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShopOrderItemRemoveService extends CommerceBaseAbstraction {
+    @Inject
+    private ECMOrderBO orderBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String orderId = XParamUtils.getString("orderId", params, StringUtils.EMPTY_STRING);
+        final ECMOrder order = orderBO.loadByCode(orgItem.getOrganId(), orderId);
+        validated(action, order, "ORDER", "ORDER_NOT_FOUND", String.format("order %s is not found", orderId));
+
+        String prodId = XParamUtils.getString("prodId", params, StringUtils.EMPTY_STRING);
+        String itemIds = XParamUtils.getString("itemIds", params, StringUtils.EMPTY_STRING);
+
+        final List<String> itemArg = new ArrayList<>();
+        if (StringUtils.hasLength(itemIds)) {
+            itemArg.addAll(CollectionUtils.asList(itemIds.split(";")));
+        }
+
+
+        if (!CollectionUtils.isEmpty(order.getItems()) &&
+                (StringUtils.hasLength(prodId) || !CollectionUtils.isEmpty(itemArg))) {
+            for (int i = order.getItems().size() - 1; i >= 0; i--) {
+                final ECMOrderItem item = order.getItems().get(i);
+                if (item != null) {
+                    boolean isRemove = false;
+                    if (StringUtils.hasLength(prodId)) {
+                        if (prodId.equals(item.getProdId()) ||
+                                prodId.equals(item.getProdCode())) {
+                            order.getItems().remove(i);
+                            isRemove = true;
+                        }
+                    }
+
+                    if (!isRemove && !CollectionUtils.isEmpty(itemArg)) {
+                        if (itemArg.contains(item.getUuid())) {
+                            order.getItems().remove(i);
+                        }
+                    }
+                }
+            }
+        }
+
+        order.calc();
+        orderBO.update(order.getUuid(), order);
+
+        if (order.getItems().size() == 0) {
+            orderBO.remove(order.getUuid());
+            return new ObjectWebDataservice<>(new IdentityDTO("ORDERCLEAR"));
+        }
+
+        return new ObjectWebDataservice<>(order);
+    }
+}

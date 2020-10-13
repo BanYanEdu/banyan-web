@@ -1,0 +1,175 @@
+package com.inet.calista.crm.bo.setting;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.cache.CRMCacheManager;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.setting.configuration.SystemConfiguration;
+import com.inet.calista.crm.util.JsonUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * SystemConfigurationBo.
+ *
+ * @author thoangtran
+ * @version SystemConfigurationBo 2018 04-04 15:52
+ */
+@Named("crm_setting_sysconfigbo")
+@Slf4j
+public class SystemConfigurationBo extends CRMNoSqlBo<SystemConfiguration> implements BeanInitiateInvoke {
+
+
+  /**
+   * Constructor injection
+   * @param contentBf
+   */
+  @Inject
+  public SystemConfigurationBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_setting_config");
+  }
+
+  /**
+   * Save sysconfiguration
+   * @param systemConfiguration
+   * @return
+   */
+  public SystemConfiguration save(SystemConfiguration systemConfiguration) {
+    systemConfiguration.setUuid(this.add(systemConfiguration,"key","orgCode"));
+    putToCache(systemConfiguration.getKey(), systemConfiguration.getOrgCode(), systemConfiguration.getValue());
+    return systemConfiguration;
+  }
+
+  /**
+   * Get by key
+   * @param tenantId
+   * @param key
+   * @return
+   */
+  public SystemConfiguration getByKey(String tenantId, String key) {
+    final QueryImpl<JSONDB> query = this.getQueryOwner(tenantId);
+    query.field("key").equal(key);
+
+    return this.load(query);
+  }
+
+  /**
+   *
+   * @param keywords
+   * @return
+   */
+  public SearchDTO<SystemConfiguration> findAllMaster( String keywords) {
+    return this.findByTenant(CommonConstant.MASTER, keywords);
+  }
+  /**
+   *
+   * @param tenantId
+   * @param keywords
+   * @return
+   */
+  public SearchDTO<SystemConfiguration> findByTenant(String tenantId, String keywords) {
+    final QueryImpl<JSONDB> query = this.getQueryOwner(tenantId);
+    if(!Strings.isNullOrEmpty(keywords)) {
+      query.or(query.criteria("key").like(keywords), query.criteria("description").like(keywords));
+    }
+    return this.query(query);
+  }
+
+  /**
+   *
+   * @param key
+   * @param tenantId
+   * @return
+   */
+  private boolean isExistedKey(String key, String tenantId) {
+    final QueryImpl<JSONDB> query = this.getQueryOwner(tenantId);
+    query.field("key").equal(key);
+    return this.count(query) > 0;
+  }
+
+  @Override
+  protected Class<SystemConfiguration> getClassConvetor() {
+    return SystemConfiguration.class;
+  }
+
+
+
+  @Override
+  public void init() {
+    if (log.isInfoEnabled()) {
+      log.info("Begin initialize data for system configuration");
+    }
+
+    String configs = ResourceUtil.getResourceAsString("system-config.json");
+    if (!Strings.isNullOrEmpty(configs)) {
+      if (!configs.startsWith("[")) {
+        configs = String.format("[%s]", configs);
+      }
+    }
+
+    JSONArray array = JsonUtils.toJsonArray(configs);
+    if (array != null && array.length() > 0) {
+      JSONObject object;
+      String key;
+      for (int index = 0; index < array.length(); index++) {
+        try {
+          object = array.getJSONObject(index);
+          key = JsonUtils.getString(object, "key");
+          if (!Strings.isNullOrEmpty(key) && !isExistedKey(key,  CommonConstant.MASTER)) {
+            this.add(new SystemConfiguration(key,
+                JsonUtils.getString(object, "value"),
+                JsonUtils.getString(object, "description"),
+                JsonUtils.getBoolean(object, "visible"),
+                CommonConstant.MASTER
+
+        ));
+          }
+        } catch (JSONException ex) {
+          log.warn("Error to get data to initialize at index:"
+              + index);
+        }
+      }
+    }
+
+    if (log.isInfoEnabled()) {
+      log.info("End initialize data for system configuration");
+    }
+
+    // put to cache
+    putToCache();
+  }
+
+  public void putToCache() {
+    CRMCacheManager.INSTANCE.getSysConfigCacheManager().removeAll();
+
+    // find all system configuration
+    List<SystemConfiguration> configs = this.query().getItems();
+    if (configs == null) {
+      return;
+    }
+
+    for (SystemConfiguration config : configs) {
+      // put configuration to cache
+      putToCache(config.getKey(), config.getOrgCode(), config.getValue());
+    }
+  }
+  public void putToCache(String key, String tenantId, String value){
+    CRMCacheManager.INSTANCE.getSysConfigCacheManager().setItem(
+        key + "-" + tenantId, value);
+  }
+
+
+}

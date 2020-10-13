@@ -1,0 +1,21 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * PersonalInfo
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: PersonalInfo.java Feb 14, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class PersonalInfo {
+    private Long dob;
+    private String genderCode;
+    private String maritalStatusCode;
+}

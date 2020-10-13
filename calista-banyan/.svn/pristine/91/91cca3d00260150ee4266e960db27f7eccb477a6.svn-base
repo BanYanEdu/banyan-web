@@ -1,0 +1,24 @@
+package com.inet.jobportal.service.employer.jobpost;
+
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+
+import javax.inject.Named;
+
+/**
+ * JobPostAddVisitDS.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPostAddVisitDS.java Jan 23, 2019 11:50:38 AM nguyen_dv $
+ * @since 1.0
+ */
+@Named("jobportaljobpostaddvisit")
+//@XPortalDataService(roles = {NoSQLConstant.ROLE_ADMIN}, description = "Dosage Create service")
+@XPortalDataService(description = "Job Portal - JobPost Add Visit Service")
+@XPortalPageRequest(uri = "jobportal/employer/jobpost/visit/add",
+        inherit = true,
+//        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobPostAddVisitDS {
+}

@@ -1,0 +1,188 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GLInvitation;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: GLInvitationBO.java Nov 19, 2018 11:46 phongtt $
+ * @since 1.0
+ */
+@Named("GLInvitationBO")
+public class GLInvitationBO extends GLNoSqlBo<GLInvitation> implements BeanInitiateInvoke {
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    protected GLInvitationBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_invitation");
+    }
+
+    /**
+     * 
+     * @param organId
+     * @param code
+     * @return
+     */
+    public GLInvitation loadSentCode(String organId, String code) 
+    {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+		query.field("code").equal(code);
+        query.field("status").equal(-1);
+        return load(query);
+    }
+
+    /**
+     * @param sender
+     * @return
+     */
+    public SearchDTO<GLInvitation> querySender(String organId, String sender) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("sender").equal(sender);
+
+        return query(query);
+    }
+
+    /**
+     * 
+     * @param user
+     * @param organId
+     * @return
+     */
+    public GLInvitation loadUserOrganId(String user, String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("username").equal(user);
+
+        return load(query);
+    }
+
+    /**
+     * 
+     * @param organId
+     * @return
+     */
+    public SearchDTO<GLInvitation> queryOrganId(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        return query(query);
+    }
+
+    /**
+     * 
+     * @param organId
+     * @param uuid
+     * @return
+     */
+    public GLInvitation loadUUID(String organId, String uuid) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid));
+
+        return load(query);
+    }
+
+    /**
+     * 
+     * @param organId
+     * @param email
+     * @return
+     */
+    public GLInvitation checkEmailInvite(String organId, String email) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("email").equal(email);
+
+        return load(query);
+    }
+
+    /**
+     * 
+     * @param organId
+     * @param username
+     * @return
+     */
+    public GLInvitation checkUserInvite(String organId, String username) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("username").equal(username);
+
+        return load(query);
+    }
+
+    /**
+     * 
+     * @param organId
+     * @param phone
+     * @return
+     */
+    public GLInvitation checkPhoneInvite(String organId, String phone) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("phone").equal(phone);
+        return load(query);
+    }
+
+   /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GLInvitation> getClassConvetor() {
+        return GLInvitation.class;
+    }
+    
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+	@Override
+	public void init() {
+		ensureIndex("organId");
+		ensureIndex("organId,uuid");
+		ensureIndex("organId,code");
+		ensureIndex("organId,username");
+		ensureIndex("organId,sender");
+		ensureIndex("organId,status,phone");
+		ensureIndex("organId,status,username");
+		ensureIndex("organId,status,email");
+	}
+}
+

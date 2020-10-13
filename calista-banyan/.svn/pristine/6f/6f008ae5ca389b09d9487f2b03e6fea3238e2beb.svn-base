@@ -1,0 +1,92 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.dataservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.bo.GlbOrganizationBO;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * LoadProfileService.
+ *
+ * @author thoangtran
+ * @version LoadProfileService 2018 07-25 11:25
+ */
+@Named("glorganprofileload")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN},
+	engage = {"pluginfirmlogoview","cloudfirmprofileload"},
+	description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/organ/profile/load",
+        transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class OrganLoadService extends GlbAbstraction {
+    @Inject
+    private GlbOrganizationBO organizationBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final SiteDataModel site, 
+    		final SubFirmProfile profile,
+    		final AbstractBaseAction action,
+    		final Map<String, Object> params) throws WebOSBOException 
+    {
+        GlbOrganization info = organizationBO.loadByOrganId(getOrganId(site, profile));
+        if (null == info) 
+        {
+            info = new GlbOrganization();
+
+            final FirmInformation firm = MngmFactoryManager.INSTANCE
+                    .service()
+                    .organization(site, getOrganId(site, profile));
+
+            if (null != firm) 
+            {
+                //SyncData from lotus
+                info.setOrganId(firm.getOrganId());
+                info.setName(firm.getOrgName());
+                info.setCreatedDate(System.currentTimeMillis());
+                info.setModifiedDate(System.currentTimeMillis());
+                info.setUuid(organizationBO.add(info));
+            }
+        }
+
+        return new ObjectWebDataservice<>(info);
+    }
+}

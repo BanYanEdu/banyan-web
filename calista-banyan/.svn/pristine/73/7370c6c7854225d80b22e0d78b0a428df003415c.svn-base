@@ -1,0 +1,377 @@
+/*****************************************************************
+   Copyright 2020 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.inet.calista.common.model.BaseModel;
+import com.inet.xportal.document.data.RightObject;
+
+/**
+ * 
+ * GlbShelfMeta.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbShelfMeta.java Feb 7, 2020 9:29:46 AM $
+ *
+ * @since 1.0
+ */
+public class GlbShelfMeta extends BaseModel
+{
+	private String organId;
+	// define context mapping with this note from application
+	private String contextID;
+	private String application;
+	private String urlBase64;
+	private String owner;
+	// define permission of user on this document
+	private List<RightObject> rights = new ArrayList<>();
+
+	private String title;
+	private String language;
+	private long docDate = 0;
+	private String author;
+
+	private String category;
+	private String miimetype;
+	private String tags;
+	private String brief;
+
+	private boolean published;
+	private String publisher;
+
+	private boolean signed;
+	private String signer;
+
+	// uuid of shelf
+	private String shelfID;
+	private String shelfCode;
+	private long shelfDate = 0;
+
+	/**
+	 * @return the organId
+	 */
+	public String getOrganId() {
+		return organId;
+	}
+
+	/**
+	 * @param organId
+	 *            the organId to set
+	 */
+	public void setOrganId(String organId) {
+		this.organId = organId;
+	}
+
+	/**
+	 * @return the contextID
+	 */
+	public String getContextID() {
+		return contextID;
+	}
+
+	/**
+	 * @param contextID the contextID to set
+	 */
+	public void setContextID(String contextID) {
+		this.contextID = contextID;
+	}
+
+	/**
+	 * @return the application
+	 */
+	public String getApplication() {
+		return application;
+	}
+
+	/**
+	 * @param application
+	 *            the application to set
+	 */
+	public void setApplication(String application) {
+		this.application = application;
+	}
+
+	/**
+	 * @return the urlBase64
+	 */
+	public String getUrlBase64() {
+		return urlBase64;
+	}
+
+	/**
+	 * @param urlBase64
+	 *            the urlBase64 to set
+	 */
+	public void setUrlBase64(String urlBase64) {
+		this.urlBase64 = urlBase64;
+	}
+
+	/**
+	 * @return the owner
+	 */
+	public String getOwner() {
+		return owner;
+	}
+
+	/**
+	 * @param owner
+	 *            the owner to set
+	 */
+	public void setOwner(String owner) {
+		this.owner = owner;
+	}
+
+	/**
+	 * @return the rights
+	 */
+	public List<RightObject> getRights() {
+		return rights;
+	}
+
+	/**
+	 * @param rights
+	 *            the rights to set
+	 */
+	public void setRights(List<RightObject> rights) {
+		this.rights = rights;
+	}
+
+	/**
+	 * @return the title
+	 */
+	public String getTitle() {
+		return title;
+	}
+
+	/**
+	 * @param title
+	 *            the title to set
+	 */
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	/**
+	 * @return the language
+	 */
+	public String getLanguage() {
+		return language;
+	}
+
+	/**
+	 * @param language
+	 *            the language to set
+	 */
+	public void setLanguage(String language) {
+		this.language = language;
+	}
+
+	/**
+	 * @return the docDate
+	 */
+	public long getDocDate() {
+		return docDate;
+	}
+
+	/**
+	 * @param docDate
+	 *            the docDate to set
+	 */
+	public void setDocDate(long docDate) {
+		this.docDate = docDate;
+	}
+
+	/**
+	 * @return the author
+	 */
+	public String getAuthor() {
+		return author;
+	}
+
+	/**
+	 * @param author
+	 *            the author to set
+	 */
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	/**
+	 * @return the category
+	 */
+	public String getCategory() {
+		return category;
+	}
+
+	/**
+	 * @param category
+	 *            the category to set
+	 */
+	public void setCategory(String category) {
+		this.category = category;
+	}
+
+	/**
+	 * @return the miimetype
+	 */
+	public String getMiimetype() {
+		return miimetype;
+	}
+
+	/**
+	 * @param miimetype
+	 *            the miimetype to set
+	 */
+	public void setMiimetype(String miimetype) {
+		this.miimetype = miimetype;
+	}
+
+	/**
+	 * @return the tags
+	 */
+	public String getTags() {
+		return tags;
+	}
+
+	/**
+	 * @param tags
+	 *            the tags to set
+	 */
+	public void setTags(String tags) {
+		this.tags = tags;
+	}
+
+	/**
+	 * @return the brief
+	 */
+	public String getBrief() {
+		return brief;
+	}
+
+	/**
+	 * @param brief
+	 *            the brief to set
+	 */
+	public void setBrief(String brief) {
+		this.brief = brief;
+	}
+
+	/**
+	 * @return the published
+	 */
+	public boolean isPublished() {
+		return published;
+	}
+
+	/**
+	 * @param published
+	 *            the published to set
+	 */
+	public void setPublished(boolean published) {
+		this.published = published;
+	}
+
+	/**
+	 * @return the publisher
+	 */
+	public String getPublisher() {
+		return publisher;
+	}
+
+	/**
+	 * @param publisher
+	 *            the publisher to set
+	 */
+	public void setPublisher(String publisher) {
+		this.publisher = publisher;
+	}
+
+	/**
+	 * @return the signed
+	 */
+	public boolean isSigned() {
+		return signed;
+	}
+
+	/**
+	 * @param signed
+	 *            the signed to set
+	 */
+	public void setSigned(boolean signed) {
+		this.signed = signed;
+	}
+
+	/**
+	 * @return the signer
+	 */
+	public String getSigner() {
+		return signer;
+	}
+
+	/**
+	 * @param signer
+	 *            the signer to set
+	 */
+	public void setSigner(String signer) {
+		this.signer = signer;
+	}
+
+	/**
+	 * @return the shelfID
+	 */
+	public String getShelfID() {
+		return shelfID;
+	}
+
+	/**
+	 * @param shelfID the shelfID to set
+	 */
+	public void setShelfID(String shelfID) {
+		this.shelfID = shelfID;
+	}
+
+	/**
+	 * @return the shelfCode
+	 */
+	public String getShelfCode() {
+		return shelfCode;
+	}
+
+	/**
+	 * @param shelfCode
+	 *            the shelfCode to set
+	 */
+	public void setShelfCode(String shelfCode) {
+		this.shelfCode = shelfCode;
+	}
+
+	/**
+	 * @return the shelfDate
+	 */
+	public long getShelfDate() {
+		return shelfDate;
+	}
+
+	/**
+	 * @param shelfDate
+	 *            the shelfDate to set
+	 */
+	public void setShelfDate(long shelfDate) {
+		this.shelfDate = shelfDate;
+	}
+}

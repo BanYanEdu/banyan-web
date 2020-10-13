@@ -1,0 +1,135 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.excel.service;
+
+import com.inet.calista.erp.excel.data.ReportExcel;
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.bo.SiteBO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.report.ReportService;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
+
+/**
+ * RecordExcelDataservice.
+ *
+ * @author Hien Nguyen
+ * @version $Id: RecordExcelDataservice.java Sep 24, 2015 9:05:19 AM nguyen_dv $
+ * @since 1.0
+ */
+public abstract class ExcelExportAbstraction implements ReportService {
+    protected static final Logger logger = LoggerFactory.getLogger(ExcelExportAbstraction.class);
+
+    @Inject
+    protected SiteBO siteBO;
+
+
+    protected abstract Object invoke(final SiteDataModel siteData,
+                                     final FirmInformation firmInfo,
+                                     final Map<String, Object> params,
+                                     final Map<String, Object> reports);
+
+    /**
+     * @param siteData
+     * @param firmInfo
+     * @return
+     */
+    protected final String getOrganId(final SiteDataModel siteData,
+                                      final FirmInformation firmInfo) {
+        if (firmInfo != null) {
+            return firmInfo.getOrganId();
+        }
+
+        return siteData.getOrganiId();
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.report.ReportService#invoke(java.util.Map)
+     */
+    @Override
+    public Object invoke(final Map<String, Object> params) throws WebOSBOException {
+        try {
+            logger.debug("preparing data ...........................................");
+            final Map<String, Object> reports = new ReportExcel<>();
+            reports.put("siteData", new SiteDataModel());
+            reports.put("orgData", new FirmInformation());
+
+
+            String reportID = XParamUtils.getString("templateID", params);
+            logger.debug("templateID : {} ", reportID);
+
+            String siteID = XParamUtils.getString("siteID", params);
+            final SiteDataModel siteData = siteBO.load(siteID);
+            logger.debug("SiteID {} has data {}", siteID, siteData);
+
+            FirmInformation firmData = null;
+
+            if (siteData != null) {
+                reports.put("siteData", siteData);
+
+                String orgID = XParamUtils.getString("orgID", params);
+                firmData = MngmFactoryManager.INSTANCE
+                        .service()
+                        .organization(siteData, orgID);
+                logger.debug("OrganID {} has data {}", orgID, firmData);
+
+                if (firmData != null) {
+                    reports.put("orgData", firmData);
+                }
+            }
+
+            JSONObject paramsreport = new JSONObject();
+            for (String key : params.keySet()) {
+                paramsreport.put(key, params.get(key));
+
+                try {
+                    long value = XParamUtils.getLong(key, params);
+                    String sValue = new SimpleDateFormat("dd/MM/yyyy").format(new Date(value));
+                    paramsreport.put("dts" + key, sValue);
+                } catch (Throwable ex) {
+                    //TODO:ignore exception
+                }
+            }
+
+            long printDate = System.currentTimeMillis();
+            paramsreport.put("printDate", printDate);
+            paramsreport.put("printDay", new SimpleDateFormat("dd").format(new Date(printDate)));
+            paramsreport.put("printMonth", new SimpleDateFormat("MM").format(new Date(printDate)));
+            paramsreport.put("printYear", new SimpleDateFormat("yyyy").format(new Date(printDate)));
+
+            reports.put("paramData", paramsreport);
+
+            return invoke(siteData, firmData, params, reports);
+        } catch (Throwable ex) {
+            logger.warn("Report [frame core excel abstraction] fail: {}", ex);
+            return null;
+        }
+    }
+}

@@ -1,0 +1,119 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.cms;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.utils.ECMUtil;
+import com.inet.xportal.cms.web.model.CMSItemModel;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * CommerceCMSDataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceCMSDataservice.java Jan 30, 2018 11:08 phongtt $
+ * @since 1.0
+ */
+@Named("commercecmsitemlist")
+@XPortalDataService(roles = {ECMConstant.ROLE_ADMIN}, description = ECMConstant.ROLE_ADMIN_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/cmsitem/list",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CommerceCMSDataservice extends CommerceCMSAbstraction {
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param summary
+     * @param idx
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    @Override
+    protected CMSItemModel loadItem(final CMSFirm cmsfirm,
+                                    final OrganizationDTO orgItem,
+                                    final ECMItem summary,
+                                    int idx,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+        return null;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.cms.web.marketplace.subfirmservice.ApplicationTabCMSAbstraction#service(com.inet.xportal.cms.web.model.CMSItemModel, com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.cms.web.model.ApplicationSummary, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSItemModel cmsItem,
+                                     final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final ECMItem summary,
+                                     int idx,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        // adjust value from tab-group
+        ECMUtil.tabgroupAdjustment(action.getSiteID(),
+                getCMSPrefix(cmsfirm),
+                getLanguage(action, params),
+                summary.getCmsTab(),
+                false);
+
+        SearchDTO<CMSItemModel> result = null;
+        /*final List<String> cmslst = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(summary.getElements())) {
+            for (PairValueDTO item : summary.getElements())
+                cmslst.add(item.getUuid());
+
+            result = cmsItemBO().queryByOwner(cmslst, action.getSiteID(),
+                    getCMSPrefix(cmsfirm),
+                    XParamUtils.getString("code", params, getOwnerId(orgItem)));
+        }*/
+
+        final List<String> menus = new ArrayList<>();
+        menus.add(XParamUtils.getString("code", params, getOwnerId(orgItem)));
+
+        result = cmsItemBO().loadByMenu(
+                action.getSiteID(),
+                getCMSPrefix(cmsfirm),
+                action.getMultilangual(),
+                menus);
+
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

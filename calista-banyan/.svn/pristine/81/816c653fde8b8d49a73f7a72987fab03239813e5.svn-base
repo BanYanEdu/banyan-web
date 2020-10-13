@@ -1,0 +1,12 @@
+package com.inet.calista.crm.model.common;
+
+/**
+ * Visibility.
+ *
+ * @author thoangtran
+ * @version Visibility 2018 04-06 14:40
+ */
+public enum Visibility {
+  PRIVATE,
+  PUBLIC
+}

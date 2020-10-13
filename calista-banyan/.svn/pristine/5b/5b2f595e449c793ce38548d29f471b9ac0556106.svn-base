@@ -1,0 +1,64 @@
+package com.inet.calista.global.reportservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.bo.GlbReportTemplateBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * ExcelTplListService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ExcelTplListService.java Feb 11, 2020 11:19:01 AM $
+ *
+ * @since 1.0
+ */
+@Named("glexceltemplate_listservice")
+@XPortalDataService(roles = { NoSQLConstant.ROLE_USER }, description = CalistaConstant.ROLE_USER_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/list", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class GlbExcelTplListService extends GlbAbstraction 
+{
+	@Inject
+	private GlbReportTemplateBO templateBo;
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(final SiteDataModel site, 
+			final SubFirmProfile firmProfile, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String application = XParamUtils.getString("application", params, action.getApplication());
+		String module = XParamUtils.getString("module", params);
+		String type = XParamUtils.getString("type", params);
+		String organId = getOrganId(site, firmProfile);
+		
+		SearchDTO<GlbReportTemplate> result = templateBo.filter(organId, application, module, type);
+		if (result == null)
+			result = new SearchDTO<>();
+		
+		return new ObjectWebDataservice<>(result);
+
+	}
+}

@@ -1,0 +1,70 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.erp.common.bo.ERPGroupBase;
+import com.inet.calista.erp.masterdata.model.ERPGroup;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPGroupBO.java May 16, 2018 11:42 phongtt $
+ * @since 1.0
+ */
+@Named("ERPGroupBO")
+public class ERPGroupBO extends ERPGroupBase<ERPGroup> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(ERPGroupBO.class);
+
+    @Inject
+    protected ERPGroupBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPGroup> getClassConvetor() {
+        return ERPGroup.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("name");
+        ensureIndex("parent");
+        ensureIndex("name,parent");
+        ensureIndex("organId,name");
+        ensureIndex("organId,parent");
+        ensureIndex("organId,name,parent");
+    }
+
+
+}

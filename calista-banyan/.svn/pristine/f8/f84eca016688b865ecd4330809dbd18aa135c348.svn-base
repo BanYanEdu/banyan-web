@@ -1,0 +1,64 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.service.contact.profile;
+
+import com.inet.calista.global.bo.contact.ContactInfoBo;
+import com.inet.calista.global.service.GlAbstractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.service.contact.profile.
+ *
+ * @author Phong Tran
+ * @version $Id: QueryProfileService.java Nov 02, 2018 10:31 phongtt $
+ * @since 1.0
+ */
+@Named("glcontactprofilequery")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description = "User role")
+@XPortalPageRequest(uri = "gl/contact/profile/query",
+        transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class QueryProfileService extends GlAbstractService {
+    @Inject
+    private ContactInfoBo contactInfoBo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile profile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String users = XParamUtils.getString("users", params, StringUtils.EMPTY_STRING);
+        String keyword = XParamUtils.getString("keyword", params, StringUtils.EMPTY_STRING);
+
+        return new ObjectWebDataservice<>(contactInfoBo.queryByUserCode(CollectionUtils.asList(users.split(",")), keyword));
+    }
+}

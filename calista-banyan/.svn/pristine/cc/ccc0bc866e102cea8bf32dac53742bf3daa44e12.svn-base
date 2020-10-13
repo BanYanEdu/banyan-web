@@ -1,0 +1,146 @@
+package com.inet.calista.crm.bo.essentials;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.dto.EntityDto;
+import com.inet.calista.crm.dto.SearchCriteria;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.model.essentials.Entity;
+import com.inet.calista.crm.model.essentials.EntityType;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.xportal.module.web.bo.MercuryRegisterBO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.data.SearchResult;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * EntityBo.
+ *
+ * @author thoangtran
+ * @version EntityBo 2018 04-16 15:46
+ */
+@Named("crm.organizationBo")
+@Slf4j
+public class EntityBo extends CRMNoSqlBo<Entity> implements BeanInitiateInvoke {
+
+  private MercuryRegisterBO mercuryRegisterBo;
+
+  @Inject
+  public EntityBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, Entity.COLLECTION);
+  }
+
+  /**
+   * Save or update entity
+   * @param entity
+   * @return
+   */
+
+  public Entity save(Entity entity, String ownerId) {
+    entity.setOrgCode(ownerId);
+    if(Strings.isNullOrEmpty(entity.getOrganId()) && EntityType.organization.name().equals(entity.getObjectType())){
+      entity.setOrganId(getMercuryRegisterBo().organIdGenerator());
+    }
+    entity.setOrganId(entity.getOrganId());
+    this.add(entity);
+    return entity;
+  }
+
+  /**
+   * Update information
+   * @param entity
+   * @return
+   */
+
+  public Entity update(String uuid, Entity entity, String ownerId){
+    final Entity exist = this.loadById(entity.getUuid(), ownerId);
+    if(null != exist){
+      entity.setOrganId(exist.getOrganId());
+      this.update(entity.getUuid(), entity);
+    }
+    return entity;
+  }
+  /**
+   *
+   * @param uuid
+   * @param ownerId
+   * @return
+   */
+  public EntityDto loadDtoById(String uuid, String ownerId) {
+     return new EntityDto(loadById(uuid, ownerId));
+  }
+  /**
+   * Search entity by criteria
+   * @param criteria
+   * @return
+   */
+  public SearchResult<JSONDB> search(final SearchCriteria<QSearchCriteria> criteria, String ownerId){
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+    final QueryImpl<JSONDB> queryTn = getQueryOwner(ownerId);
+    queryTn.field("deleted").notEqual(true);
+    query.pipeline("$match", queryTn.getQueryObject());
+    // lookup to global
+    final QueryImpl<JSONDB> queryInGlobal = new QueryImpl<>();
+    QSearchCriteria qSearchCriteria = criteria.getCriteria();
+
+    // search by key
+    if(null != qSearchCriteria && StringUtils.hasLength(criteria.getCriteria().getKeyword())){
+      final String keywords = criteria.getCriteria().getKeyword();
+      queryInGlobal.or(query.criteria("name").like(keywords),
+          query.criteria("primaryEmail").startsWith(keywords)
+          );
+    }
+    //lookup("gl_organization","organId","organId", query, queryInGlobal, new Document(), true);
+    return this.pagination(query, criteria.getPageSize(), criteria.getPageNumber());
+  }
+
+
+
+  @Override
+  protected Class<Entity> getClassConvetor() {
+    return Entity.class;
+  }
+
+  @Override
+  protected Map<String, Class<?>> childrenConvertMap() {
+    final Map<String, Class<?>> map = new HashMap<>();
+    map.put("assignTo", LinkTo.class);
+    return map;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+
+  void createIndex() {
+    ensureIndex("uuid");
+    ensureIndex("name,objectType");
+    ensureIndex("orgCode");
+  }
+
+
+  /**
+   *
+   * @return
+   */
+  private MercuryRegisterBO getMercuryRegisterBo(){
+    if(null == this.mercuryRegisterBo ){
+      mercuryRegisterBo = WebContext.INSTANCE.cache().getBean(MercuryRegisterBO.class);
+    }
+
+    return  mercuryRegisterBo;
+  }
+}

@@ -1,0 +1,200 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.data.task;
+
+import java.util.Collection;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+
+/**
+ * Modification.
+ *
+ * @author Duyen Tang
+ * @version $Id: Modification.java Dec 15, 2017 3:51:53 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Modification {
+  private String field;
+  private String oldValue;
+  private String newValue;
+  private String action;
+  
+  /**
+   * Create {@link Modification} instance
+   */
+  public Modification() {}
+
+  /**
+   * Create {@link Modification} instance
+   * 
+   * @param field the given field to modify
+   * @param oldValue the given old value
+   * @param newValue the given new value
+   * @param action the given action
+   */
+  public Modification(String field, String oldValue, String newValue, Action action) {
+    this.field = field;
+    this.oldValue = oldValue;
+    this.newValue = newValue;
+    this.action = action.name();
+  }
+  
+  /**
+   * Create {@link Modification} instance
+   * 
+   * @param field the given field to modify
+   * @param oldValue the given old value
+   * @param newValue the given new value
+   * @param action the given action
+   */
+  public Modification(String field, Number oldValue, Number newValue, Action action) {
+    this.field = field;
+    this.oldValue = String.valueOf(oldValue);
+    this.newValue = String.valueOf(newValue);
+    this.action = action.name();
+  }
+
+  /**
+   * @return the field
+   */
+  public String getField() {
+    return field;
+  }
+
+  /**
+   * @param field the field to set
+   */
+  public void setField(String field) {
+    this.field = field;
+  }
+
+  /**
+   * @return the oldValue
+   */
+  public String getOldValue() {
+    return oldValue;
+  }
+
+  /**
+   * @param oldValue the oldValue to set
+   */
+  public void setOldValue(String oldValue) {
+    this.oldValue = oldValue;
+  }
+
+  /**
+   * @return the newValue
+   */
+  public String getNewValue() {
+    return newValue;
+  }
+
+  /**
+   * @param newValue the newValue to set
+   */
+  public void setNewValue(String newValue) {
+    this.newValue = newValue;
+  }
+
+  /**
+   * @return the action
+   */
+  public String getAction() {
+    return action;
+  }
+
+  /**
+   * @param action the action to set
+   */
+  public void setAction(String action) {
+    this.action = action;
+  }
+  
+  /**
+   * Return {@link Modification} on two {@link String} field
+   * 
+   * @param field the given field
+   * @param oldV the given old value
+   * @param newV the given new value
+   * @return the {@link Modification}
+   */
+  public static Modification modify(String field, String oldV, String newV) {
+    if ((Strings.isNullOrEmpty(oldV) && Strings.isNullOrEmpty(newV)) 
+        || (oldV != null && oldV.equals(newV))) {
+      // no modification on given field
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(oldV)) {
+      // adding modification
+      return new Modification(field, oldV, newV, Action.add);
+    }
+    
+    if (Strings.isNullOrEmpty(newV)) {
+      // deleting modification
+      return new Modification(field, oldV, newV, Action.delete);
+    }
+    
+    return new Modification(field, oldV, newV, Action.modify);
+  }
+  
+  /**
+   * Return {@link Modification} on two {@link String} field
+   * 
+   * @param field the given field
+   * @param oldV the given old value
+   * @param newV the given new value
+   * @return the {@link Modification}
+   */
+  public static Modification modify(String field, Collection<?> oldV, Collection<?> newV) {
+    if (CollectionUtils.isEmpty(oldV) && CollectionUtils.isEmpty(newV) 
+        || (oldV != null && oldV.equals(newV))) {
+      // no modification on given field
+      return null;
+    }
+    
+    if (CollectionUtils.isEmpty(oldV)) {
+      // adding modification
+      return new Modification(field, null, newV.toString(), Action.add);
+    }
+    
+    if (CollectionUtils.isEmpty(newV)) {
+      // deleting modification
+      return new Modification(field, oldV.toString(), null, Action.delete);
+    }
+    
+    return new Modification(field, oldV.toString(), newV.toString(), Action.modify);
+  }
+
+  /**
+   * Action.
+   *
+   * @author Duyen Tang
+   * @version $Id: Modification.java Dec 15, 2017 3:52:20 PM tttduyen $
+   *
+   * @since 1.0
+   */
+  public enum Action {
+    add,
+    modify,
+    delete,
+    transfer,
+    force_modify
+  }
+}

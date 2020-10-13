@@ -1,0 +1,399 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.system.bo;
+
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.system.data.ERPCounterValue;
+import com.inet.calista.erp.system.model.ERPCounter;
+import com.inet.calista.erp.util.ERPUtil;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ExpressionUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPCounterBO.java Apr 24, 2018 10:35 phongtt $
+ * @since 1.0
+ */
+@Named("ERPCounterBO")
+public class ERPCounterBO extends ERPBaseBO<ERPCounter> implements BeanInitiateInvoke {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPCounterBO.class);
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("values", ERPCounterValue.class);
+    }
+
+    @Inject
+    protected ERPCounterBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_counter");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPCounter> getClassConvetor() {
+        return ERPCounter.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("counterId");
+        ensureIndex("organId,counterId");
+        ensureIndex("values.counterKey");
+    }
+
+    @Override
+    public final String add(final ERPCounter info) throws WebOSBOException {
+        final ERPCounter data = loadCounter(info.getOrganId(), info.getCounterId());
+        if (data != null) {
+            return data.getUuid();
+        } else {
+            return super.add(info);
+        }
+    }
+
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param prefix
+     * @throws WebOSBOException
+     */
+    public void initCounter(String organId, String counterId, String prefix) throws WebOSBOException {
+        initCounter(organId, counterId, prefix, 5);
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param prefix
+     * @throws WebOSBOException
+     */
+    public void initCounter(String organId, String counterId, String prefix, int zeroLead) throws WebOSBOException {
+        initCounter(organId, counterId, prefix, zeroLead, "-");
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param prefix
+     * @throws WebOSBOException
+     */
+    public void initCounter(String organId, String counterId, String prefix, int zeroLead, String sign) throws WebOSBOException {
+        final ERPCounter info = loadCounter(organId, counterId);
+        if (info != null) {
+            return;
+        }
+
+        final ERPCounter counter = new ERPCounter();
+        counter.setZeroLead(zeroLead < 0 ? 0 : zeroLead);
+        counter.setOrganId(organId);
+        counter.setCounterId(counterId);
+        if (StringUtils.hasLength(prefix)) {
+            counter.setPrefix(prefix);
+            if (StringUtils.hasLength(sign)) {
+                counter.setParts("PREFIX," + sign + ",NUM");
+            } else {
+                counter.setParts("PREFIX,NUM");
+            }
+        } else {
+            counter.setParts("NUM");
+        }
+
+        counter.setPattern(patternBuilder(counter));
+        counter.setUuid(add(counter));
+    }
+
+
+    /**
+     * @param organId
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPCounter> query(String organId, String keyword, int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("counterId").like(keyword),
+                    query.criteria("counterId").like(keyword)
+            ));
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param counter
+     * @return
+     * @throws WebOSBOException
+     */
+    public String patternBuilder(final ERPCounter counter) throws WebOSBOException {
+        String pattern = "";
+        if (counter != null && StringUtils.hasLength(counter.getParts())) {
+            for (String part : counter.getParts().split(",")) {
+                if (part.contains("YY")) {
+                    if (part.equals("YYYY")) {
+                        pattern += "year";
+                    } else if (part.equals("YY")) {
+                        pattern += "String.valueOf(year).substring(2)";
+                    }
+                } else if (part.contains("MM")) {
+                    pattern += "util.leadingZeros(2,month)";
+                } else if (part.contains("DD")) {
+                    pattern += "util.leadingZeros(2,day)";
+                } else if (part.contains("NUM")) {
+                    pattern += "util.leadingZeros(" + counter.getZeroLead() + ",lastNum)";
+                } else if (part.contains("FIX")) {
+                    pattern += part.toLowerCase();
+                } else {
+                    pattern += "'" + part + "'";
+                }
+
+                pattern += "+";
+            }
+            pattern += "''";
+        }
+        return pattern;
+    }
+
+    /**
+     * @param counter
+     * @param year
+     * @param month
+     * @param day
+     * @return
+     * @throws WebOSBOException
+     */
+    private String counterKey(final ERPCounter counter, int year, int month, int day) throws WebOSBOException {
+        if (counter != null) {
+            return String.format("%s-%s-%s-%s",
+                    counter.getUuid(),
+                    (StringUtils.hasLength(counter.getYear()) && year > 0) ? String.valueOf(year) : "year",
+                    (StringUtils.hasLength(counter.getMonth()) && month > 0) ? String.valueOf(month) : "month",
+                    (StringUtils.hasLength(counter.getDay()) && day > 0) ? String.valueOf(day) : "day");
+        }
+
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param counter
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    private ERPCounterValue counterValue(final ERPCounter counter, long date) throws WebOSBOException {
+        return counterValue(counter, date, new HashMap<>());
+    }
+
+    /**
+     * @param counter
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    private ERPCounterValue counterValue(final ERPCounter counter, long date, final Map<String, Object> parts) throws WebOSBOException {
+        ERPCounterValue counterValue = null;
+        if (counter != null && counter.isUsed()) {
+            parts.put("util", ERPUtil.class);
+
+            parts.put("prefix", counter.getPrefix());
+            parts.put("suffix", counter.getSuffix());
+            parts.put("zeroLead", counter.getZeroLead());
+
+
+            final Calendar cal = Calendar.getInstance();
+            if (date > 0) {
+                cal.setTimeInMillis(date);
+            }
+
+            int year = -1;
+            if (StringUtils.hasLength(counter.getYear())) {
+                year = cal.get(Calendar.YEAR);
+                parts.put("year", year);
+            }
+
+            int month = -1;
+            if (StringUtils.hasLength(counter.getMonth())) {
+                month = cal.get(Calendar.MONTH) + 1;
+                parts.put("month", month);
+            }
+
+            int day = -1;
+            if (StringUtils.hasLength(counter.getDay())) {
+                day = cal.get(Calendar.DAY_OF_MONTH);
+                parts.put("day", day);
+            }
+
+            String counterKey = counterKey(counter, year, month, day);
+            logger.debug("counterKey {}", counterKey);
+
+            boolean isExists = false;
+            for (ERPCounterValue value : counter.getValues()) {
+                if (counterKey.equals(value.getCounterKey())) {
+                    isExists = true;
+                    parts.put("lastNum", value.getNum());
+                }
+            }
+
+            counterValue = new ERPCounterValue(counterKey, year, month, day);
+
+            if (!isExists) {
+                parts.put("lastNum", 1);
+
+                counter.getValues().add(counterValue);
+                super.update(counter.getUuid(), counter);
+            }
+        }
+
+        return counterValue;
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPCounter loadCounter(String organId, String counterId) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("counterId").equal(counterId);
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @return
+     * @throws WebOSBOException
+     */
+    public String builder(String organId, String counterId) throws WebOSBOException {
+        return builder(organId, counterId, 0);
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public String builder(String organId, String counterId, long date) throws WebOSBOException {
+        Object retVal = StringUtils.EMPTY_STRING;
+
+        final ERPCounter counter = loadCounter(organId, counterId);
+        logger.debug("found counter {} with id {}", counter, counterId);
+        if (counter != null && counter.isUsed()) {
+            try {
+                final Map<String, Object> values = new HashMap<>();
+                final ERPCounterValue item = counterValue(counter, date, values);
+                logger.debug("builder counter value {} has parts {}", item, values.size());
+
+                String pattern = counter.getPattern();
+                logger.debug("builder counterKey {} has pattern {}", item.getCounterKey(), pattern);
+
+                retVal = ExpressionUtil.eval("return " + pattern, values);
+            } catch (Throwable ex) {
+                logger.warn("Expression util fail {}", ex);
+            }
+        }
+
+        return retVal.toString();
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @throws WebOSBOException
+     */
+    public void increase(String organId, String counterId) throws WebOSBOException {
+        increase(organId, counterId, 0);
+    }
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public void increase(String organId, String counterId, long date) throws WebOSBOException {
+        final ERPCounter counter = loadCounter(organId, counterId);
+        if (counter != null && counter.isUsed()) {
+            final ERPCounterValue item = counterValue(counter, date);
+
+            for (ERPCounterValue value : counter.getValues()) {
+                if (value.equals(item)) {
+                    value.setNum(value.getNum() + 1);
+                    logger.debug("increase counterKey {} with last number {}", item.getCounterKey(), value.getNum());
+                    super.update(counter.getUuid(), counter);
+                }
+            }
+        }
+    }
+}

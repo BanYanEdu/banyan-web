@@ -1,0 +1,75 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import com.inet.calista.global.bo.GlbOrganizationBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * 
+ * OrganizationAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: OrganizationAbstraction.java Feb 11, 2020 2:44:00 PM $
+ *
+ * @since 1.0
+ */
+public abstract class OrganizationAbstraction extends GlbAbstraction 
+{
+    @Inject
+    protected GlbOrganizationBO orgBO;
+
+    /**
+     * 
+     * @param organId
+     * @param info
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected abstract WebDataService service(String organId,
+    			final GlbOrganization info,
+    		    final AbstractBaseAction action,
+            final Map<String, Object> params) throws WebOSBOException;
+    
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected final WebDataService service(final SiteDataModel site,
+                                     final SubFirmProfile profile,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException 
+    {
+    		String organId = getOrganId(site, profile);
+    		return service(organId, orgBO.loadByOrganId(organId), action, params);
+    }
+}

@@ -1,0 +1,51 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.hbase.model.cash;
+
+import com.inet.calista.erp.hbase.model.ERPDocMaster;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * com.inet.calista.erp.hbase.model.cash.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPFITransCashHB.java Dec 11, 2018 10:39 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPFITransCashHB extends ERPDocMaster {
+    private String periodCode;
+    private String preparedBy;
+    private String cashAccountId;
+    private String entityId;
+    private String entityAddress;
+    private String transPersonName;
+
+    private String lineUuid;
+    private String lineNo;
+    private String lineDesc;
+    private String cashTransItemId;
+    private float transAmount;
+    private float baseAmount;
+    private String linkType;
+    private String linkDocId;
+    private String linkDocRef;
+}

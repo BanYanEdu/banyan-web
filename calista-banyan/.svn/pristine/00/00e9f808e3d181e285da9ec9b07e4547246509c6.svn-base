@@ -1,0 +1,60 @@
+package com.inet.calista.global.model.contact;
+
+import com.inet.calista.global.model.NoSqlModel;
+import com.inet.calista.global.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Set;
+
+/**
+ * OrganizationInfo.
+ *
+ * @author thoangtran
+ * @version OrganizationInfo 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class OrganizationInfo extends NoSqlModel<OrganizationInfo> {
+    // collection name
+    public static final String COLLECTION_NAME = "gl_organization";
+
+    private long createdDate;
+    private String createdBy;
+    private String modifiedBy;
+    private long modifiedDate;
+
+    private String name; // required
+    private String foreignName;
+    private String abbreviationName;
+    private String address; // dia chi cong ty
+    private String taxCode;
+    private String primaryEmail;
+    private String website;
+    private String primaryPhone;
+    private String fax;
+    private int foundedYear; // Năm thanh lap
+    private String legalRepName; // dai hien phap luat
+    private String legalRepCanonId; // link to contact
+    //
+    private String companySize;
+    private String industry; // LINH HOAT ĐỘNG
+    private Set<String> busAces; // NGHANH NGHE
+    private String memberOfId; // Parent Org
+
+    private String region; // thi truong
+
+    private String logo;
+
+    private String description;
+    private Address officeAddress;
+
+    // tax address
+    private String organId; // DINH DANH CUA TO CHUC SU DUNG DE SU DUNG TREN TOAN HE THONG
+    private String ownerId; // TO CHUC SO HUU THONG TIN
+
+    @Override
+    protected boolean equals(OrganizationInfo other) {
+        return false;
+    }
+}

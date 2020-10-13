@@ -1,0 +1,123 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.common.bo;
+
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.bo.LetterTemplateAbstraction;
+import com.inet.xportal.nosql.web.bo.SiteBO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.web.context.WebContext;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.calista.common.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: CalNotifyBO.java Nov 09, 2018 13:50 phongtt $
+ * @since 1.0
+ */
+@Named("CalNotifyBO")
+public class CalNotifyBO extends LetterTemplateAbstraction<Object> {
+    /**
+     * @return
+     */
+    private SiteDataModel siteProfile() {
+        return WebContext.INSTANCE.cache()
+                .getBean(SiteBO.class)
+                .loadByContext();
+    }
+
+    /**
+     * @param variables
+     * @param siteData
+     * @param firmInfo
+     */
+    private void variablesBuilder(final Map variables,
+                                  final SiteDataModel siteData,
+                                  final FirmInformation firmInfo) {
+        if (variables != null && firmInfo != null) {
+            //Ecommerce system information
+            variables.put("siteName", siteData.getName());
+            variables.put("siteAddress1", siteData.getAddress1());
+            variables.put("siteAddress2", siteData.getAddress2());
+            variables.put("sitePhone", siteData.getPhone());
+            variables.put("siteFax", siteData.getFax());
+
+            //Vendor information
+            variables.put("orgName", firmInfo.getOrgName());
+            variables.put("orgAddress1", firmInfo.getAddress1());
+            variables.put("orgAddress2", firmInfo.getAddress2());
+            variables.put("orgPhone", firmInfo.getPhone());
+            variables.put("orgFax", firmInfo.getFax());
+        }
+    }
+
+    /**
+     * @param organId
+     * @param category
+     * @param language
+     */
+    public void notifyService(final Map variables,
+                              String organId,
+                              String category,
+                              String language) {
+        final SiteDataModel siteData = siteProfile();
+        logger.debug("SiteNotify is {}", siteData);
+
+        if (siteData != null) {
+            final FirmInformation firmInfo = MngmFactoryManager.INSTANCE
+                    .service()
+                    .organization(siteData, organId);
+
+            logger.debug("firm {} for organ {} is loading ......", firmInfo, organId);
+
+            if (firmInfo != null) {
+                variablesBuilder(variables, siteData, firmInfo);
+
+                /*logger.debug("sms notify is beginning ......");
+                final Map<String, Object> variablesSms = new HashMap<>();
+                variablesSms(variablesSms, siteData, firmInfo, order);
+                logger.debug("variablesSms builder {}", variablesSms);
+                smsNotify(siteData, variablesSms,
+                        firmInfo.getPhone(),
+                        (order.getBuyer() != null) ? order.getBuyer().getPhone() : "",
+                        category, language);
+
+
+                logger.debug("email notify is beginning ......");
+                letterNotify(siteData, language, category, emailVendor, variables);
+
+
+                logger.debug("unify notify is beginning ......");
+                pushNotify(siteData, variables, form, to, category, language);
+
+                final Map<String, Object> variablesUnify = new HashMap<>();
+                variablesUnify(variablesUnify, siteData, firmInfo, order);
+                logger.debug("variablesUnify builder {}", variablesUnify);
+                pushNotify(siteData, variablesUnify,
+                        firmInfo.getEmail(),
+                        (order.getBuyer() != null) ? order.getBuyer().getUsername() : "",
+                        category, language);*/
+            }
+        }
+    }
+}

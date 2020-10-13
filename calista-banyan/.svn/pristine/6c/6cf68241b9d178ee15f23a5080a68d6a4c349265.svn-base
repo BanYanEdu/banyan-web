@@ -1,0 +1,72 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.service.SearchService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * SearchOrderByFollowUpService.
+ *
+ * @author Duyen Tang
+ * @version $Id: SearchOrderByFollowUpService.java Dec 21, 2018 11:38:30 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_searchorderbyfollowupservice")
+@XPortalDataService(roles = {Roles.TASK}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/sorderbyfu",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SearchOrderByFollowUpService extends SearchService<String> {
+  public static final String SEARCH_TYPE_PROCESS = "process";
+  public static final String SEARCH_TYPE_COORD_WATCH = "coord_watch";
+  @Inject
+  private TaskBO taskBo;
+
+  @Override
+  protected Class<String> getModelClass() {
+    return null;
+  }
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    SearchCriteria<String> criteria = getCriteria(site, subFirm, action, params);
+    criteria.setCriteria(XParamUtils.getString(CollaTaskJsonConstants.KEY, params));
+    
+    return new ObjectWebDataservice<>(taskBo.searchOrderByFollowUp(criteria, 
+        XParamUtils.getString(CollaTaskJsonConstants.SEARCH_TYPE, params)));
+  }
+
+}

@@ -1,0 +1,335 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.message;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.util.JsonUtils;
+import com.inet.xportal.web.cache.MemberManager;
+import com.inet.xportal.web.message.GlobalMessageAbstraction;
+
+import net.sf.json.JSONObject;
+
+/**
+ * CreateTaskMessage.
+ *
+ * @author Duyen Tang
+ * @version $Id: CreateTaskMessage.java Mar 26, 2018 5:00:52 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class CreateTaskMessage extends GlobalMessageAbstraction {
+  private static final Logger LOG = LoggerFactory.getLogger(CreateTaskMessage.class);
+  /**
+   * The given serial version UUID
+   */
+  private static final long serialVersionUID = 1043804759522002460L;
+  protected String name;
+  protected String desc;
+  protected long assignedDate = System.currentTimeMillis();
+  protected long startDate;
+  protected long deadline;
+  //-1: low, 0: normal, 1: high; 2: urgent
+  protected int priority = 0;
+  protected String note;
+  
+  private String creatorUname;
+  private String creatorName;
+  private String orgCode;
+
+  private Executor assignee;
+  private List<Executor> coordinators;
+  private List<Executor> watchers;
+  
+  private String application;
+  private String queryStr;
+  
+
+  @Override
+  public GlobalMessageAbstraction eventMessage(JSONObject data, Class<?> arg1) {
+    accumulate(data);
+
+    return this;
+  }
+  
+  /**
+   * Convert given {@link JSONObject} to {@link CreateTaskData}
+   * 
+   * @param data the given {@link JSONObject}
+   * @param eventName the given event name
+   * @return data
+   */
+  @SuppressWarnings("unchecked")
+  private void accumulate(JSONObject data) {
+    if (data == null) {
+      LOG.error("Null data's received");
+      return;
+    }
+    
+    this.name = JsonUtils.getString(data, "name");
+    this.desc = JsonUtils.getString(data, "desc");
+    this.startDate = JsonUtils.getLong(data, "startDate", 0L);
+    this.deadline = JsonUtils.getLong(data, "deadline", 0L);
+    this.priority = JsonUtils.getInt(data, "deadline", 0);
+    this.note = JsonUtils.getString(data, "note");
+    this.orgCode = JsonUtils.getString(data, "orgCode");
+    this.application = JsonUtils.getString(data, "application");
+    this.queryStr = JsonUtils.getString(data, "queryStr");
+    
+    this.creatorUname = JsonUtils.getString(data, "creatorUname");
+    this.creatorName = MemberManager.INSTANCE.getFullname(creatorUname);
+    
+    String assigneeUname = JsonUtils.getString(data, "assigneeUname");
+    this.assignee = new Executor(assigneeUname, MemberManager.INSTANCE.getFullname(assigneeUname), null);
+    coordinators = getExecutor((List<String>) data.get("coordinatorUnames"));
+    watchers = getExecutor((List<String>) data.get("watcherUnames"));
+  }
+  
+  /**
+   * Return list of {@link Executor} from given user name
+   * 
+   * @param unames the list of user name
+   * @return the list of executor
+   */
+  private List<Executor> getExecutor(List<String> unames) {
+    if (CollectionUtils.isEmpty(unames)) {
+      return null;
+    }
+    
+    List<Executor> executors = new LinkedList<>();
+    unames.forEach(uname -> {
+      executors.add(new Executor(uname, MemberManager.INSTANCE.getFullname(uname), null));
+    });
+    
+    return executors;
+  }
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the desc
+   */
+  public String getDesc() {
+    return desc;
+  }
+
+  /**
+   * @param desc the desc to set
+   */
+  public void setDesc(String desc) {
+    this.desc = desc;
+  }
+
+  /**
+   * @return the assignedDate
+   */
+  public long getAssignedDate() {
+    return assignedDate;
+  }
+
+  /**
+   * @param assignedDate the assignedDate to set
+   */
+  public void setAssignedDate(long assignedDate) {
+    this.assignedDate = assignedDate;
+  }
+
+  /**
+   * @return the startDate
+   */
+  public long getStartDate() {
+    return startDate;
+  }
+
+  /**
+   * @param startDate the startDate to set
+   */
+  public void setStartDate(long startDate) {
+    this.startDate = startDate;
+  }
+
+  /**
+   * @return the deadline
+   */
+  public long getDeadline() {
+    return deadline;
+  }
+
+  /**
+   * @param deadline the deadline to set
+   */
+  public void setDeadline(long deadline) {
+    this.deadline = deadline;
+  }
+
+  /**
+   * @return the priority
+   */
+  public int getPriority() {
+    return priority;
+  }
+
+  /**
+   * @param priority the priority to set
+   */
+  public void setPriority(int priority) {
+    this.priority = priority;
+  }
+
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+
+  /**
+   * @return the creatorUname
+   */
+  public String getCreatorUname() {
+    return creatorUname;
+  }
+
+  /**
+   * @param creatorUname the creatorUname to set
+   */
+  public void setCreatorUname(String creatorUname) {
+    this.creatorUname = creatorUname;
+  }
+
+  /**
+   * @return the creatorName
+   */
+  public String getCreatorName() {
+    return creatorName;
+  }
+
+  /**
+   * @param creatorName the creatorName to set
+   */
+  public void setCreatorName(String creatorName) {
+    this.creatorName = creatorName;
+  }
+
+  /**
+   * @return the orgCode
+   */
+  public String getOrgCode() {
+    return orgCode;
+  }
+
+  /**
+   * @param orgCode the orgCode to set
+   */
+  public void setOrgCode(String orgCode) {
+    this.orgCode = orgCode;
+  }
+
+  /**
+   * @return the assignee
+   */
+  public Executor getAssignee() {
+    return assignee;
+  }
+
+  /**
+   * @param assignee the assignee to set
+   */
+  public void setAssignee(Executor assignee) {
+    this.assignee = assignee;
+  }
+
+  /**
+   * @return the coordinators
+   */
+  public List<Executor> getCoordinators() {
+    return coordinators;
+  }
+
+  /**
+   * @param coordinators the coordinators to set
+   */
+  public void setCoordinators(List<Executor> coordinators) {
+    this.coordinators = coordinators;
+  }
+
+  /**
+   * @return the watchers
+   */
+  public List<Executor> getWatchers() {
+    return watchers;
+  }
+
+  /**
+   * @param watchers the watchers to set
+   */
+  public void setWatchers(List<Executor> watchers) {
+    this.watchers = watchers;
+  }
+
+  /**
+   * @return the application
+   */
+  public String getApplication() {
+    return application;
+  }
+
+  /**
+   * @param application the application to set
+   */
+  public void setApplication(String application) {
+    this.application = application;
+  }
+
+  /**
+   * @return the queryStr
+   */
+  public String getQueryStr() {
+    return queryStr;
+  }
+
+  /**
+   * @param queryStr the queryStr to set
+   */
+  public void setQueryStr(String queryStr) {
+    this.queryStr = queryStr;
+  }
+}

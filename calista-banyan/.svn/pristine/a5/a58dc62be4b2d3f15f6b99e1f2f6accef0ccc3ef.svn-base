@@ -1,0 +1,110 @@
+/*****************************************************************
+   Copyright 2013 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.reportservice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.codec.Base64;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.global.bo.GlbReportResultBO;
+import com.inet.calista.global.bo.GlbReportTemplateBO;
+import com.inet.xportal.report.bo.ReportBuilderBO;
+import com.inet.xportal.report.data.ReportParam;
+import com.inet.xportal.report.model.ReportDocument;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.IdentityDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.JSONUtils;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * GlbReportRefreshAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbReportRefreshAbstraction.java Feb 13, 2020 11:35:37 AM $
+ *
+ * @since 1.0
+ */
+public abstract class GlbReportRefreshAbstraction extends GlbReportResultAbstraction {
+	@Inject
+	protected ReportBuilderBO reportBO;
+	
+	/**
+	 * 
+	 * @param reportDataUUID
+	 * @return
+	 */
+	protected final WebDataService dataService(Object reportDataUUID )
+	{
+		if (reportDataUUID instanceof String)
+			return new ObjectWebDataservice<>(new IdentityDTO(XParamUtils.getString(reportDataUUID)));
+		else
+			return new ObjectWebDataservice<>(reportDataUUID);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.tmplservice.GlbReportResultAbstraction#service(com.inet.xportal.report.model.ReportDocument, java.lang.String, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(final ReportDocument report, 
+			String organId,
+			final AbstractBaseAction action, 
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		if (report.getStatus() == 0)
+		{
+			logger.debug("The reportID {} is generating.", report.getReportID());
+			return new ObjectWebDataservice<>(new IdentityDTO(report.getReportID()));
+		}
+		
+		// remove report data
+		resultBO.removeByReportID(report);
+		
+		// decode this parameter to string 
+		logger.debug("Convert report parameter");
+		ReportParam rptParam = null;
+		if (StringUtils.hasLength(report.getParameter()))
+			rptParam = JSONUtils.toObject(Base64.decodeToString(report.getParameter()),ReportParam.class);
+		
+		final Map<String,Object> values = paramsBuilder(organId, 
+				SecurityUtil.getPrincipal(), 
+				action, 
+				new HashMap<>(rptParam == null || CollectionUtils.isEmpty(rptParam.getParams()) ? params : rptParam.getParams()));
+		
+		
+		Object reportDataUUID = reportBO.reportBuilder(GlbReportTemplateBO.class,
+				GlbReportResultBO.class,
+				action.getWebScope().copeScope(),
+				organId,
+				report.getTemplateID(),
+				action.getUploadSaveDir(),
+				values);
+		
+		logger.debug("report {} has been generated", reportDataUUID);
+		
+		return dataService(reportDataUUID);
+	}
+}

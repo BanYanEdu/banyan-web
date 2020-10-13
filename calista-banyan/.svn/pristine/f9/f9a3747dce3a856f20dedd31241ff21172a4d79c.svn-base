@@ -1,0 +1,13 @@
+package com.inet.jobportal.model.sys;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class AppAbout {
+    private String version;
+    private String author;
+    private String releaseDate;
+    private String remark;
+}

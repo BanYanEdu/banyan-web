@@ -1,0 +1,24 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Reference Person
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: ReferencePerson.java Mar 5, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class ReferencePerson {
+    private String uuid;
+    private String name;
+    private String companyName;
+    private String jobTitle;
+    private String email;
+    private String telNo;
+}

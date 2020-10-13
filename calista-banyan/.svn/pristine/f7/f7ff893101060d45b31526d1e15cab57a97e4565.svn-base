@@ -1,0 +1,106 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.reportservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.global.bo.GlbReportResultBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.xportal.module.web.util.FirmServiceUtil;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.report.model.ReportDocument;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * GlbReportResultAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbReportResultAbstraction.java Feb 13, 2020 11:23:49 AM $
+ *
+ * @since 1.0
+ */
+public abstract class GlbReportResultAbstraction extends GlbAbstraction 
+{
+	@Inject
+	protected GlbReportResultBO resultBO;
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected final ReportDocument loadResult(String organId, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException 
+	{
+		String reportID = XParamUtils.getString("reportID", params);
+		if (!StringUtils.hasLength(reportID))
+		{
+			logger.error("ReportID is required.");
+			throw new WebOSBOException("Bad request!");
+		}
+		
+		ReportDocument reportInf = resultBO.loadByReportID(reportID, organId);
+		if (reportInf == null)
+		{
+			logger.error("ReportID {} is not found.", reportID);
+			throw new WebOSBOException("Bad request!");
+		}
+		
+		return reportInf;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(final SiteDataModel site, 
+			final SubFirmProfile firmProfile,
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException  
+	{
+		String organId = FirmServiceUtil.getOrganId(site, firmProfile);
+		return service(loadResult(organId, action, params), organId, action, params);
+	}
+	
+	/**
+	 * 
+	 * @param report
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected abstract WebDataService service(final ReportDocument report,
+			String organId,
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException ;
+}

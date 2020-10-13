@@ -1,0 +1,25 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * ModuleList.
+ *
+ * @author thoangtran
+ * @version ModuleList 2018 04-06 14:26
+ */
+public enum ModuleList {
+  contact,
+  entity,
+  campaigns,
+  cases,
+  internal_tickets,
+  invoice,
+  potentials,
+  project,
+  purchaseOrder,
+  quotes,
+  salesOrder,
+  serviceContracts,
+  services,
+  workOrders,
+  eCommerce
+}

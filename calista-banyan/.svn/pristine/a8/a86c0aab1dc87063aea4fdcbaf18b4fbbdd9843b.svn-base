@@ -1,0 +1,193 @@
+/*****************************************************************
+   Copyright 2020 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.bo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbMetaNote;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * 
+ * GlbMetaNoteBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbMetaNoteBO.java Feb 4, 2020 10:04:45 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbMetaNoteBO")
+public class GlbMetaNoteBO extends GlbNoSqlBO<GlbMetaNote> implements BeanInitiateInvoke 
+{
+	/**
+	 * 
+	 * @param businessFacade
+	 */
+	@Inject
+	protected GlbMetaNoteBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) 
+	{
+		super(businessFacade, "gl_notes");
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @return
+	 */
+	public List<String> category(String organId, String owner)
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("organId").equal(organId)
+				.field("owner").equal(owner);
+		
+		return distinct("category",(QueryImpl<JSONDB>)query);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param uuid
+	 * @return
+	 */
+	public GlbMetaNote loadById(String organId, String owner, String uuid)
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid))
+				.field("organId").equal(organId)
+				.field("owner").equal(owner);
+		
+		return load((QueryImpl<JSONDB>)query);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param contextID
+	 * @param application
+	 * @return
+	 */
+	public GlbMetaNote loadByContext(String organId, String owner, String contextID, String application)
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("contextID").equal(contextID)
+				.field("application").equal(application)
+				.field("organId").equal(organId)
+				.field("owner").equal(owner);
+		
+		return load((QueryImpl<JSONDB>)query);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param uuid
+	 */
+	public void deleteById(String organId, String owner, String uuid)
+	{
+		final List<ObjectId> ids = new ArrayList<>();
+		for (String id : uuid.split(","))
+			ids.add(BaseDBStore.getId(id));
+		
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field(BaseDBStore.ID_KEY).in(ids)
+				.field("organId").equal(organId)
+				.field("owner").equal(owner);
+		
+		remove((QueryImpl<JSONDB>)query);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @return
+	 */
+	public SearchDTO<GlbMetaNote> query(String organId, String owner)
+	{
+		return query(organId, owner, StringUtils.EMPTY_STRING, 0, 20);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param category
+	 * @param offset
+	 * @param limit
+	 * @return
+	 */
+	public SearchDTO<GlbMetaNote> query(String organId, String owner, String category, int offset, int limit)
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("organId").equal(organId)
+				.field("owner").equal(owner)
+				.order("-modified");
+		
+		if (StringUtils.hasLength(category))
+			query.field("category").equal(category);
+		
+		if (offset >= 0)
+			query.offset(offset);
+		
+		if (limit > 0)
+			query.limit(limit);
+		
+		// return all keys of this query
+		return query((QueryImpl<JSONDB>)query);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() 
+	{
+		ensureIndex("organId,owner,modified");
+		ensureIndex("organId,owner,category");
+		ensureIndex("organId,owner,category,modified");
+		ensureIndex("organId,owner,contextID,application");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<GlbMetaNote> getClassConvetor() 
+	{
+		return GlbMetaNote.class;
+	}
+}

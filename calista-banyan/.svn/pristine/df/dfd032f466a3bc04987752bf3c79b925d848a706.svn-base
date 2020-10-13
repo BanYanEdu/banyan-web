@@ -1,0 +1,327 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.bo;
+
+import com.inet.calista.common.bo.CalNoSqlBo;
+import com.inet.calista.erp.common.api.ERPFactoryManager;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPBaseBO.java Sep 05, 2018 15:37 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPBaseBO<T> extends CalNoSqlBo<T> {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPBaseBO.class);
+
+    /**
+     * Constructor default
+     *
+     * @param magicContentBF
+     * @param collection
+     */
+    public ERPBaseBO(MagicContentBF magicContentBF, String collection) {
+        super(magicContentBF, collection);
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public String uuidRandom() throws WebOSBOException {
+        return ObjectId.get().toHexString();
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param defaultCode
+     * @return
+     */
+    public String counterGenerate(String organId, String outletId, String counterId, String defaultCode) {
+        boolean isDuplicate;
+        String counter;
+        do {
+            isDuplicate = false;
+
+            counter = ERPFactoryManager.INSTANCE
+                    .counter()
+                    .builder(organId, counterId);
+
+            if (StringUtils.hasLength(counter) && checkCodeExists(organId, outletId, counter)) {
+                isDuplicate = true;
+
+                ERPFactoryManager.INSTANCE
+                        .counter()
+                        .increase(organId, counterId);
+
+                logger.debug("Counter {} isDuplicate", counter);
+            }
+        } while (isDuplicate);
+
+        return StringUtils.hasLength(counter) ? counter : defaultCode;
+    }
+
+    /**
+     * @param organId
+     * @param uuid
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadById(String organId, String uuid) throws WebOSBOException {
+        return loadById(organId, StringUtils.EMPTY_STRING, uuid);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param uuids
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryById(String organId, String outletId, String uuids) throws WebOSBOException {
+        return super.query(queryIDBuilder(organId, outletId, uuids));
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param uuids
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryById(String organId, String outletId, final List<String> uuids) throws WebOSBOException {
+        return super.query(queryIDBuilder(organId, outletId, uuids));
+    }
+
+    /**
+     * @param organId
+     * @param uuids
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryById(String organId, String uuids) throws WebOSBOException {
+        return queryById(organId, StringUtils.EMPTY_STRING, uuids);
+    }
+
+    /**
+     * @param organId
+     * @param uuids
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryById(String organId, final List<String> uuids) throws WebOSBOException {
+        return queryById(organId, StringUtils.EMPTY_STRING, uuids);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param uuid
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadById(String organId, String outletId, String uuid) throws WebOSBOException {
+        return super.load(queryIDBuilder(organId, outletId, uuid));
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadByCode(String organId, String code) throws WebOSBOException {
+        return loadByCode(organId, StringUtils.EMPTY_STRING, code);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadByCode(String organId, String outletId, String code) throws WebOSBOException {
+        return super.load(queryCodeBuilder(organId, outletId, code));
+    }
+
+    /**
+     * @param organId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByCode(String organId, String codes) throws WebOSBOException {
+        return queryByCode(organId, StringUtils.EMPTY_STRING, codes);
+    }
+
+    /**
+     * @param organId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByCode(String organId, final List<String> codes) throws WebOSBOException {
+        return queryByCode(organId, StringUtils.EMPTY_STRING, codes);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByCode(String organId, String outletId, String codes) throws WebOSBOException {
+        return super.query(queryCodeBuilder(organId, outletId, codes));
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByCode(String organId, String outletId, final List<String> codes) throws WebOSBOException {
+        return super.query(queryCodeBuilder(organId, outletId, codes));
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByOrgan(String organId, String outletId) throws WebOSBOException {
+        return super.query(queryBaseBuilder(organId, outletId));
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean checkCodeExists(String organId, String code) throws WebOSBOException {
+        return checkCodeExists(organId, StringUtils.EMPTY_STRING, code);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean checkCodeExists(String organId, String outletId, String code) throws WebOSBOException {
+        return count(queryCodeBuilder(organId, outletId, code)) > 0;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBaseBuilder(String organId, String outletId) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryCodeBuilder(String organId, String outletId, String code) throws WebOSBOException {
+        return queryCodeBuilder(organId, outletId, CollectionUtils.asList(code.split(";")));
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryCodeBuilder(String organId, String outletId, final List<String> codes) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = queryBaseBuilder(organId, outletId);
+        query.field("code").in(codes);
+
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param uuid
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryIDBuilder(String organId, String outletId, String uuid) throws WebOSBOException {
+        return queryIDBuilder(organId, outletId, CollectionUtils.asList(uuid.split(";")));
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param uuids
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryIDBuilder(String organId, String outletId, final List<String> uuids) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = queryBaseBuilder(organId, outletId);
+
+        final List<ObjectId> objectIds = new ArrayList<>();
+
+        for (String uuid : uuids) {
+            if (StringUtils.hasLength(uuid)) {
+                objectIds.add(BaseDBStore.getId(uuid));
+            }
+        }
+
+        query.field(BaseDBStore.ID_KEY).in(objectIds);
+
+        return query;
+    }
+}

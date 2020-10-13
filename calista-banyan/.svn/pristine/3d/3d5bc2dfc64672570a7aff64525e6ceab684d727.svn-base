@@ -1,0 +1,50 @@
+package com.inet.calista.crm.service.template;
+
+import com.inet.calista.crm.model.template.Template;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtran
+ * @version CreateService 2019 01-29 15:19
+ */
+@Named("crm_marketing_template_createService")
+@XPortalDataService(roles = { Roles.MARKETING}, description = "Marketing role")
+@XPortalPageRequest(uri = "crm/marketing/template/create", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CreateService extends TemplateService {
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final Template template = action.getModel(Template.class);
+      template.setOrgCode(firmProfile.getOrganiId());
+      resolveCreateModel(template);
+      template.setUuid(this.templateBo.add(template));
+      return new ObjectWebDataservice<>(template);
+
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during saving template", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

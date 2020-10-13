@@ -1,0 +1,80 @@
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.model.GlbExcelTemplate;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * GlbExcelTemplateBo.
+ *
+ * @author thoangtran
+ * @version GlbExcelTemplateBo 2019 07-02 11:14
+ */
+@Named("glbExcelTemplateBo")
+public class GlbExcelTemplateBo extends GlbNoSqlBO<GlbExcelTemplate> implements BeanInitiateInvoke {
+
+  @Inject
+  protected GlbExcelTemplateBo(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+    super(businessFacade, "gl_excel_template");
+  }
+
+
+  /**
+   * Load GlbExcelTemplate by identify and organId
+   * @param uuid the given identify of record
+   * @param organId the given organId of subfirm
+   * @return GlbExcelTemplate
+   */
+  public GlbExcelTemplate load(String uuid, String organId) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field(GlobalConstant.UUID).equal(uuid);
+    return  this.load(query);
+  }
+
+
+  /**
+   * Get list excel template in organization by application, module and type
+   *
+   * @param organId the given code of organization
+   * @param app the given application name
+   * @param module the given module
+   * @param type the given type
+   * @return SearchDTO<GlbExcelTemplate> match with query
+   */
+  public SearchDTO<GlbExcelTemplate> list(String organId, String app, String module, String type) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field("application").equal(app);
+    if(StringUtils.hasLength(module)) {
+      query.field("module").equal(module);
+    }
+    if(StringUtils.hasLength(type)) {
+      query.field("type").equal(type);
+    }
+    return this.query(query);
+  }
+  @Override
+  protected Class<GlbExcelTemplate> getClassConvetor() {
+    return GlbExcelTemplate.class;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+
+  private void createIndex(){
+    ensureIndex("organId,application,module,type");
+  }
+}

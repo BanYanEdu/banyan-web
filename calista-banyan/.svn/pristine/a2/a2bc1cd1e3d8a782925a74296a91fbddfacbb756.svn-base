@@ -1,0 +1,63 @@
+package com.inet.calista.crm.service.template;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.template.Template;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtran
+ * @version CreateService 2019 01-29 15:19
+ */
+@Named("crm_marketing_template_updateService")
+@XPortalDataService(roles = { Roles.MARKETING}, description = "Marketing role")
+@XPortalPageRequest(uri = "crm/marketing/template/update", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class UpdateService extends TemplateService {
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final Template template = action.getModel(Template.class);
+      if(Strings.isNullOrEmpty(template.getUuid())) {
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      if(!this.templateBo.isBelongOrg(template.getUuid(), firmProfile.getOrganiId())){
+        putError(action, CommonConstant.UUID, ErrorCode.not_existed);
+        return FAILURE_RESULT;
+      }
+
+      template.setOrgCode(firmProfile.getOrganiId());
+      resolveModifyModel(template);
+
+      this.templateBo.update(template, firmProfile.getOrganiId());
+      return new ObjectWebDataservice<>(template);
+
+    } catch (Exception ex) {
+      final CRMBusinessException iex = new CRMBusinessException("Error occurs during update template", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

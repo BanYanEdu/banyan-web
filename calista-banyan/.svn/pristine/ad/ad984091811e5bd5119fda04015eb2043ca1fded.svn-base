@@ -1,0 +1,162 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.proj;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ProjectBo;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.data.Member;
+import com.inet.calista.collatask.data.Member.Role;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.model.project.Project.Status;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * ProjectService.
+ *
+ * @author Duyen Tang
+ * @version $Id: ProjectService.java Mar 2, 2018 4:51:05 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class ProjectService extends CollabarationTaskService {
+  @Inject
+  protected ProjectBo projectBo;
+  
+  /**
+   * Return list of {@link Member} from given {@link JSONArray}
+   * 
+   * @param array the given array data as {@link JSONArray}
+   * @return the list of {@link Member}
+   * @throws ValidationException if submission invalid
+   */
+  protected List<Member> getMembers(JSONArray array) throws ValidationException {
+    if (array == null || array.isEmpty()) {
+      return null;
+    }
+    
+    List<Member> members = new ArrayList<>();
+    Member member = null;
+    for (int index = 0; index < array.size(); index++) {
+      // convert from JSONObject to Member
+      member = (Member) JSONObject.toBean((JSONObject) array.get(index), Member.class);
+      
+      // validate data
+      if (Strings.isNullOrEmpty(member.getUname()) || Strings.isNullOrEmpty(member.getRole())) {
+        throw new ValidationException(createViolationDto(CollaTaskJsonConstants.MEMBERS_STR, ErrorCode.invalid));
+      }
+      
+      if (member.getJoinDate() <= 0) {
+        member.setJoinDate(System.currentTimeMillis());
+      }
+      
+      // add member to list
+      members.add(member);
+    }
+    
+    return members;
+  }
+  
+  /**
+   * Load project information
+   * 
+   * @param params the given parameter
+   * @return the project
+   * @throws ValidationException if submission invalid
+   */
+  protected Project loadProject(Map<String, Object> params) throws ValidationException {
+    String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+    if (Strings.isNullOrEmpty(uuid)) {
+      throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+    }
+    
+    // load project from given UUID
+    Project project = projectBo.load(uuid);
+    
+    if (project == null) {
+      throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+    }
+    
+    return project;
+  }
+  
+  /**
+   * Load project information
+   * 
+   * @param params the given parameter
+   * @return the project
+   * @throws ValidationException if submission invalid
+   */
+  protected Project loadProject(Map<String, Object> params, boolean include, String... fields) throws ValidationException {
+    String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+    if (Strings.isNullOrEmpty(uuid)) {
+      throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+    }
+    
+    // load project from given UUID
+    Project project = projectBo.findByUuid(uuid, include, fields);
+    
+    if (project == null) {
+      throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+    }
+    
+    return project;
+  }
+  
+  /**
+   * Check given user can edit on given {@link Project} or not
+   * 
+   * @param exeUname the given executor user name
+   * @param project the given project information
+   * @return can edit or not
+   */
+  protected boolean canEdit(String exeUname, Project project) {
+    if (!Status.create.name().equals(project.getStatus()) &&
+        !Status.processing.name().equals(project.getStatus())) {
+      return false;
+    }
+    
+    if (exeUname.equals(project.getCreatorUname())) {
+      return true;
+    }
+    
+    if (!CollectionUtils.isEmpty(project.getMembers())) {
+      for (Member member : project.getMembers()) {
+        if (exeUname.equals(member.getUname()) && 
+            (Role.manager.name().equals(member.getRole()) || Role.leader.name().equals(member.getRole()))) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+}

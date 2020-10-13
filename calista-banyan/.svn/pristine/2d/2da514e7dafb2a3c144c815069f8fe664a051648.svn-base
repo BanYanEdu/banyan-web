@@ -1,0 +1,151 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.bo;
+
+import com.inet.calista.erp.common.bo.ERPGroupBase;
+import com.inet.calista.erp.excel.ERPExcelUtil;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.model.POSGroup;
+import com.inet.xportal.jdbc.xls.JDBCRowReader;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: POSGroupBO.java May 18, 2018 10:53 phongtt $
+ * @since 1.0
+ */
+@Named("POSGroupBO")
+public class POSGroupBO extends ERPGroupBase<POSGroup> implements BeanInitiateInvoke, JDBCRowReader {
+
+    @Inject
+    protected POSGroupBO(@ContentContext(context = POSConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<POSGroup> getClassConvetor() {
+        return POSGroup.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("name");
+        ensureIndex("parent");
+        ensureIndex("name,parent");
+        ensureIndex("organId,name");
+        ensureIndex("organId,parent");
+        ensureIndex("organId,name,parent");
+    }
+
+    @Override
+    public boolean rowProcess(final ResultSet row, int rowCount, final String[] cols,
+                              final Map<String, Object> obj) throws WebOSBOException {
+        try {
+            if (obj == null) {
+                logger.error("objData is null");
+                return false;
+            }
+
+            String organId = ERPExcelUtil.getOrganId(obj);
+            if (!StringUtils.hasLength(organId)) {
+                logger.error("organId missed!...");
+
+                return false;
+            }
+
+            List<POSGroup> dataImport = new ArrayList<>();
+            if (obj.containsKey("dataImport")) {
+                dataImport = (List<POSGroup>) obj.get("dataImport");
+            }
+
+            boolean isMapColumn = ERPExcelUtil.isMapColumn(obj);
+            logger.debug("found isMapColumn {}", isMapColumn);
+
+            ERPExcelUtil.changeColumn(obj, cols, row);
+
+            if (isMapColumn) {
+                logger.debug("import row {} beginning ........ ", rowCount);
+                String colName = "";
+                try {
+                    final POSGroup data = new POSGroup();
+                    data.setOrganId(organId);
+                    colName = "NAME";
+                    data.setName(ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+
+                    if (StringUtils.hasLength(data.getName())) {
+                        colName = "PARENT";
+                        String parent = ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName));
+                        if (StringUtils.hasLength(parent)) {
+                            POSGroup parentGroup = loadByName(organId, parent);
+                            if (parentGroup == null) {
+                                parentGroup = new POSGroup();
+                                parentGroup.setOrganId(organId);
+                                parentGroup.setName(parent);
+                                parentGroup.setUuid(add(parentGroup));
+
+                                dataImport.add(parentGroup);
+                            }
+
+                            data.setParent(parentGroup.getUuid());
+                        }
+
+
+                        POSGroup group = loadByName(organId, data.getName());
+                        if (group != null) {
+                            update(group.getUuid(), data);
+                        } else {
+                            data.setUuid(add(data));
+                        }
+
+                        dataImport.add(data);
+                    }
+                } catch (Throwable ex) {
+                    logger.debug("import row {} & col {} fail.", rowCount, colName);
+                    //Break import file when fail at rowCurrent.
+                    return false;
+                }
+
+                obj.put("dataImport", dataImport);
+            }
+        } catch (Exception ex) {
+            logger.warn("import row {} fail ", rowCount, ex);
+        }
+
+        return true;
+    }
+}

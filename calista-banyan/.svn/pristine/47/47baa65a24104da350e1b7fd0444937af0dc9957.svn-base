@@ -1,0 +1,89 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.model;
+
+import com.inet.calista.erp.common.model.ERPBase;
+import com.inet.calista.pos.common.data.POSShiftItem;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * com.inet.platform.pos.model.shift.
+ *
+ * @author Phong Tran
+ * @version $Id: POSShift.java May 30, 2018 09:14 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class POSShift extends ERPBase {
+    private String code;
+    private String brief;
+
+    //User open shift
+    private String openEmpId;
+    private String openEmpName;
+    private long openTime = 0;
+
+    //User close shift
+    private String closeEmpId;
+    private String closeEmpName;
+    private long closeTime = 0;
+
+    //User receiver
+    private String receiverId;
+    private String receiverName;
+    private long confirmTime = 0;
+
+    //affairs collect/pay in the shift
+    private List<POSShiftItem> items = new ArrayList<>();
+
+    private float totalQtyCollect = 0;
+    private float totalAmountCollect = 0;
+
+    private float totalQtyPay = 0;
+    private float totalAmountPay = 0;
+
+    public boolean isShiftClosed() {
+        return getCloseTime() > 0;
+    }
+
+    public void calc() {
+        setTotalQtyCollect(0);
+        setTotalAmountCollect(0);
+        setTotalQtyPay(0);
+        setTotalAmountPay(0);
+
+        if (!CollectionUtils.isEmpty(getItems())) {
+            for (POSShiftItem item : getItems()) {
+                if (item.getType() == 0) {
+                    setTotalQtyCollect(getTotalQtyCollect() + item.getQty());
+                    setTotalAmountCollect(getTotalAmountCollect() + item.getAmount());
+                } else {
+                    setTotalQtyPay(getTotalQtyPay() + item.getQty());
+                    setTotalAmountPay(getTotalAmountPay() + item.getAmount());
+                }
+            }
+        }
+    }
+}

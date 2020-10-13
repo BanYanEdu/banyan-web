@@ -1,0 +1,154 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.masterdata.model.ERPMasterData;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPMasterListBO.java Aug 06, 2018 09:55 phongtt $
+ * @since 1.0
+ */
+@Named("ERPMasterDataBO")
+public class ERPMasterDataBO extends ERPBaseBO<ERPMasterData> implements BeanInitiateInvoke {
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+    }
+
+    @Inject
+    protected ERPMasterDataBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_master_data");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPMasterData> getClassConvetor() {
+        return ERPMasterData.class;
+    }
+
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("masterId");
+        ensureIndex("masterCode");
+        ensureIndex("organId,masterId");
+        ensureIndex("organId,masterCode");
+    }
+
+    @Override
+    public String add(final ERPMasterData info) throws WebOSBOException {
+        final ERPMasterData model = loadMDCode(info.getOrganId(), info.getMasterId(), info.getCode());
+        if (model != null) {
+            return model.getUuid();
+        }
+
+        return super.add(info);
+    }
+
+    /**
+     * @param organId
+     * @param masterId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPMasterData loadMDCode(String organId, String masterId, String code) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("masterId").equal(masterId);
+        query.field("code").equal(code);
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @param masterId
+     * @param uuid
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPMasterData loadMDId(String organId, String masterId, String uuid) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("masterId").equal(masterId);
+        query.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid));
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @param master
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPMasterData> queryByMaster(String organId, String master) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.and(query.or(
+                query.criteria("masterId").equal(master),
+                query.criteria("masterCode").equal(master)
+        ));
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param masterId
+     * @param masterCode
+     * @throws WebOSBOException
+     */
+    public void updateByMaster(String organId, String masterId, String masterCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.criteria("masterId").equal(masterId);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("masterCode", masterCode);
+
+        super.update(update, query);
+    }
+}

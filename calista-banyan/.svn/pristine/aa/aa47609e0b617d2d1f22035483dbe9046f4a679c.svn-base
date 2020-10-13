@@ -1,0 +1,74 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.utils;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.xportal.cms.web.CMSConstants;
+import com.inet.xportal.cms.web.data.CMSTabBase;
+import com.inet.xportal.cms.web.model.MenuContext;
+import com.inet.xportal.cms.web.util.SiteMenuUtil;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * CommerceUtil.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceUtil.java Dec 02, 2017 09:16 phongtt $
+ * @since 1.0
+ */
+public class ECMUtil {
+    protected static final Logger logger = LoggerFactory.getLogger(ECMUtil.class);
+
+    /**
+     * @param siteID
+     * @param firm
+     * @param language
+     * @param tabgroup
+     * @return
+     */
+    public static SearchDTO<MenuContext> tabGroup(String siteID,
+                                                  String firm,
+                                                  String language,
+                                                  String tabgroup) {
+
+        return SiteMenuUtil.tabGroup(siteID, firm, language,
+                CMSConstants.CMS_SERVICE_CONTENTPAGE,
+                ECMConstant.CMS_MENU_CONTEXT, tabgroup);
+    }
+
+    /**
+     * @param siteID
+     * @param firm
+     * @param language
+     * @param summary
+     * @param view
+     */
+    public static void tabgroupAdjustment(String siteID,
+                                          String firm,
+                                          String language,
+                                          final CMSTabBase summary,
+                                          boolean view) {
+        SiteMenuUtil.tabgroupAdjustment(siteID, firm, language,
+                CMSConstants.CMS_SERVICE_CONTENTPAGE,
+                ECMConstant.CMS_MENU_CONTEXT,
+                summary, view);
+    }
+}

@@ -1,0 +1,162 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.masterdata.model.ERPItemProperty;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * ERPItemPropertyBO.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPItemPropertyBO.java Dec 21, 2016 20:36 phongtt $
+ * @since 1.0
+ */
+@Named("ERPItemPropertyBO")
+public class ERPItemPropertyBO extends ERPBaseBO<ERPItemProperty> implements BeanInitiateInvoke {
+
+    @Inject
+    protected ERPItemPropertyBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_md_item_property");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("code");
+        ensureIndex("name");
+        ensureIndex("organId");
+        ensureIndex("organId,code");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPItemProperty> getClassConvetor() {
+        return ERPItemProperty.class;
+    }
+
+    @Override
+    public String add(final ERPItemProperty info) throws WebOSBOException {
+        return super.add(info, "organId", "code");
+    }
+
+    /**
+     * @param oldOrgan
+     * @param newOrgan
+     * @throws WebOSBOException
+     */
+    public void changeOrgan(String oldOrgan, String newOrgan) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(oldOrgan);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("organId", newOrgan);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPItemProperty> properties(String organId, String keyword, List<String> codes) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<JSONDB>();
+
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+        }
+
+        if (!CollectionUtils.isEmpty(codes)) {
+            query.field("code").in(codes);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPItemProperty> properties(String organId, String keyword) throws WebOSBOException {
+        return properties(organId, keyword, null);
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPItemProperty> query(String organId, String keyword) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param uuid
+     * @throws WebOSBOException
+     */
+    public void removeByOrgan(String organId, String uuid) throws WebOSBOException {
+        final ERPItemProperty property = loadById(organId, uuid);
+        if (property != null) {
+            super.remove(property.getUuid());
+        }
+    }
+}

@@ -1,0 +1,154 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.logtime.LogTimeTaskDto;
+import com.inet.calista.collatask.dto.logtime.SearchByProjectDto;
+import com.inet.calista.collatask.model.LogTime;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.mongodb.DBObject;
+import com.mongodb.util.JSON;
+
+/**
+ * LogTimeBO.
+ *
+ * @author Duyen Tang
+ * @version $Id: LogTimeBO.java Apr 20, 2018 10:28:31 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("collatask_logtimes")
+public class LogTimeBO extends CollaborationTaskBO<LogTime> implements BeanInitiateInvoke {
+
+	/**
+	 * Create {@link LogTimeBO} instance from given information
+	 * 
+	 * @param contentBf
+	 *            the given {@link MagicContentBF}
+	 */
+	@Inject
+	protected LogTimeBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+		super(contentBf, "collatask_log_time");
+	}
+
+	/**
+	 * Find by given condition
+	 * 
+	 * @param exeUname
+	 *            the given executor user name
+	 * @param refUuid
+	 *            the given reference UUID
+	 * @param refType
+	 *            the given reference type
+	 * @param pageSize
+	 *            the given page size
+	 * @param pageNumber
+	 *            the given page number
+	 * @return the result
+	 */
+	public SearchDTO<LogTime> findBy(String exeUname, String refUuid, String refType, int pageSize, int pageNumber) {
+		final QueryImpl<JSONDB> query = new QueryImpl<JSONDB>();
+		query.field("refUuid").equal(refUuid)
+			 .field("refType").equal(refType);
+
+		if (pageSize > 0) {
+			query.limit(pageSize).offset(pageNumber * pageSize);
+		}
+
+		// search on author
+		if (!Strings.isNullOrEmpty(exeUname)) {
+			query.field("authUname").equal(exeUname);
+		}
+
+		return query(query);
+	}
+
+	/**
+	 * Find log time by project
+	 * 
+	 * @param search
+	 *            the given search condition
+	 * @return the result
+	 */
+	public SearchDTO<LogTimeTaskDto> searchByProject(SearchCriteria<SearchByProjectDto> searchCriteria) 
+	{
+		final QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+		SearchByProjectDto dto = searchCriteria.getCriteria();
+
+		// search on author
+		if (!Strings.isNullOrEmpty(dto.getAuthorUname())) {
+			query.field("authUname").equal(dto.getAuthorUname());
+		}
+
+		// search on date from
+		if (dto.getDateFrom() > 0) {
+			query.field("date").greaterThanOrEq(DateUtils.startTimeInMillisOf(dto.getDateFrom()));
+		}
+
+		// search on date to
+		if (dto.getDateTo() > 0) {
+			query.field("date").lessThanOrEq(DateUtils.endTimeInMillisOf(dto.getDateTo()));
+		}
+
+		query.pipeline("$lookup",
+				JSON.parse("{" + "from: 'collatask_task'," + "let: {taskUuid: '$refUuid'}," + "pipeline: ["
+						+ "{$match: {$expr: {$and: [{$eq: ['$uuid', '$$taskUuid']}, {$eq: ['$projectUuid', '"
+						+ dto.getProjectUuid() + "']}]}}}" + "]," + "as: 'task'" + "}"))
+				.match((DBObject) JSON.parse("{$expr: {$gt: [{$size: '$task'}, 0]}}"))
+				/*
+				 * .pipeline("$addFields", JSON.parse("{" +
+				 * "task: {$arrayElemAt: ['$tasks', 0]}" + "}"));
+				 */
+				.unwind("$task").projection((DBObject) JSON.parse(
+						"{'authUname': 1, 'authName':1, date:1, time:1, note:1, refUuid:1, refType:1, 'task.name':1, 'task.status':1}"));
+
+		return query(query, LogTimeTaskDto.class);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<LogTime> getClassConvetor() {
+		return LogTime.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() {
+		ensureIndex("refUuid,refType");
+		ensureIndex("refUuid,refType,authUname");
+		
+		ensureIndex("orgCode");
+		ensureIndex("orgCode,authUname");
+		ensureIndex("orgCode,authUname,date");
+	}
+}

@@ -1,0 +1,120 @@
+package com.inet.calista.crm.service;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.util.SecurityUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Calendar;
+
+/**
+ * CRMAbstractService.
+ *
+ * @author thoangtran
+ * @version CRMAbstractService 2018 04-04 15:59
+ */
+public abstract class CRMAbstractService extends PluginSubfirmAbstraction {
+
+  protected static final ObjectWebDataservice<Boolean> SUCCESS_RESULT = new ObjectWebDataservice<Boolean>(true);
+  protected static final ObjectWebDataservice<Boolean> FAILURE_RESULT = new ObjectWebDataservice<Boolean>(false);
+
+
+
+  /**
+   * Resolve create new data
+   * @param model
+   */
+  protected NoSqlModel resolveCreateModel(NoSqlModel model){
+    Calendar calendar = Calendar.getInstance();
+    model.setCreatedBy(SecurityUtil.getAlias());
+    model.setCreatedDate(calendar.getTimeInMillis());
+    return model;
+  }
+
+
+  /**
+   *
+   * @param model
+   */
+  protected void resolveModifyModel(NoSqlModel model) {
+    model.setModifiedBy(SecurityUtil.getAlias());
+    model.setModifiedDate(Calendar.getInstance().getTimeInMillis());
+  }
+
+
+  /**
+   * Put error to {@link AbstractBaseAction}
+   *
+   * @param action the given action
+   * @param field the given field
+   * @param error the given error
+   */
+  public static void putError(AbstractBaseAction action, String field, ErrorCode error) {
+    action.getViolation().add(createViolationDto(field, error));
+  }
+
+  /**
+   * Put service error to {@link AbstractBaseAction}
+   *
+   * @param action the given action
+   */
+  public static void putServiceError(AbstractBaseAction action) {
+    action.getViolation().add(createViolationDto("service", ErrorCode.service_error));
+  }
+  /**
+   * Create {@link ViolationDTO} from given information
+   *
+   * @param field the given field
+   * @param error the given error
+   * @return the result
+   */
+  public static ViolationDTO createViolationDto(String field, ErrorCode error) {
+    return new ViolationDTO(field, error.name() , 0, "");
+  }
+
+
+  /////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////// LOG HELPER //////////////////////////////////////////
+  /**
+   * Log for beginning operation
+   *
+   * @param log the given {@link Logger}
+   * @param operation the given operation
+   */
+  protected void logBeginOperation(final Logger log, final String operation) {
+    if (log.isInfoEnabled()) {
+      log.info("<<< CRM >>> BEGIN: " + operation);
+    }
+  }
+
+  /**
+   * Log for end operation
+   *
+   * @param log the given {@link Logger}
+   * @param operation the given operation
+   */
+  protected void logEndOperation(final Logger log, final String operation) {
+    if (log.isInfoEnabled()) {
+      log.info("<<< CRM >>> END: " + operation);
+    }
+  }
+
+  /**
+   * Log information
+   *
+   * @param log the given {@link Logger}
+   * @param information the given information
+   */
+  protected void logInfo(final Logger log, final String information) {
+    if (log.isInfoEnabled()) {
+      log.info("<<< CRM >>> INFO: " + information);
+    }
+  }
+
+
+}

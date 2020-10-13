@@ -1,0 +1,10 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * EmailEvent.
+ *
+ * @author thoangtran
+ * @version EmailEvent 2018 04-13 17:32
+ */
+public class EmailEvent {
+}

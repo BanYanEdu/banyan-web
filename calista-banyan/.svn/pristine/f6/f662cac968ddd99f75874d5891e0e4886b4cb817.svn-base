@@ -1,0 +1,32 @@
+{
+  "INVOICE" : {
+    "name": "Quản  lý hoá đơn",
+    "types": [
+      {
+        "type": "ADJUSTMENT",
+        "name":"Điều chỉnh hoá đơn"
+      },
+      {
+        "type": "REPLACEMENT",
+        "name":"Thay thế hoá đơn"
+      },
+      {
+        "type": "CANCELLATION",
+        "name":"Huỷ bỏ hoá đơn"
+      },
+      {
+        "type": "DESTROYED",
+        "name":"Xoá bỏ hoá đơn"
+      }
+    ]
+  },
+  "CATEGORY": {
+    "name": "Danh mục",
+    "types": [
+      {
+        "type": "ADJUSTMENT",
+        "name":"Điều chỉnh hoá đơn"
+      }
+    ]
+  }
+}

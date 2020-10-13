@@ -1,0 +1,18 @@
+package com.inet.calista.global.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * DictionaryCriteria.
+ *
+ * @author thoangtran
+ * @version DictionaryCriteria 2018 08-13 14:44
+ */
+@Getter
+@Setter
+public class DictionaryCriteria {
+	private String key;
+	private String keyword;
+	private String type;
+}

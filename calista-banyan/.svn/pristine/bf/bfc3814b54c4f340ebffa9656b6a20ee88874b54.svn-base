@@ -1,0 +1,151 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model.project;
+
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * Phase.
+ *
+ * @author Duyen Tang
+ * @version $Id: Phase.java Apr 4, 2018 3:38:18 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Phase extends BaseModel {
+  private String name;
+  private String desc;
+  private String status = Status.processing.name();
+  private long startDate;
+  private long deadline;
+  
+  private String projectUuid;
+  
+  // this value will be calculated when needing
+  private Float progress;
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the desc
+   */
+  public String getDesc() {
+    return desc;
+  }
+
+  /**
+   * @param desc the desc to set
+   */
+  public void setDesc(String desc) {
+    this.desc = desc;
+  }
+
+  /**
+   * @return the status
+   */
+  public String getStatus() {
+    return status;
+  }
+
+  /**
+   * @param status the status to set
+   */
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
+  /**
+   * @return the startDate
+   */
+  public long getStartDate() {
+    return startDate;
+  }
+
+  /**
+   * @param startDate the startDate to set
+   */
+  public void setStartDate(long startDate) {
+    this.startDate = startDate;
+  }
+
+  /**
+   * @return the deadline
+   */
+  public long getDeadline() {
+    return deadline;
+  }
+
+  /**
+   * @param deadline the deadline to set
+   */
+  public void setDeadline(long deadline) {
+    this.deadline = deadline;
+  }
+  
+  /**
+   * @return the projectUuid
+   */
+  public String getProjectUuid() {
+    return projectUuid;
+  }
+
+  /**
+   * @param projectUuid the projectUuid to set
+   */
+  public void setProjectUuid(String projectUuid) {
+    this.projectUuid = projectUuid;
+  }
+  
+  /**
+   * @return the progress
+   */
+  public Float getProgress() {
+    return progress;
+  }
+
+  /**
+   * @param progress the progress to set
+   */
+  public void setProgress(Float progress) {
+    this.progress = progress;
+  }
+
+  /**
+   * Status.
+   *
+   * @author Duyen Tang
+   * @version $Id: Phase.java Apr 4, 2018 4:20:48 PM tttduyen $
+   *
+   * @since 1.0
+   */
+  public enum Status {
+    processing,
+    locked,
+    closed
+  }
+}

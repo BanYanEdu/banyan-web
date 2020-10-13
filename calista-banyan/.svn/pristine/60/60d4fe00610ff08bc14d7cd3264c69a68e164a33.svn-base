@@ -1,0 +1,71 @@
+package com.inet.calista.crm.service.essentials.contact;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.essentials.ContactBo;
+import com.inet.calista.crm.bo.essentials.EntityBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.dto.ContactDto;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * LoadByIdService.
+ *
+ * @author thoangtran
+ * @version LoadByIdService 2018 04-16 11:46
+ */
+@Named("crm_essentials_contact_lbyidservice")
+@XPortalDataService(roles = { Roles.ESSENTIALS_CONTACT}, description = "Contact role")
+@XPortalPageRequest(uri = "crm/essentials/contact/lbid", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class LoadByIdService extends CRMAbstractService {
+  @Inject
+  private ContactBo contactBo;
+  @Inject
+  private EntityBo entityBo;
+
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String  uuid = XParamUtils.getString(CommonConstant.UUID, params);
+      if(Strings.isNullOrEmpty(uuid)){
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      ContactDto contact = new ContactDto();
+      contact.setContact(contactBo.loadFullContact(uuid, firmProfile.getOrganiId()));
+      if(null != contact.getContact()) {
+        if(StringUtils.hasLength(contact.getContact().getEntityId())){
+          contact.setEntity(entityBo.load(contact.getContact().getEntityId()));;
+        }
+      }
+      return new ObjectWebDataservice<>(contact);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during loading contact by identify", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

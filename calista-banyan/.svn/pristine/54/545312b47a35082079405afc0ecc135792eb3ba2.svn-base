@@ -1,0 +1,73 @@
+/*****************************************************************
+   Copyright 2013 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.reportservice;
+
+import java.io.OutputStream;
+import java.util.Map;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.xportal.report.model.ReportDocument;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileDownloadAction;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.IStreamRead;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * 
+ * GlbReportDownloadAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbReportDownloadAbstraction.java Feb 13, 2020 11:31:17 AM $
+ *
+ * @since 1.0
+ */
+public abstract class GlbReportDownloadAbstraction extends GlbReportResultAbstraction {
+	/**
+	 * 
+	 * @param report
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	@Override
+	protected final WebDataService service(final ReportDocument report,
+			String organId,
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException
+	{
+		if (!StringUtils.hasLength(report.getGridFsUUID()))
+		{
+			logger.error("The reportID {} could not generated.", report.getReportID());
+			action.getViolation().add(new ViolationDTO("REPORT_CONTENT", "REPORT_CONTENT", 1, "REPORT_CONTENT_EMPTY"));
+			throw new WebOSBOException("Bad request!");
+		}
+		
+		// read file content into response stream directly
+		return new ObjectWebDataservice<>(((FileDownloadAction)action).service(false, report.getMimetype(), report.reportFullName(), new IStreamRead() {
+			@Override
+			public void read(OutputStream  output) 
+			{
+				resultBO.loadByReportID(report, output);
+			}
+		}));
+	}
+}

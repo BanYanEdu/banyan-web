@@ -1,0 +1,47 @@
+package com.inet.calista.global.service;
+
+import com.inet.calista.global.dto.SearchCriteria;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import java.util.Map;
+
+/**
+ * QSearchService.
+ *
+ * @author thoangtd
+ * @version $$Id: QSearchService 6/20/16 2:15 PM thoangtd $$
+ * @since 1.0
+ */
+public abstract class SearchService<T> extends GlAbstractService {
+
+  /**
+   * Create search criteria instance
+   *
+   * @param action the given action
+   * @param params the given parameters
+   * @return the given criteria
+   */
+  protected SearchCriteria<T> getCriteria(SubFirmProfile firmProfile, AbstractBaseAction action, Map<String, Object> params) {
+    SearchCriteria<T> criteria = new SearchCriteria<>();
+    criteria.setPageSize(XParamUtils.getInteger("pageSize", params,  20));
+    criteria.setPageNumber(XParamUtils.getInteger("pageNumber", params, -1));
+    criteria.setSortField(XParamUtils.getString("sortField", params));
+    criteria.setSortAsc(XParamUtils.getInteger("sortAsc", params, -1));
+    criteria.setCriteria(action.getModel(getModelClass()));
+    criteria.setType(XParamUtils.getString("type", params));
+    criteria.setOrganId(firmProfile.getOrganiId());
+    criteria.setUsername(SecurityUtil.getPrincipal());
+    return criteria;
+  }
+
+  /**
+   * Return the model class
+   *
+   * @return the model class
+   */
+  protected abstract Class<T> getModelClass();
+}
+

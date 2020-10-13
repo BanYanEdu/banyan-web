@@ -1,0 +1,201 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.task;
+
+import com.inet.calista.collatask.data.Executor;
+
+/**
+ * HandleDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: HandleDto.java Nov 20, 2018 3:05:56 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class HandleDto {
+  private Executor executor;
+
+  // task identifier
+  private String uuid;
+  private String refUuid;
+  private String refType;
+  
+  private int progress;
+  private ReceiverDto assignee;
+  private long deadline;
+  
+  // log time
+  private double time;
+  private String note;
+  
+  // watch task
+  private boolean needWatch;
+  private long watchOnDate;
+
+  /**
+   * @return the executor
+   */
+  public Executor getExecutor() {
+    return executor;
+  }
+
+  /**
+   * @param executor the executor to set
+   */
+  public void setExecutor(Executor executor) {
+    this.executor = executor;
+  }
+
+  /**
+   * @return the uuid
+   */
+  public String getUuid() {
+    return uuid;
+  }
+
+  /**
+   * @param uuid the uuid to set
+   */
+  public void setUuid(String uuid) {
+    this.uuid = uuid;
+  }
+
+  /**
+   * @return the refUuid
+   */
+  public String getRefUuid() {
+    return refUuid;
+  }
+
+  /**
+   * @param refUuid the refUuid to set
+   */
+  public void setRefUuid(String refUuid) {
+    this.refUuid = refUuid;
+  }
+
+  /**
+   * @return the refType
+   */
+  public String getRefType() {
+    return refType;
+  }
+
+  /**
+   * @param refType the refType to set
+   */
+  public void setRefType(String refType) {
+    this.refType = refType;
+  }
+
+  /**
+   * @return the progress
+   */
+  public int getProgress() {
+    return progress;
+  }
+
+  /**
+   * @param progress the progress to set
+   */
+  public void setProgress(int progress) {
+    this.progress = progress;
+  }
+
+  /**
+   * @return the assignee
+   */
+  public ReceiverDto getAssignee() {
+    return assignee;
+  }
+
+  /**
+   * @param assignee the assignee to set
+   */
+  public void setAssignee(ReceiverDto assignee) {
+    this.assignee = assignee;
+  }
+
+  /**
+   * @return the deadline
+   */
+  public long getDeadline() {
+    return deadline;
+  }
+
+  /**
+   * @param deadline the deadline to set
+   */
+  public void setDeadline(long deadline) {
+    this.deadline = deadline;
+  }
+
+  /**
+   * @return the time
+   */
+  public double getTime() {
+    return time;
+  }
+
+  /**
+   * @param time the time to set
+   */
+  public void setTime(double time) {
+    this.time = time;
+  }
+
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+
+  /**
+   * @return the needWatch
+   */
+  public boolean isNeedWatch() {
+    return needWatch;
+  }
+
+  /**
+   * @param needWatch the needWatch to set
+   */
+  public void setNeedWatch(boolean needWatch) {
+    this.needWatch = needWatch;
+  }
+
+  /**
+   * @return the watchOnDate
+   */
+  public long getWatchOnDate() {
+    return watchOnDate;
+  }
+
+  /**
+   * @param watchOnDate the watchOnDate to set
+   */
+  public void setWatchOnDate(long watchOnDate) {
+    this.watchOnDate = watchOnDate;
+  }
+}

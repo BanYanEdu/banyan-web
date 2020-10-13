@@ -1,0 +1,102 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.proj;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.PhaseBO;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.task.AdvanceLookUpDto;
+import com.inet.calista.collatask.model.project.Phase;
+import com.inet.calista.collatask.service.SearchService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * GanttChartService.
+ *
+ * @author Duyen Tang
+ * @version $Id: GanttChartService.java May 9, 2018 2:35:27 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_project_ganttchartservice")
+@XPortalDataService(roles = { Roles.PROJECT }, description = "")
+@XPortalPageRequest(uri = "colla/projects/gantt", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class GanttChartService extends SearchService<AdvanceLookUpDto> {
+	@Inject
+	private TaskBO taskBo;
+	@Inject
+	private PhaseBO phaseBo;
+
+	@Override
+	protected Class<AdvanceLookUpDto> getModelClass() {
+		return AdvanceLookUpDto.class;
+	}
+
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		// get criteria
+		SearchCriteria<AdvanceLookUpDto> criteria = getCriteria(site, subFirm, action, params);
+
+		if (Strings.isNullOrEmpty(criteria.getCriteria().getProjectUuid())) {
+			putError(action, CollaTaskJsonConstants.PROJECT_UUID, ErrorCode.must_not_empty);
+			return FAILURE_RESULT;
+		}
+
+		// load phase by project UUID
+		List<Phase> phases = phaseBo.findByProjectUuid(criteria.getCriteria().getProjectUuid(), null);
+		if (!CollectionUtils.isEmpty(phases)) {
+			// compute progress by task
+			List<Phase> progressPhases = taskBo.computePhaseProgress(criteria.getOrgCode(), criteria.getCriteria().getProjectUuid());
+			if (!CollectionUtils.isEmpty(progressPhases)) {
+				Map<String, Float> phaseProgressMap = progressPhases.stream()
+						.collect(Collectors.toMap(Phase::getUuid, Phase::getProgress));
+
+				// fill progress to phase
+				phases.forEach(phase -> phase.setProgress(phaseProgressMap.get(phase.getUuid())));
+			}
+		}
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("phases", phases);
+		result.put("tasks", taskBo.advanceLookUp(criteria));
+
+		return new ObjectWebDataservice<>(result);
+	}
+
+}

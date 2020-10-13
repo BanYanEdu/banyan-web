@@ -1,0 +1,204 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.analytics.bo;
+
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.analytics.message.SalesAnalyticsMessage;
+import com.inet.xportal.thesis.annotation.OLAPAnnotation;
+import com.inet.xportal.thesis.annotation.OLAPField;
+import com.inet.xportal.thesis.annotation.OLAPMetric;
+import com.inet.xportal.thesis.biolap.Aggregator;
+import com.inet.xportal.thesis.bo.OlapQueryAbstract;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import io.druid.data.input.impl.DimensionSchema;
+import net.sf.json.JSONObject;
+
+import javax.inject.Named;
+
+/**
+ * com.inet.calista.erp.analytics.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: OLAPSalesServiceBO.java Dec 29, 2018 10:19 phongtt $
+ * @since 1.0
+ */
+@OLAPAnnotation(datasource = ERPConstant.SALES_ANALYTICS,
+        dimensions = {
+                @OLAPField(field = "country"),
+                @OLAPField(field = "city"),
+                @OLAPField(field = "sex"),
+                @OLAPField(field = "age",
+                        type = DimensionSchema.ValueType.LONG,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.longMax),
+                                @OLAPMetric(type = Aggregator.Metric.longMin)
+                        }),
+
+                @OLAPField(field = "organId"),
+                @OLAPField(field = "outletId"),
+                @OLAPField(field = "userCode"), //sales person
+                @OLAPField(field = "supplierId"),
+                @OLAPField(field = "customerId"),
+
+
+                //Master - Detail
+                @OLAPField(field = "voucherGroup"),
+                @OLAPField(field = "saleType"), //Retail, WhoseSale
+                //Sale: Retail, Commerce, Invoice, v.v...
+                @OLAPField(field = "voucherModule"),
+                @OLAPField(field = "voucherCode"),
+                @OLAPField(field = "voucherType"),
+
+                @OLAPField(field = "currencyId"),
+
+                @OLAPField(field = "itemId"),
+                @OLAPField(field = "itemCode"),
+                @OLAPField(field = "itemSku"),
+
+                //Electron, Food, Drink v.v...
+                @OLAPField(field = "itemCategory"),
+                //Apple, Sony, v.v..
+                @OLAPField(field = "itemBrand"),
+                //Red, Blue, Green, v.v...
+                @OLAPField(field = "itemColor"),
+                //XXL, XL, X, 39, 40 v.v....
+                @OLAPField(field = "itemSize"),
+                //Gold, plastic, tole, silk v.v...
+                @OLAPField(field = "itemMaterial"),
+                //VietNam, USA, China, v.v..
+                @OLAPField(field = "itemMadeIn"),
+                //extend
+                @OLAPField(field = "itemType"),
+
+                //return
+                @OLAPField(field = "itemReturn"),
+
+                @OLAPField(field = "qty",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                @OLAPField(field = "price",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                //qty * price
+                @OLAPField(field = "revenue",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+
+                @OLAPField(field = "cogs",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+
+                //qty * cogs
+                @OLAPField(field = "investment",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                @OLAPField(field = "vatCode"),
+                @OLAPField(field = "vat",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatSum)
+                        }),
+                @OLAPField(field = "taxCode"),
+                @OLAPField(field = "tax",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatSum)
+                        }),
+                @OLAPField(field = "shipCode"),
+                @OLAPField(field = "ship",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatSum)
+                        }),
+                @OLAPField(field = "discountCode"),
+                @OLAPField(field = "discount",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                @OLAPField(field = "promotionCode"),
+                @OLAPField(field = "promotion",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                @OLAPField(field = "commissionCode"),
+                @OLAPField(field = "commission",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        }),
+                //cost = commission + discount + vat + tax + promotion + ship
+                //revenue - (investment + cost)
+                @OLAPField(field = "profit",
+                        type = DimensionSchema.ValueType.FLOAT,
+                        metrics = {
+                                @OLAPMetric(type = Aggregator.Metric.floatMax),
+                                @OLAPMetric(type = Aggregator.Metric.floatSum),
+                                @OLAPMetric(type = Aggregator.Metric.floatMin)
+                        })
+        },
+        count = true
+)
+@Named("OLAPSalesServiceBO")
+public class OLAPSalesServiceBO extends OlapQueryAbstract {
+    @Override
+    public String getAnalyticsType() {
+        return ERPConstant.SALES_ANALYTICS;
+    }
+
+    /**
+     * @param data
+     */
+    public void analytics(final SalesAnalyticsMessage data) {
+        boolean isDataLake = ConfigureLoader.INSTANCE.getAnalytics().dataLake();
+
+        logger.debug("Analytics {} dataLake {}", getAnalyticsType(), isDataLake);
+        if (isDataLake) {
+            ConfigureLoader.INSTANCE
+                    .getAnalytics()
+                    .events(getAnalyticsType(),
+                            JSONObject.fromObject(data));
+        }
+    }
+}

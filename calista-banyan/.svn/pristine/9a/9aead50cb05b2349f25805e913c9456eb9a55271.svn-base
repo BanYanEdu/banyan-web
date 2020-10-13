@@ -1,0 +1,127 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.model;
+
+import com.inet.calista.ecommerce.data.ECMBuyer;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.data.ECMShipper;
+import com.inet.calista.erp.common.data.ERPInfoData;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * CommerceOrder.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceOrder.java Dec 04, 2017 12:01 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ECMOrder extends ERPInfoData {
+
+    private String employeeId;
+    private String employeeName;
+
+    //status: TEMP, NEW, COMPLETED
+    //private String status = ECMOrderStatus.TEMP.name();
+
+    private ECMBuyer buyer = new ECMBuyer();
+    private List<ECMOrderItem> items = new ArrayList<>();
+
+    private float totalAmount;
+    private float totalAmountEx;
+    private float discPercent;
+    private float totalDiscAmount;
+    private float totalDiscAmountEx;
+    private float vatPercent;
+    private float totalVATAmount;
+    private float totalVATAmountEx;
+    private float totalPayment;
+    private float totalPaymentEx;
+
+    //COD, CASH, PAYMENT
+    private String paymentType;
+    private long paymentDate;
+    private float totalPaidAmount;
+    private float totalPaidAmountEx;
+
+    private float totalRemainAmount;
+    private float totalRemainAmountEx;
+
+    //info for payment
+    private String transactionId;
+    private String transactionStatus;
+
+    //Shipper infor
+    private ECMShipper shipper = new ECMShipper();
+    private long deliveryDate;
+    private long receivedDate;
+
+    public ECMOrder calc() {
+        float itemAmount = 0;
+        if (!CollectionUtils.isEmpty(this.getItems())) {
+            for (ECMOrderItem item : this.getItems()) {
+                itemAmount += item.getAmount();
+            }
+        }
+        this.setTotalAmount(itemAmount);
+
+        //Calculator discount percent
+        if (this.getDiscPercent() > 100) {
+            this.setDiscPercent(100);
+        } else if (this.getDiscPercent() < 0) {
+            this.setDiscPercent(0);
+        }
+        this.setTotalDiscAmount(itemAmount * getDiscPercent() / 100);
+
+        //Calculator vat percent
+        if (this.getVatPercent() > 100) {
+            this.setVatPercent(100);
+        } else if (this.getVatPercent() < 0) {
+            this.setVatPercent(0);
+        }
+        this.setTotalVATAmount(itemAmount * getVatPercent() / 100);
+
+        //Calculator payment amount
+        this.setTotalPayment(this.getTotalAmount() + this.getTotalVATAmount() - this.getTotalDiscAmount());
+
+        //Calculator amount follow exchange rate of currency
+        if (this.getRate() <= 0) {
+            this.setRate(1);
+        }
+
+        this.setTotalAmountEx(this.getTotalAmount() * this.getRate());
+        this.setTotalDiscAmountEx(this.getTotalDiscAmount() * this.getRate());
+        this.setTotalVATAmountEx(this.getTotalVATAmount() * this.getRate());
+        this.setTotalPaymentEx(this.getTotalPayment() * this.getRate());
+
+        this.setTotalPaidAmountEx(this.getTotalPaidAmount() * this.getRate());
+
+        //Calculator Remain amount
+        this.setTotalRemainAmount(this.getTotalPaidAmount() - this.getTotalPayment());
+        this.setTotalRemainAmountEx(this.getTotalRemainAmount() * this.getRate());
+
+        return this;
+    }
+}

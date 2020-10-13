@@ -1,0 +1,6 @@
+package com.inet.jobportal.service;
+
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+
+public abstract class JobPortalAbsractService extends PluginSubfirmAbstraction {
+}

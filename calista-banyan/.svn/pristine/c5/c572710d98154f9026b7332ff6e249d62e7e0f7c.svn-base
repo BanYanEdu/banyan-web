@@ -1,0 +1,128 @@
+/*****************************************************************
+   Copyright 2013 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.crm.cache;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.xportal.web.cache.LocalCacheManager;
+
+/**
+ * SystemConfigurationCacheManager.
+ *
+ * @author Duyen Tang
+ * @version $Id: SystemConfigurationCacheManager.java 2013-08-12 16:56:58z tttduyen $
+ *
+ * @since 1.0
+ */
+public class SystemConfigurationCacheManager extends LocalCacheManager<String> {
+  public static final String EXCHANGE_PERMISSION = "exchange_permission";
+  public static final String EXCHANGE_ERROR_FOLDER = "exchange_error_folder";
+
+  /**
+   * Create {@link SystemConfigurationCacheManager} instance
+   */
+  public SystemConfigurationCacheManager() {
+    super("ikepler-system-config");
+  }
+
+  /**
+   *
+   * @param key
+   * @return
+   */
+  public String findByKey(String key) {
+      return findByKey(key , CommonConstant.MASTER);
+
+  }
+  /**
+   * Find configuration by given key
+   * 
+   * @param key the given key
+   * @return the configuration
+   */
+  public String findByKey(String key, String tenantId) {
+    if(Strings.isNullOrEmpty(tenantId)){
+      return getItem(key + "-" + tenantId);
+    }
+    return getItem(key);
+  }
+
+  /**
+   *
+   * @param key
+   * @param defaultValue
+   * @return
+   */
+  public boolean findByKey(String key, boolean defaultValue) {
+    try {
+      return Boolean.valueOf(getItem(key));
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Get integer value configuration
+   * 
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the default value
+   */
+  public int getIntItem(String key, String tenantId, int defaultValue) {
+    try {
+      return Integer.valueOf(findByKey(key, tenantId));
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+  /**
+   * Get integer value configuration
+   *
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the default value
+   */
+  public int getIntItem(String key, int defaultValue) {
+    try {
+      return getIntItem(key, CommonConstant.MASTER, defaultValue);
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+  /**
+   * Get boolean value configuration
+   * 
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the result
+   */
+  public boolean getBooleanItem(String key, boolean defaultValue) {
+    try {
+      return getBooleanItem(key, CommonConstant.MASTER, defaultValue);
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+
+
+  public boolean getBooleanItem(String key, String tenantId, boolean defaultValue) {
+    try {
+      return Boolean.valueOf(findByKey(key, tenantId));
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+}

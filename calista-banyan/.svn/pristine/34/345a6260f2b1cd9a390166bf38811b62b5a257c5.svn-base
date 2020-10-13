@@ -1,0 +1,429 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.excel;
+
+import com.inet.xportal.jdbc.xls.JDBCExcelParser;
+import com.inet.xportal.jdbc.xls.JDBCRowReader;
+import com.inet.xportal.web.transaction.JTASupported;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringTokenizer;
+
+/**
+ * com.inet.xportal.erp.util.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPExcelUtil.java Aug 27, 2018 11:55 phongtt $
+ * @since 1.0
+ */
+public class ERPExcelUtil {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPExcelUtil.class);
+
+    /**
+     * @param file
+     * @param rowReader
+     * @param numberRowCommit
+     * @param beginRow
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, Object> importExcel(final File file, final JDBCRowReader rowReader,
+                                                  int numberRowCommit, int beginRow) throws Exception {
+
+        return importExcel(file, rowReader, numberRowCommit, beginRow, null);
+    }
+
+
+    /**
+     * @param file
+     * @param rowReader
+     * @param numberRowCommit
+     * @param beginRow
+     * @param obj
+     * @throws Exception
+     */
+    public static Map<String, Object> importExcel(final File file, final JDBCRowReader rowReader,
+                                                  int numberRowCommit, int beginRow,
+                                                  Map<String, Object> obj) throws Exception {
+        beginRow = beginRow - 2;
+
+        if (beginRow < 0) {
+            beginRow = 0;
+        }
+
+        final JDBCExcelParser parser = new JDBCExcelParser(file);
+        final JTASupported jta = null;
+
+        if (obj == null) {
+            obj = new HashMap<>();
+        }
+
+        parser.service(rowReader, jta,
+                numberRowCommit, // batch of transaction number commited
+                beginRow, // ignore first rows in excel file
+                obj);
+
+        return obj;
+    }
+
+    /**
+     * @param obj
+     * @param cols
+     * @param row
+     * @throws Exception
+     */
+    public static void changeColumn(final Map<String, Object> obj, final String[] cols, final ResultSet row) throws Exception {
+        if (!obj.containsKey("columns") && row != null) {
+            if ("column_name".equals(getString(row, 1).toLowerCase())) {
+                logger.debug("changeColumn is running ....");
+
+                final Map<String, Integer> columns = new HashMap<>();
+                String[] columnName = new String[cols.length];
+
+                for (int i = 0; i <= cols.length - 1; i++) {
+                    String colName = getString(row, i);
+                    if (!StringUtils.hasLength(colName)) {
+                        colName = "COL" + i;
+                    }
+                    columns.put(colName, i);
+                    columnName[i] = colName;
+                }
+
+                obj.put("columns", columns);
+                obj.put("columnName", columnName);
+                obj.put("column_mapping", true);
+            }
+        }
+    }
+
+    /**
+     * @param obj
+     * @throws Exception
+     */
+    public static boolean isMapColumn(final Map<String, Object> obj) throws Exception {
+        if (obj.containsKey("column_mapping")) {
+            return (boolean) obj.get("column_mapping");
+        }
+
+        return false;
+    }
+
+    /**
+     * @param obj
+     * @param cols
+     * @return
+     * @throws Exception
+     */
+    public static String[] getColumnName(final Map<String, Object> obj, final String[] cols) throws Exception {
+        if (obj.containsKey("columns") && obj.containsKey("columnName")) {
+            return (String[]) obj.get("columnName");
+        }
+
+        return cols;
+    }
+
+    /**
+     * @param obj
+     * @param cols
+     * @param colName
+     * @return
+     * @throws Exception
+     */
+    public static int getColIndex(final Map<String, Object> obj, final String[] cols, String colName) throws Exception {
+        try {
+            Map<String, Integer> columns = new HashMap<>();
+            if (obj.containsKey("columns")) {
+                columns = (Map<String, Integer>) obj.get("columns");
+            } else {
+                for (int i = 0; i <= cols.length - 1; i++) {
+                    columns.put(cols[i], i + 1);
+                }
+
+                obj.put("columns", columns);
+            }
+
+            if (columns != null) {
+                return columns.get(colName);
+            }
+        } catch (Throwable ex) {
+            logger.error("getColIndex {} fail !...", colName, ex);
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param obj
+     * @return
+     */
+    public static String getOrganId(final Map<String, Object> obj) {
+        if (obj.containsKey("organId")) {
+            return (String) obj.get("organId");
+        }
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param obj
+     * @return
+     */
+    public static String getOutletId(final Map<String, Object> obj) {
+        if (obj.containsKey("outletId")) {
+            return (String) obj.get("outletId");
+        }
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @return
+     */
+    public static String getString(final ResultSet row, String colName) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colName);
+            if (obj instanceof Double)
+                return String.valueOf(((Double) obj).longValue()).trim();
+
+            return obj.toString().trim();
+        } catch (Throwable e) {
+            return StringUtils.EMPTY_STRING;
+        }
+    }
+
+    /**
+     * @param row
+     * @param colIndex
+     * @return
+     */
+    public static String getString(final ResultSet row, int colIndex) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colIndex);
+            if (obj instanceof Double)
+                return String.valueOf(((Double) obj).longValue()).trim();
+
+            return obj.toString().trim();
+        } catch (Throwable e) {
+            return StringUtils.EMPTY_STRING;
+        }
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @return
+     */
+    public static Integer getInteger(final ResultSet row, String colName) {
+        return getInteger(row, colName, 0);
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @param defaultVal
+     * @return
+     */
+    public static Integer getInteger(final ResultSet row, String colName, Integer defaultVal) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colName);
+            return XParamUtils.getInteger(obj, defaultVal);
+        } catch (Throwable e) {
+            return defaultVal;
+        }
+    }
+
+
+    /**
+     * @param row
+     * @param colIndex
+     * @return
+     */
+    public static Integer getInteger(final ResultSet row, int colIndex) {
+        return getInteger(row, colIndex, 0);
+    }
+
+    /**
+     * @param row
+     * @param colIndex
+     * @param defaultVal
+     * @return
+     */
+    public static Integer getInteger(final ResultSet row, int colIndex, Integer defaultVal) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colIndex);
+            return XParamUtils.getInteger(obj, defaultVal);
+        } catch (Throwable e) {
+            return defaultVal;
+        }
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @return
+     */
+    public static Float getFloat(final ResultSet row, String colName) {
+        return getFloat(row, colName, 0F);
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @param defaultVal
+     * @return
+     */
+    public static Float getFloat(final ResultSet row, String colName, Float defaultVal) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colName);
+            return XParamUtils.getFloat(obj, defaultVal);
+        } catch (Throwable e) {
+            return defaultVal;
+        }
+    }
+
+    /**
+     * @param row
+     * @param colIndex
+     * @return
+     */
+    public static Float getFloat(final ResultSet row, int colIndex) {
+        return getFloat(row, colIndex, 0F);
+    }
+
+    /**
+     * @param row
+     * @param colIndex
+     * @param defaultVal
+     * @return
+     */
+    public static Float getFloat(final ResultSet row, int colIndex, Float defaultVal) {
+        try {
+            logger.debug("row --> {}: {}", colIndex, row);
+            Object obj = JDBCExcelParser.readValue(row, colIndex);
+            return XParamUtils.getFloat(obj, defaultVal);
+        } catch (Throwable e) {
+            logger.error("get float error ", e);
+            return defaultVal;
+        }
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @return
+     */
+    public static BigDecimal getBigDecimal(final ResultSet row, String colName) {
+        return getBigDecimal(row, colName, BigDecimal.ZERO);
+    }
+
+    /**
+     * @param row
+     * @param colName
+     * @param defaultVal
+     * @return
+     */
+    public static BigDecimal getBigDecimal(final ResultSet row, String colName, BigDecimal defaultVal) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colName);
+            return XParamUtils.getDecimal(obj, defaultVal);
+        } catch (Throwable e) {
+            return defaultVal;
+        }
+    }
+
+
+    /**
+     * @param row
+     * @param colIndex
+     * @return
+     */
+    public static BigDecimal getBigDecimal(final ResultSet row, int colIndex) {
+        return getBigDecimal(row, colIndex, BigDecimal.ZERO);
+    }
+
+    /**
+     * @param row
+     * @param colIndex
+     * @param defaultVal
+     * @return
+     */
+    public static BigDecimal getBigDecimal(final ResultSet row, int colIndex, BigDecimal defaultVal) {
+        try {
+            Object obj = JDBCExcelParser.readValue(row, colIndex);
+            return XParamUtils.getDecimal(obj, defaultVal);
+        } catch (Throwable e) {
+            return defaultVal;
+        }
+    }
+
+
+    /**
+     * standardized string
+     *
+     * @param s
+     * @return
+     */
+    public static String standardized(String s) {
+        if (!StringUtils.hasLength(s)) {
+            return s;
+        }
+
+        StringTokenizer stok = new StringTokenizer(s);
+
+        StringBuilder result = new StringBuilder();
+
+        while (stok.hasMoreTokens()) {
+            if (result.length() == 0) {
+                result.append(standardizedWord(stok.nextToken()));
+            } else {
+                result.append(" " + standardizedWord(stok.nextToken()));
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * standardized word
+     *
+     * @param s
+     * @return
+     */
+    public static String standardizedWord(String s) {
+        if (!StringUtils.hasLength(s)) {
+            return s;
+        }
+
+        Character c = s.charAt(0);
+        Character change = Character.toUpperCase(c);
+
+        StringBuffer ss = new StringBuffer(s);
+        ss.insert(0, change);
+        ss.deleteCharAt(1);
+        return ss.toString();
+    }
+}

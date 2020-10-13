@@ -1,0 +1,299 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.calista.ecommerce.bo.ECMItemBO;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.utils.ECMUtil;
+import com.inet.calista.erp.common.data.ERPBinaryModel;
+import com.inet.calista.erp.util.ERPUtil;
+import com.inet.xportal.cms.web.bo.CMSAssetFileBO;
+import com.inet.xportal.cms.web.bo.CMSAssetManagerBO;
+import com.inet.xportal.cms.web.bo.CMSItemBO;
+import com.inet.xportal.cms.web.data.AssetType;
+import com.inet.xportal.cms.web.dataservice.FirmContentAbstraction;
+import com.inet.xportal.cms.web.model.CMSAssetModel;
+import com.inet.xportal.cms.web.model.CMSBinaryModel;
+import com.inet.xportal.cms.web.model.MenuContext;
+import com.inet.xportal.cms.web.util.SiteMenuUtil;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileUploadAction;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.BusinessException;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.StringUUID;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.io.File;
+import java.util.Map;
+
+/**
+ * ProductContentBase.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ProductContentBase.java Dec 12, 2017 9:30:39 AM $
+ * @since 1.0
+ */
+public abstract class ProductContentBase extends FirmContentAbstraction {
+    protected static final Logger logger = LoggerFactory.getLogger(ProductContentBase.class);
+
+    @Inject
+    protected ECMItemBO productBO;
+
+    /**
+     * @return the binaryBO
+     */
+    protected CMSAssetFileBO getBinaryBO() {
+        return productBO.getBinaryBO();
+    }
+
+
+    /**
+     * @return the cmsItemBO
+     */
+    protected CMSItemBO getCmsItemBO() {
+        return productBO.getCmsItemBO();
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param summary
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected abstract WebDataService service(final CMSFirm cmsfirm,
+                                              final OrganizationDTO orgItem,
+                                              final ECMItem summary,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params) throws WebOSBOException;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.cms.web.marketplace.MarketPlaceAbstraction#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected final WebDataService service(final CMSFirm cmsfirm,
+                                           final OrganizationDTO orgItem,
+                                           final AbstractBaseAction action,
+                                           final Map<String, Object> params) throws WebOSBOException {
+        return service(cmsfirm, orgItem, productLoad(cmsfirm, orgItem, action, params), action, params);
+    }
+
+    /**
+     * @return
+     */
+    protected String statusLoad() {
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected ECMItem productLoad(final CMSFirm cmsfirm,
+                                  final OrganizationDTO orgItem,
+                                  final AbstractBaseAction action,
+                                  final Map<String, Object> params) throws WebOSBOException {
+        String uuid = XParamUtils.getString("prodId", params);
+        if (!StringUtils.hasLength(uuid)) {
+            logger.error("Product ID is required.");
+            action.fieldError("PRODUCT_ID", "PRODUCT_ID_MISSED");
+        }
+
+        final ECMItem existed = productBO.loadById(getOwnerId(orgItem), uuid);
+        if (existed == null) {
+            logger.error("Product {} is not found.", uuid);
+            action.fieldError("PRODUCT_ID", "PRODUCT_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(statusLoad()) ||
+                statusLoad().equals(existed.getStatus()))
+            return existed;
+
+        logger.error("Product status {} is not loaded with {} status.", existed.getStatus(), statusLoad());
+        action.fieldError("PRODUCT_ID", "PRODUCT_NOT_LOAD");
+
+        return null;
+    }
+
+    /**
+     * @param cmsfirm
+     * @param summary
+     * @param action
+     * @param params
+     * @throws WebOSBOException
+     */
+    protected final void tabgroupVerify(final CMSFirm cmsfirm,
+                                        final ECMItem summary,
+                                        final AbstractBaseAction action,
+                                        final Map<String, Object> params) throws WebOSBOException {
+        if (StringUtils.hasLength(summary.getCmsTab().getTabgroup())) {
+            // get all items of this group
+            final SearchDTO<MenuContext> result = ECMUtil.tabGroup(action.getSiteID(),
+                    getCMSPrefix(cmsfirm),
+                    getLanguage(action, params),
+                    summary.getCmsTab().getTabgroup());
+
+            if (result == null || result.getTotal() <= 0) {
+                logger.error("Product tabgroup {} is not defined.", summary.getCmsTab().getTabgroup());
+                action.fieldError("TAB_GROUP", "TAB_GROUP_NOT_DEFINED");
+            }
+
+            SiteMenuUtil.tabgroupAdjustment(summary.getCmsTab(), false, result);
+        }
+    }
+
+    /**
+     * @param prod
+     * @param params
+     * @throws WebOSBOException
+     */
+    protected final void propertiesBuilder(final ECMItem prod, final Map<String, Object> params) throws WebOSBOException {
+        if (prod != null) {
+            JSONObject properties = new JSONObject();
+            if (prod.getProperties() != null) {
+                properties = prod.getProperties();
+            }
+
+            boolean isUpdate = false;
+            for (String prop : params.keySet()) {
+                if (prop.startsWith("_")) {
+                    isUpdate = true;
+                    properties.put(prop.substring(1), params.get(prop));
+                }
+            }
+
+            if (isUpdate) {
+                prod.setProperties(properties);
+            }
+        }
+    }
+
+    /**
+     * @param cmsfirm
+     * @param action
+     * @param params
+     * @param assetName
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final CMSAssetModel addAssetImage(final CMSFirm cmsfirm,
+                                                final AbstractBaseAction action,
+                                                final Map<String, Object> params,
+                                                String assetName) throws WebOSBOException {
+        final CMSAssetModel model = new CMSAssetModel();
+
+        try {
+            model.setName(assetName);
+            model.setCategory(assetName);
+
+            model.setSite(action.getSiteID());
+            model.setFirm(getCMSPrefix(cmsfirm));
+            model.setLanguage(getLanguage(action, params));
+
+            model.setAuthor(SecurityUtil.getPrincipal());
+            model.setAlias(SecurityUtil.getAlias());
+
+            model.setType(AssetType.IMAGE.name());
+
+            String uuid = WebContext.INSTANCE.cache()
+                    .getBean(CMSAssetManagerBO.class)
+                    .add(model);
+
+            model.setUuid(uuid);
+        } catch (Throwable ex) {
+            logger.warn("create asset image fail!.");
+        }
+
+        return model;
+    }
+
+    /**
+     * @param prod
+     * @param action
+     * @throws BusinessException
+     */
+    protected final void imagesBuilder(final CMSFirm cmsfirm,
+                                       final ECMItem prod,
+                                       final FileUploadAction action,
+                                       final Map<String, Object> params) throws WebOSBOException {
+        if (prod != null) {
+            if (!CollectionUtils.isEmpty(action.getFileUpload())) {
+                for (int idx = 0; idx < action.getFileUpload().size(); idx++) {
+                    final File file = action.getFileUpload().get(idx);
+                    logger.debug("File {} is uploading...", file);
+
+                    if (file != null) {
+                        String filetype = action.getFileType(idx);
+                        String filename = action.getFileName(idx);
+
+                        // define this with image type from user view
+                        String fieldname = action.getFileUploadName().get(idx);
+
+                        // get filename (from upload)
+                        if (!StringUtils.hasLength(filename))
+                            filename = file.getName();
+
+
+                        final CMSAssetModel assetModel = addAssetImage(cmsfirm, action, params, prod.getGroup());
+                        String folder = (assetModel != null && StringUtils.hasLength(assetModel.getUuid())) ? assetModel.getUuid() : prod.getUuid();
+                        String binaryCode = StringUUID.uniqueToken();
+
+                        final ERPBinaryModel erpBinary = new ERPBinaryModel();
+                        erpBinary.setCode(binaryCode);
+                        ERPUtil.fileInfoBuilder(folder, filename, fieldname, filetype, file, erpBinary);
+                        prod.getImages().add(erpBinary);
+
+                        String avatar = XParamUtils.getString("avatar", params, StringUtils.EMPTY_STRING);
+                        if (StringUtils.hasLength(avatar) &&
+                                fieldname.equals(avatar) &&
+                                !avatar.equals(prod.getAvatar())) {
+                            prod.setAvatar(erpBinary.getCode());
+                        }
+
+                        final CMSBinaryModel cmsBinary = new CMSBinaryModel();
+                        cmsBinary.setCode(binaryCode);
+                        ERPUtil.fileInfoBuilder(folder, filename, fieldname, filetype, file, cmsBinary);
+                        getBinaryBO().add(file, cmsBinary);
+                        WebContext.INSTANCE.cache()
+                                .getBean(CMSAssetManagerBO.class)
+                                .updateAssetTotal(folder);
+                    }
+                }
+            }
+        }
+    }
+}

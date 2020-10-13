@@ -1,0 +1,56 @@
+package com.inet.calista.crm.service.setting.employee.search;
+
+import com.inet.calista.crm.bo.setting.EmployeeBo;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.service.SearchService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * QuickSearchService.
+ *
+ * @author thoangtran
+ * @version QuickSearchService 2018 04-11 17:34
+ */
+
+@Named("crm_setting_empls_qsearcgservice")
+@XPortalDataService(roles = { Roles.SETTING_EMPLOYEE}, description = "Manage employee")
+@XPortalPageRequest(uri = "crm/setting/empls/search/quick", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class QuickSearchService extends SearchService<QSearchCriteria> {
+  @Inject
+  private EmployeeBo employeeBo;
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile subFirmProfile, AbstractBaseAction action, Map<String, Object> map) throws WebOSBOException {
+    try{
+      return new ObjectWebDataservice<>(employeeBo.search(getCriteria(subFirmProfile, action, map), subFirmProfile.getOrganiId()));
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during quick search employee information", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    }
+
+  }
+
+  @Override
+  protected Class<QSearchCriteria> getModelClass() {
+    return QSearchCriteria.class;
+  }
+
+}

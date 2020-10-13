@@ -1,0 +1,84 @@
+package com.inet.calista.global.subfirmservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.bo.GlbReportTemplateBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * ExcelTplAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ExcelTplAbstraction.java Feb 11, 2020 11:38:55 AM $
+ *
+ * @since 1.0
+ */
+public abstract class ExcelTplAbstraction extends GlbAbstraction 
+{
+	@Inject
+	protected GlbReportTemplateBO templateBo;
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected GlbReportTemplate loadTemplate(String organId, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String uuid = XParamUtils.getString(GlobalConstant.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) 
+			putError(action, GlobalConstant.UUID, ErrorCode.MUST_NOT_EMPTY);
+		
+		GlbReportTemplate template = templateBo.load(uuid, organId);
+		if (null == template) 
+			putError(action, GlobalConstant.UUID, ErrorCode.NOT_EXISTS);
+		
+		return template;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(final SiteDataModel siteDataModel, 
+			final SubFirmProfile firmProfile, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String organId = getOrganId(siteDataModel, firmProfile);
+		return service(organId, loadTemplate(organId, action, params), action, params);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param template
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected abstract WebDataService service(String organId,
+			final GlbReportTemplate template, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException; 
+}

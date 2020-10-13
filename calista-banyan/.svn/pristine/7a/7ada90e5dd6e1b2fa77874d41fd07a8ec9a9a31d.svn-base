@@ -1,0 +1,12 @@
+package com.inet.calista.crm.model.common;
+
+/**
+ * Source.
+ *
+ * @author thoangtran
+ * @version Source 2018 04-18 11:54
+ */
+public enum Source {
+  crm,
+  ecm
+}

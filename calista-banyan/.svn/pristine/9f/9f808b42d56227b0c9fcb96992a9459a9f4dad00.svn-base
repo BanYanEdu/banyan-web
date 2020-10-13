@@ -1,0 +1,319 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.service;
+
+import com.inet.calista.erp.common.service.ERPCoreAbstraction;
+import com.inet.calista.erp.masterdata.bo.ERPMasterDataBO;
+import com.inet.calista.erp.masterdata.bo.ERPMasterListBO;
+import com.inet.calista.erp.masterdata.model.ERPMasterData;
+import com.inet.calista.erp.masterdata.model.ERPMasterList;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPMasterAbstraction.java Aug 06, 2018 11:22 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPMasterAbstraction extends ERPCoreAbstraction {
+    @Inject
+    protected ERPMasterListBO masterListBO;
+    @Inject
+    protected ERPMasterDataBO masterDataBO;
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final String masterListRemove(final SiteDataModel siteData,
+                                            final SubFirmProfile subFirm,
+                                            final AbstractBaseAction action,
+                                            final Map<String, Object> params) throws WebOSBOException {
+
+        String masterIds = XParamUtils.getString("masterIds", params, StringUtils.EMPTY_STRING);
+
+        String removeIds = StringUtils.EMPTY_STRING;
+        if (StringUtils.hasLength(masterIds)) {
+            for (String masterId : masterIds.split(";")) {
+                final ERPMasterList masterList = masterListBO.load(masterId);
+                if (masterList != null) {
+                    masterListBO.remove(masterId);
+                    removeIds += masterId + ";";
+                }
+            }
+        }
+
+        return removeIds;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPMasterList masterListCreate(final SiteDataModel siteData,
+                                                   final SubFirmProfile subFirm,
+                                                   final AbstractBaseAction action,
+                                                   final Map<String, Object> params) throws WebOSBOException {
+        final ERPMasterList masterList = action.getModel(ERPMasterList.class);
+        masterList.setOrganId(getOrganId(siteData, subFirm));
+
+        if (!StringUtils.hasLength(masterList.getCode())) {
+            logger.error("Code is required!");
+            action.fieldError("MASTERLIST", "CODE_IS_REQUIRED");
+        }
+
+        if (!StringUtils.hasLength(masterList.getName())) {
+            logger.error("Name is required!");
+            action.fieldError("MASTERLIST", "NAME_IS_REQUIRED");
+        }
+
+        if (masterListBO.loadByCode(masterList.getOrganId(), masterList.getCode()) != null) {
+            logger.error("MasterList is exists!");
+            action.fieldError("MASTERLIST", "CODE_EXISTS");
+        }
+
+        masterList.setUuid(masterListBO.add(masterList));
+
+        return masterList;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPMasterList masterListUpdate(final SiteDataModel siteData,
+                                                   final SubFirmProfile subFirm,
+                                                   final AbstractBaseAction action,
+                                                   final Map<String, Object> params) throws WebOSBOException {
+        String masterId = XParamUtils.getString("masterId", params, StringUtils.EMPTY_STRING);
+        if (masterListBO.load(masterId) == null) {
+            logger.error("MasterList {} isn't found!");
+            action.fieldError("MASTERLIST", "MASTERLIST_NOT_FOUND");
+        }
+
+        final ERPMasterList masterList = action.getModel(ERPMasterList.class);
+        masterList.setUuid(masterId);
+        masterList.setOrganId(getOrganId(siteData, subFirm));
+
+        if (!StringUtils.hasLength(masterList.getCode())) {
+            logger.error("Code is required!");
+            action.fieldError("MASTERLIST", "CODE_IS_REQUIRED");
+        }
+
+        if (!StringUtils.hasLength(masterList.getName())) {
+            logger.error("Name is required!");
+            action.fieldError("MASTERLIST", "NAME_IS_REQUIRED");
+        }
+
+        final ERPMasterList mlExists = masterListBO.loadByCode(masterList.getOrganId(), masterList.getCode());
+        if (mlExists != null && !mlExists.getUuid().equals(masterId)) {
+            logger.error("MasterList is exists!");
+            action.fieldError("MASTERLIST", "CODE_EXISTS");
+        }
+
+        masterListBO.update(masterList.getUuid(), masterList);
+
+        masterDataBO.updateByMaster(masterList.getOrganId(), masterList.getUuid(), masterList.getCode());
+
+        return masterList;
+    }
+
+    /**
+     * @param masterCode
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final SearchDTO<ERPMasterData> masterDataList(String masterCode,
+                                                            final SiteDataModel siteData,
+                                                            final SubFirmProfile subFirm,
+                                                            final AbstractBaseAction action,
+                                                            final Map<String, Object> params) throws WebOSBOException {
+        final ERPMasterList masterList = masterListBO.loadByCode(getOrganId(siteData, subFirm), masterCode);
+        logger.debug("found masterList {} by code {}", masterList, masterCode);
+        if (masterList == null) {
+            logger.error("MasterList {} isn't found.", masterCode);
+            action.fieldError("MASTERLIST", "MASTERLIST_NOT_FOUND");
+        }
+
+        return masterDataBO.queryByMaster(getOrganId(siteData, subFirm), masterList.getUuid());
+    }
+
+    /**
+     * @param masterCode
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPMasterData masterDataCreate(String masterCode,
+                                                   final SiteDataModel siteData,
+                                                   final SubFirmProfile subFirm,
+                                                   final AbstractBaseAction action,
+                                                   final Map<String, Object> params) throws WebOSBOException {
+        final ERPMasterList masterList = masterListBO.loadByCode(getOrganId(siteData, subFirm), masterCode);
+        logger.debug("found masterList {} by code {}", masterList, masterCode);
+        if (masterList == null) {
+            logger.error("MasterList {} isn't found.", masterCode);
+            action.fieldError("MASTERLIST", "MASTERLIST_NOT_FOUND");
+        }
+
+        final ERPMasterData masterData = action.getModel(ERPMasterData.class);
+        masterData.setOrganId(getOrganId(siteData, subFirm));
+        masterData.setMasterId(masterList.getUuid());
+        masterData.setMasterCode(masterList.getCode());
+
+        if (!StringUtils.hasLength(masterData.getCode())) {
+            logger.error("Code is required!");
+            action.fieldError("MASTERDATA", "CODE_IS_REQUIRED");
+        }
+
+        if (!StringUtils.hasLength(masterData.getName())) {
+            logger.error("Name is required!");
+            action.fieldError("MASTERDATA", "NAME_IS_REQUIRED");
+        }
+
+        if (masterDataBO.loadMDCode(masterData.getOrganId(), masterData.getMasterId(), masterData.getCode()) != null) {
+            logger.error("Code is exists!");
+            action.fieldError("MASTERDATA", "CODE_EXISTS");
+        }
+
+        masterData.setUuid(masterDataBO.add(masterData));
+
+        return masterData;
+    }
+
+    /**
+     * @param masterCode
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPMasterData masterDataUpdate(String masterCode,
+                                                   final SiteDataModel siteData,
+                                                   final SubFirmProfile subFirm,
+                                                   final AbstractBaseAction action,
+                                                   final Map<String, Object> params) throws WebOSBOException {
+        final ERPMasterList masterList = masterListBO.loadByCode(getOrganId(siteData, subFirm), masterCode);
+        logger.debug("found masterList {} by code {}", masterList, masterCode);
+        if (masterList == null) {
+            logger.error("MasterList {} isn't found.", masterCode);
+            action.fieldError("MASTERLIST", "MASTERLIST_NOT_FOUND");
+        }
+
+        String dataId = XParamUtils.getString("dataId", params, StringUtils.EMPTY_STRING);
+        if (masterDataBO.loadMDId(getOrganId(siteData, subFirm), masterList.getUuid(), dataId) == null) {
+            logger.error("MasterData {} isn't found.", dataId);
+            action.fieldError("MASTERDATA", "MASTERDATA_NOT_FOUND");
+        }
+
+        final ERPMasterData masterData = action.getModel(ERPMasterData.class);
+        masterData.setUuid(dataId);
+        masterData.setOrganId(getOrganId(siteData, subFirm));
+        masterData.setMasterId(masterList.getUuid());
+        masterData.setMasterCode(masterList.getCode());
+
+        if (!StringUtils.hasLength(masterList.getCode())) {
+            logger.error("Code is required!");
+            action.fieldError("MASTERDATA", "CODE_IS_REQUIRED");
+        }
+
+        if (!StringUtils.hasLength(masterList.getName())) {
+            logger.error("Name is required!");
+            action.fieldError("MASTERDATA", "NAME_IS_REQUIRED");
+        }
+
+        final ERPMasterData exists = masterDataBO.loadMDCode(masterData.getOrganId(), masterData.getMasterId(), masterData.getCode());
+        if (exists != null && !dataId.equals(exists.getUuid())) {
+            logger.error("Code is exists!");
+            action.fieldError("MASTERDATA", "CODE_EXISTS");
+        }
+
+        masterDataBO.update(masterData.getUuid(), masterData);
+
+        return masterData;
+    }
+
+    /**
+     * @param masterCode
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final String masterDataRemove(String masterCode,
+                                            final SiteDataModel siteData,
+                                            final SubFirmProfile subFirm,
+                                            final AbstractBaseAction action,
+                                            final Map<String, Object> params) throws WebOSBOException {
+        final ERPMasterList masterList = masterListBO.loadByCode(getOrganId(siteData, subFirm), masterCode);
+        logger.debug("found masterList {} by code {}", masterList, masterCode);
+        if (masterList == null) {
+            logger.error("MasterList {} isn't found.", masterCode);
+            action.fieldError("MASTERLIST", "MASTERLIST_NOT_FOUND");
+        }
+
+        String dataIds = XParamUtils.getString("dataIds", params, StringUtils.EMPTY_STRING);
+
+        String removeIds = StringUtils.EMPTY_STRING;
+        if (StringUtils.hasLength(dataIds)) {
+            for (String dataId : dataIds.split(";")) {
+                if (masterDataBO.loadMDId(getOrganId(siteData, subFirm), masterList.getUuid(), dataId) != null) {
+                    masterDataBO.remove(dataId);
+                    removeIds += dataId + ";";
+                }
+            }
+        }
+
+
+        return removeIds;
+    }
+}

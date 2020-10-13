@@ -1,0 +1,311 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.data.*;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.masterdata.bo.ERPPriceDailyBO;
+import com.inet.calista.erp.masterdata.model.ERPPriceDaily;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * ECMOrderBO.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMOrderBO.java Dec 02, 2017 09:46 phongtt $
+ * @since 1.0
+ */
+@Named("ECMOrderBO")
+public class ECMOrderBO extends ERPBaseBO<ECMOrder> implements BeanInitiateInvoke {
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("items", ECMOrderItem.class);
+        childrenConvert.put("prodInfo", Map.class);
+        childrenConvert.put("buyer", ECMBuyer.class);
+        childrenConvert.put("shipper", ECMShipper.class);
+    }
+
+    @Inject
+    protected ECMOrderBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "ecm_order");
+    }
+
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ECMOrder> getClassConvetor() {
+        return ECMOrder.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("code");
+        ensureIndex("status");
+
+        ensureIndex("organId,code");
+        ensureIndex("organId,code,status");
+    }
+
+    @Override
+    public String add(final ECMOrder info) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            info.setCode(uuidRandom());
+        }
+
+        String uuid = super.add(info, "organId", "code");
+        return uuid;
+    }
+
+    @Override
+    public void update(String uuid, final ECMOrder info) throws WebOSBOException {
+        super.update(uuid, info);
+    }
+
+    /**
+     * @return
+     */
+    public String getModule() {
+        return ECMModule.ORDER_ECM.name();
+    }
+
+    /**
+     * @param order
+     * @param product
+     * @param qty
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMOrderItem newOrderItem(final ECMOrder order,
+                                     final ECMItem product,
+                                     float qty) throws WebOSBOException {
+        ECMOrderItem itemData = null;
+        if (order != null && product != null) {
+            itemData = new ECMOrderItem();
+            itemData.setUuid(uuidRandom());
+            itemData.setProdId(product.getUuid());
+            itemData.setProdCode(product.getCode());
+            itemData.setProdName(product.getName());
+            itemData.setUnit(product.getUnit());
+            itemData.getProdInfo().put("scanCode", product.getCode());
+
+            itemData.setQty(qty);
+            itemData.setPrice(product.getPrice());
+
+            final ERPPriceDaily priceDaily = WebContext.INSTANCE.cache()
+                    .getBean(ERPPriceDailyBO.class)
+                    .loadPriceForDay(
+                            order.getOrganId(), ECMConstant.PRICELIST_SALE, StringUtils.EMPTY_STRING,
+                            itemData.getProdCode(), order.getCurrencyId());
+
+            if (priceDaily != null) {
+                itemData.setPrice(priceDaily.getPrice());
+            }
+
+            itemData.calc();
+        }
+
+        return itemData;
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     */
+    public ECMProdOrder loadProdOrder(String organId, String code) {
+        ECMItem product = WebContext.INSTANCE.cache().getBean(ECMItemBO.class).loadByCode(organId, code);
+        logger.debug("found product {} with code {}", product, code);
+        return product != null ? (new ECMProdOrder()).withProduct(product) : new ECMProdOrder();
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param defaultCode
+     * @return
+     */
+    public String counterGenerate(String organId, String outletId, String defaultCode) {
+        return counterGenerate(organId, outletId, ECMConstant.COUNTER_ORDER, defaultCode);
+    }
+
+    /**
+     * @param oldOrgan
+     * @param newOrgan
+     * @throws WebOSBOException
+     */
+    public void changeOrgan(String oldOrgan, String newOrgan) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(oldOrgan);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("organId", newOrgan);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+
+    /**
+     * @param organId
+     * @param from
+     * @param to
+     * @param keyword
+     * @param status
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMOrder> queryOrder(String organId, long from, long to, String keyword, String status, int offset, int limit) throws WebOSBOException {
+        return queryOrder(organId, StringUtils.EMPTY_STRING, from, to, keyword, status, offset, limit);
+    }
+
+    /**
+     * @param organId
+     * @param buyer
+     * @param from
+     * @param to
+     * @param keyword
+     * @param status
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMOrder> queryOrder(String organId, String buyer, long from, long to, String keyword, String status, int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = queryBuilder(organId, buyer, from, to, keyword, status, offset, limit);
+        query.retrievedFields(false, "items");
+        return super.query(query);
+    }
+
+    /**
+     * @param from
+     * @param to
+     * @param keyword
+     * @param status
+     * @return
+     * @throws WebOSBOException
+     */
+    private QueryImpl<JSONDB> queryBuilder(String organId, String buyer, long from, long to, String keyword, String status, int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (from > 0) {
+            query.field("createDate").greaterThanOrEq(from);
+        }
+        if (to > 0) {
+            query.field("createDate").lessThanOrEq(to);
+        }
+
+        if (StringUtils.hasLength(status)) {
+            query.field("status").in(CollectionUtils.asList(status.split(",")));
+        }
+
+        if (StringUtils.hasLength(buyer)) {
+            query.field("buyer.username").equal(buyer);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+
+                    query.criteria("buyer.username").doesNotExist(),
+                    query.criteria("buyer.username").like(keyword),
+
+                    query.criteria("buyer.fullName").doesNotExist(),
+                    query.criteria("buyer.fullName").like(keyword),
+
+                    query.criteria("buyer.email").doesNotExist(),
+                    query.criteria("buyer.email").like(keyword),
+
+                    query.criteria("buyer.phone").doesNotExist(),
+                    query.criteria("buyer.phone").like(keyword),
+
+                    query.criteria("shipper.fullName").doesNotExist(),
+                    query.criteria("shipper.fullName").like(keyword),
+
+                    query.criteria("shipper.email").doesNotExist(),
+                    query.criteria("shipper.email").like(keyword),
+
+                    query.criteria("shipper.phone").doesNotExist(),
+                    query.criteria("shipper.phone").like(keyword)
+            ));
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        query.order("-createDate");
+
+
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @throws WebOSBOException
+     */
+    public void removeByOrgan(String organId, String code) throws WebOSBOException {
+        final ECMOrder order = loadByCode(organId, code);
+        if (order != null) {
+            super.remove(order.getUuid());
+        }
+    }
+}

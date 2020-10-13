@@ -1,0 +1,32 @@
+package com.inet.calista.crm.model.common;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * Processer.
+ *
+ * @author thoangtran
+ * @version Processer 2019 01-24 10:12
+ */
+@Getter
+@Setter
+public class Responsible {
+  private String userCode;
+  private String fullName;
+
+  public static Responsible transform(final JSONObject jsonObject) throws JSONException {
+    if(null == jsonObject)
+      return null;
+    final Responsible staff = new Responsible();
+    if(jsonObject.has("userCode")){
+      staff.setUserCode(jsonObject.getString("userCode"));
+    }
+    if(jsonObject.has("fullName")) {
+      staff.setFullName(jsonObject.getString("fullName"));
+    }
+    return staff;
+  }
+}

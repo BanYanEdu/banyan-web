@@ -1,0 +1,133 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.model;
+
+import com.inet.calista.erp.book.model.ERPCashBook;
+import com.inet.calista.erp.book.model.ERPDiaryBook;
+import com.inet.calista.erp.book.model.ERPStockBook;
+import com.inet.calista.erp.purchase.model.ERPPurchaseInvoice;
+import com.inet.calista.pos.retail.data.POSModule;
+import com.inet.calista.pos.retail.data.POSPurchaseItem;
+import com.inet.xportal.web.exception.WebOSBOException;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+import java.util.List;
+
+/**
+ * com.inet.platform.pos.model.
+ *
+ * @author Phong Tran
+ * @version $Id: POSPurchase.java Jun 20, 2018 16:48 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class POSPurchase extends ERPPurchaseInvoice<POSPurchaseItem> {
+    private float totalPaidAmount;
+    private float totalPaidAmountEx;
+
+    private float totalRemainAmount;
+    private float totalRemainAmountEx;
+
+    /**
+     * @param data
+     */
+    public POSPurchase copyData(final POSPurchase data) {
+        this.setUuid(data.getUuid());
+        this.setOrganId(data.getOrganId());
+        this.setOutletId(data.getOutletId());
+
+        this.setModule(data.getModule());
+        this.setType(data.getType());
+        this.setCode(data.getCode());
+        this.setStatus(data.getStatus());
+
+        return this;
+    }
+
+    /**
+     * @return
+     */
+    public POSPurchase calc() {
+        super.calc();
+
+        this.setTotalPaidAmountEx(this.getTotalPaidAmount() * this.getRate());
+
+        //Calculator Remain amount
+        this.setTotalRemainAmount(this.getTotalPaidAmount() - this.getTotalPayment());
+        this.setTotalRemainAmountEx(this.getTotalRemainAmount() * this.getRate());
+
+        return this;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPStockBook> stockBooks() throws WebOSBOException {
+        final List<ERPStockBook> books = super.stockBooks();
+
+        if (!CollectionUtils.isEmpty(books)) {
+            for (ERPStockBook book : books) {
+                book.setOutletId(getOutletId());
+                book.setModule(POSModule.PUR_RETAIL.name());
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPDiaryBook> diaryBooks() throws WebOSBOException {
+        final List<ERPDiaryBook> books = super.diaryBooks();
+
+        if (!CollectionUtils.isEmpty(books)) {
+            for (ERPDiaryBook book : books) {
+                book.setOutletId(getOutletId());
+                book.setModule(POSModule.PUR_RETAIL.name());
+
+                book.setTotalPaidAmount(getTotalPaidAmount());
+                book.setTotalPaidAmountEx(getTotalPaidAmountEx());
+
+                book.setTotalRemainAmount(getTotalRemainAmount());
+                book.setTotalRemainAmountEx(getTotalRemainAmountEx());
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPCashBook cashBook() throws WebOSBOException {
+        final ERPCashBook book = super.cashBook();
+
+        book.setOutletId(getOutletId());
+        book.setModule(POSModule.PUR_RETAIL.name());
+
+        return book;
+    }
+}

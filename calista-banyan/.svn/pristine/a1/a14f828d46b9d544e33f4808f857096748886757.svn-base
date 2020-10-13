@@ -1,0 +1,191 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.cms;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.xportal.cms.web.model.CMSItemModel;
+import com.inet.xportal.nosql.web.data.PairValueDTO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CommerceCMSModifyDataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceCMSModifyDataservice.java Jan 30, 2018 11:16 phongtt $
+ * @since 1.0
+ */
+@Named("commercecmsitemmodify")
+@XPortalDataService(roles = {ECMConstant.ROLE_ADMIN}, description = ECMConstant.ROLE_ADMIN_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/cmsitem/modify",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CommerceCMSModifyDataservice extends CommerceCMSAbstraction {
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param summary
+     * @param idx
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    @Override
+    protected CMSItemModel loadItem(final CMSFirm cmsfirm,
+                                    final OrganizationDTO orgItem,
+                                    final ECMItem summary,
+                                    int idx,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+
+        String itemID = XParamUtils.getString("CMSItem", params, StringUtils.EMPTY_STRING);
+        logger.debug("CMSItem {} idx {}", itemID, idx);
+
+        CMSItemModel item;
+        if (StringUtils.hasLength(itemID)) {
+            item = cmsItemBO().loadByOwner(itemID,
+                    action.getSiteID(),
+                    getCMSPrefix(cmsfirm),
+                    XParamUtils.getString("code", params, getOwnerId(orgItem)));
+
+            if (item == null) {
+                logger.error("CMS Item {} is not found.", itemID);
+                action.getViolation().add(new ViolationDTO("ITEM_ID", "ITEM_ID", 1, "ITEM_NOT_FOUND"));
+                throw new WebOSBOException("Bad request!");
+            }
+
+            final CMSItemModel model = action.getModel(CMSItemModel.class);
+            if (StringUtils.hasLength(model.getCategory()))
+                item.setCategory(model.getCategory());
+
+            if (StringUtils.hasLength(model.getSubject()))
+                item.setSubject(model.getSubject());
+
+            if (StringUtils.hasLength(model.getBrief()))
+                item.setBrief(model.getBrief());
+
+            if (StringUtils.hasLength(model.getImage()))
+                item.setImage(model.getImage());
+
+            if (StringUtils.hasLength(model.getVtype()))
+                item.setVtype(model.getVtype());
+
+            if (item.getPosition() != model.getPosition())
+                item.setPosition(model.getPosition());
+
+            if (StringUtils.hasLength(model.getMessage()))
+                item.setMessage(model.getMessage());
+
+            // update item value
+            cmsItemBO().update(item.getUuid(), item);
+        } else {
+            item = action.getModel(CMSItemModel.class);
+
+            // set the current site
+            item.setSite(action.getSiteID());
+            item.setFirm(getCMSPrefix(cmsfirm));
+            item.setLanguage(getLanguage(action, params));
+
+            item.setMenuID(XParamUtils.getString("code", params, getOwnerId(orgItem)));
+
+            // this is writer code
+            item.setWritercode(SecurityUtil.getPrincipal());
+            // and writer name
+            item.setWritername(SecurityUtil.getAlias());
+
+            // update item value
+            item.setUuid(cmsItemBO().add(item));
+        }
+
+        try {
+            if (XParamUtils.getBoolean("CMSProdActive", params, false)) {
+                final PairValueDTO tabItem = new PairValueDTO();
+                tabItem.setUuid(item.getUuid());
+                tabItem.setName(item.getMenuID());
+                tabItem.setValue(item.getSubject());
+
+                logger.debug("CMSProdActive tabItem {}", JSONObject.fromObject(tabItem));
+
+                if (CollectionUtils.isEmpty(summary.getCmsTab().getElements())) {
+                    summary.getCmsTab().getElements().add(tabItem);
+                } else {
+                    logger.debug("found {} element(s)", summary.getCmsTab().getElements().size());
+
+                    idx = summary.getCmsTab().getElements().indexOf(tabItem);
+                    logger.debug("found element index at {}", idx);
+
+                    if (idx >= 0) {
+                        summary.getCmsTab().getElements().set(idx, tabItem);
+                    } else {
+                        summary.getCmsTab().getElements().add(tabItem);
+                    }
+
+                    for (int tab = summary.getCmsTab().getElements().size() - 1; tab >= 0; tab--) {
+                        if (!StringUtils.hasLength(summary.getCmsTab().getElements().get(tab).getUuid())) {
+                            summary.getCmsTab().getElements().remove(tab);
+                        }
+                    }
+                }
+
+                logger.debug("product {} have {} element(s)", summary.getUuid(), summary.getCmsTab().getElements().size());
+
+                productBO.update(summary.getUuid(), summary);
+            }
+        } catch (Throwable ex) {
+            logger.error("update product tab content fail! {}", ex);
+        }
+
+
+        return item;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.cms.web.marketplace.subfirmservice.ApplicationTabCMSAbstraction#service(com.inet.xportal.cms.web.model.CMSItemModel, com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.cms.web.model.ApplicationSummary, int, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSItemModel cmsItem,
+                                     final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final ECMItem summary,
+                                     int idx,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        return new ObjectWebDataservice<>(cmsItem);
+    }
+}

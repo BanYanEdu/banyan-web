@@ -1,0 +1,92 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMItemBO;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.thesis.ai.AIEngineClientBO;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.AIEvent;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * ShopProdViewService.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopProdViewService.java Dec 02, 2017 09:16 phongtt $
+ * @since 1.0
+ */
+@Named("shopproductview")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/product/view",
+        inherit = true,
+        expose = 2,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShopProdViewService extends CommerceBaseAbstraction {
+
+    @Inject
+    private ECMItemBO productBO;
+
+    @Inject
+    private AIEngineClientBO aiEngineBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        String prodId = XParamUtils.getString("prodId", params);
+        final ECMItem info = productBO.loadByCode(orgItem.getOrganId(), prodId);
+
+        validated(action, info, "PROCDUCT", "PROCDUCTID_NOT_FOUND", String.format("The product %s is not found", prodId));
+
+        try {
+            if (StringUtils.hasLength(SecurityUtil.getPrincipal())) {
+                logger.debug("AI analytics running .....");
+                final AIEvent event = new AIEvent("view", "user", "item");
+                aiEngineBO.createEvent(event, action.getApplication());
+            }
+        } catch (Exception ex) {
+            logger.error("buyEvent fail {}", ex);
+        }
+
+        return new ObjectWebDataservice<>(info);
+    }
+}

@@ -1,0 +1,192 @@
+/*****************************************************************
+ Copyright 2013 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+ Licensed under the iNet Solutions Corp.,;
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.inetcloud.vn/licenses
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ *****************************************************************/
+package com.inet.jobportal.utils;
+
+import com.inet.base.util.DateUtils;
+import com.inet.xportal.web.util.VietCalendarUtil;
+
+import java.util.*;
+
+/**
+ * CommonUtil.
+ *
+ * @author Hien Nguyen
+ * @version $Id: CommonUtil.java Aug 24, 2013 4:13:02 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+public class CommonUtil {
+    /**
+     *
+     * @param partten
+     * @return
+     */
+    public static long getVNeseDate(String partten) {
+        boolean julius = false;
+        Calendar cal = Calendar.getInstance();
+        int yyyy = cal.get(Calendar.YEAR);
+
+        // the end of lunar day in a year
+        if (partten.equals("?/12/*")) {
+            Date fdate = DateUtils.getDate("01/01/" + yyyy, DateUtils.VIETNAM_DATE_PATTERN);
+            int[] s0 = VietCalendarUtil.convertLunar2Solar(fdate);
+
+            cal.setTime(DateUtils.getDate(s0[0] + "/" + s0[1] + "/" + s0[2], DateUtils.VIETNAM_DATE_PATTERN));
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+
+            return cal.getTime().getTime();
+        }
+
+        if (partten.endsWith("*"))
+            julius = true;
+
+        // add year of this pattern
+        if (partten.endsWith("?") || partten.endsWith("*"))
+            partten = partten.substring(0, partten.length() - 1) + yyyy;
+
+        if (julius) {
+            Date fdate = DateUtils.getDate(partten, DateUtils.VIETNAM_DATE_PATTERN);
+            int[] s0 = VietCalendarUtil.convertLunar2Solar(fdate);
+
+            // get Date format
+            fdate = DateUtils.getDate(s0[0] + "/" + s0[1] + "/" + s0[2], DateUtils.VIETNAM_DATE_PATTERN);
+
+            return fdate.getTime();
+        } else {
+            Date fdate = DateUtils.getDate(partten, DateUtils.VIETNAM_DATE_PATTERN);
+            return fdate.getTime();
+        }
+    }
+
+    /**
+     *
+     * @param vals
+     * @return
+     */
+    public static List<String> stringValues(String vals) {
+        if (!vals.endsWith(","))
+            vals = vals + ",";
+
+        List<String> list = new ArrayList<String>();
+        for (String val : vals.split(",")) {
+            try {
+                list.add(val);
+            } catch (Exception e) {
+                // If it's not a Long value, ignore it
+            }
+        }
+        return list;
+    }
+
+    /**
+     *
+     * @param num
+     * @param length
+     * @return
+     */
+    public static String fillNumber(int num, int length) {
+        String val = "";
+
+        val = String.valueOf(num);
+
+        while (val.length() < length) {
+            val = "0" + val;
+        }
+
+        return val;
+
+    }
+
+    /**
+     *
+     * @param n
+     * @return
+     */
+    public static String getRandomString(int n) {
+        char[] chars = "abcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < n; i++) {
+            char c = chars[random.nextInt(chars.length)];
+            sb.append(c);
+        }
+        String output = sb.toString();
+        return output.toUpperCase();
+    }
+
+    /**
+     *
+     * @return
+     */
+    public static Date now() {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZoneServer());
+        return cal.getTime();
+    }
+
+    /**
+     *
+     * @return
+     */
+    public static TimeZone TimeZoneServer() {
+        return TimeZone.getDefault();
+    }
+
+    /**
+     *
+     * @param date
+     * @return
+     */
+    public static String formatYYYYMMDD(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZoneServer());
+        cal.setTime(date);
+
+        int month = cal.get(Calendar.MONTH) + 1;
+        String sMonth = month > 9 ? "" + month : "0" + month;
+
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+        String sDay = day > 9 ? "" + day : "0" + day;
+
+        return String.format("%d%s%s", cal.get(Calendar.YEAR), sMonth, sDay);
+    }
+
+    /**
+     *
+     * @param date
+     * @return
+     */
+    public static String formatHHMMSSMLS(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZoneServer());
+        cal.setTime(date);
+
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        String sHour = hour > 9 ? "" + hour : "0" + hour;
+
+        int minute = cal.get(Calendar.MINUTE);
+        String sMinute = minute > 9 ? "" + minute : "0" + minute;
+
+        int second = cal.get(Calendar.SECOND);
+        String sSecond = second > 9 ? "" + second : "0" + second;
+
+        int msecond = cal.get(Calendar.MILLISECOND);
+        String smSecond = msecond > 99 ? "" + msecond : (msecond > 9 ? "0" + msecond : "00" + msecond);
+
+        return String.format("%s%s%s%s", sHour, sMinute, sSecond, smSecond);
+    }
+
+}

@@ -1,0 +1,191 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.module.web.util.FirmServiceUtil;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * CollabarationDocumentService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CollabarationDocumentService.java Dec 28, 2017 11:18:41 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class CollabarationTaskService extends PluginSubfirmAbstraction {
+  protected static final ObjectWebDataservice<String> SUCCESS_RESULT = new ObjectWebDataservice<String>("success");
+  protected static final ObjectWebDataservice<String> FAILURE_RESULT = new ObjectWebDataservice<String>("failure");
+  protected final String SOCIAL_ACTIVITY_POLOCY_FRIEND = "FRIEND";
+  
+  /**
+   * Return the login user name
+   * 
+   * @return the given login user name
+   */
+  public static String getUsername() {
+    return SecurityUtil.getPrincipal();
+  }
+  
+  /**
+   * Return the login full name
+   * 
+   * @return the given login full name
+   */
+  protected String getFullname() {
+    return SecurityUtil.getAlias();
+  }
+  
+  /**
+   * Return the organization code
+   * 
+   * @param site the given {@link SiteDataModel} information
+   * @param subFirm the given {@link SubFirmProfile} information
+   * @return the organization identifier
+   */
+  protected String getOrgCode(final SiteDataModel site, final SubFirmProfile subFirm) {
+    return FirmServiceUtil.getOrganId(site, subFirm);
+  }
+  
+  /**
+   * Get executor information
+   * 
+   * @param site the given {@link SiteDataModel} information
+   * @param subFirm the given {@link SubFirmProfile} information
+   * @return the executor
+   */
+  protected Executor getExecutor(final SiteDataModel site, final SubFirmProfile subFirm) {
+    return new Executor(getUsername(), getFullname(), getOrgCode(site, subFirm));
+  }
+
+  /**
+   * Put error to {@link AbstractBaseAction}
+   * 
+   * @param action the given action
+   * @param field the given field
+   * @param error the given error
+   */
+  public static void putError(AbstractBaseAction action, String field, ErrorCode error) {
+    action.getViolation().add(createViolationDto(field, error));
+  }
+  
+  /**
+   * Create {@link ViolationDTO} from given information
+   * 
+   * @param field the given field
+   * @param error the given error
+   * @return the result
+   */
+  public static ViolationDTO createViolationDto(String field, ErrorCode error) {
+    return new ViolationDTO(field, error.name() , 0, "");
+  }
+  
+  /**
+   * Return list of {@link Executor} in given {@link JSONArray}
+   * 
+   * @param array the given {@link JSONArray}
+   * @return the list of {@link Executor}
+   * @throws ValidationException if invalid submission
+   */
+  protected List<Executor> getExecutor(JSONArray array) throws ValidationException {
+    if (array == null || array.isEmpty()) {
+      return null;
+    }
+    
+    List<Executor> executors = new LinkedList<>();
+    Executor executor = null;
+    for (int index = 0; index < array.size(); index++) {
+      executor = (Executor) JSONObject.toBean(array.getJSONObject(index), Executor.class);
+      
+      if (Strings.isNullOrEmpty(executor.getUname())) {
+        throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UNAME, ErrorCode.must_not_empty));
+      }
+      
+      // add executor to list
+      executors.add(executor);
+    }
+    
+    return executors;
+  }
+  
+  /**
+   * Check given value is empty or not
+   * 
+   * @param action the given action
+   * @param fieldName the given field name
+   * @param fieldValue the given field value
+   * @return empty or not
+   */
+  protected boolean isEmpty(AbstractBaseAction action, String fieldName, String fieldValue) {
+    if (Strings.isNullOrEmpty(fieldValue)) {
+      putError(action, fieldName, ErrorCode.must_not_empty);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Check given value is empty or not
+   *
+   * @param fieldName  the given field name
+   * @param fieldValue the given field value
+   * @return error or not
+   */
+  protected ViolationDTO isEmpty(String fieldName, String fieldValue) {
+      if (Strings.isNullOrEmpty(fieldValue)) {
+          return createViolationDto(fieldName, ErrorCode.must_not_empty);
+      }
+
+      return null;
+  }
+
+  /**
+   * Get the value in parameter with given field and check it must not be empty
+   *
+   * @param field  the given field value
+   * @param params the given parameter
+   * @return the result
+   * @throws ValidationException if the value is empty
+   */
+  protected String getRequireNotEmpty(String field, Map<String, Object> params) throws ValidationException {
+      String value = XParamUtils.getString(field, params);
+      if (Strings.isNullOrEmpty(value)) {
+          throw new ValidationException(createViolationDto(field, ErrorCode.must_not_empty));
+      }
+
+      return value;
+  }
+}

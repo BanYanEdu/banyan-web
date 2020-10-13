@@ -1,0 +1,218 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.data.ECMModule;
+import com.inet.calista.ecommerce.data.ECMProdSale;
+import com.inet.calista.ecommerce.data.ECMSaleItem;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.model.ECMSaleWeb;
+import com.inet.calista.erp.sale.bo.ERPSaleBase;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMSaleWebBO.java Jun 07, 2018 10:22 phongtt $
+ * @since 1.0
+ */
+@Named("ECMSaleWebBO")
+public class ECMSaleWebBO extends ERPSaleBase<ECMSaleWeb> implements BeanInitiateInvoke {
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("items", ECMSaleItem.class);
+    }
+
+    @Inject
+    private ECMItemBO itemBO;
+
+    @Inject
+    protected ECMSaleWebBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    @Override
+    protected Class<ECMSaleWeb> getClassConvetor() {
+        return ECMSaleWeb.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("outletId");
+        ensureIndex("code");
+        ensureIndex("createDate");
+
+        ensureIndex("organId,outletId,code,createDate");
+        ensureIndex("organId,outletId,salesmanId,createDate");
+    }
+
+    /**
+     * @return
+     */
+    public String getModule() {
+        return ECMModule.SALE_ECM.name();
+    }
+
+    /**
+     * @return
+     */
+    public String getCounter() {
+        return ECMConstant.COUNTER_SALE_ECM;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMProdSale loadProdSale(String organId, String outletId, String code) throws WebOSBOException {
+        final ECMItem product = itemBO.loadByCode(organId, code);
+
+        logger.debug("found product {} with code {}", product, code);
+
+        if (product != null) {
+            return new ECMProdSale()
+                    .withProduct(product)
+                    .withBarcode(itemBO.loadBarcode(product, code));
+        }
+
+        return new ECMProdSale();
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param defaultCode
+     * @return
+     */
+    public String counterGenerate(String organId, String outletId, String defaultCode) {
+        return super.counterGenerate(organId, outletId, getCounter(), defaultCode);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param keyword
+     * @param from
+     * @param to
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMSaleWeb> query(String organId, String outletId, String keyword,
+                                       int status, int paid, int invoice,
+                                       final List<String> empIds,
+                                       final List<String> custIds,
+                                       final List<String> saleIds,
+                                       long from, long to,
+                                       int limit, int offset) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("module").equal(getModule());
+
+        if (status >= 0) {
+            query.field("status").equal(status);
+        }
+
+        if (paid == 0) {
+            query.field("totalCustAmount").lessThanOrEq(0);
+        } else if (paid == 1) {
+            query.field("totalCustAmount").greaterThan(0);
+        }
+
+        if (invoice == 0) {
+        } else if (invoice == 1) {
+            query.field("reqExportInvoice").equal(true);
+        } else if (invoice == 2) {
+            query.field("invoiceDate").greaterThan(0);
+        }
+
+
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (!CollectionUtils.isEmpty(empIds)) {
+            query.field("employeeId").in(empIds);
+        }
+        if (!CollectionUtils.isEmpty(custIds)) {
+            query.field("customerId").in(custIds);
+        }
+        if (!CollectionUtils.isEmpty(saleIds)) {
+            query.field("salesmanId").in(saleIds);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("employeeName").like(keyword),
+                    query.criteria("customerName").like(keyword),
+                    query.criteria("salesmanName").like(keyword)
+            ));
+        }
+
+        if (from > 0) {
+            query.field("createDate").greaterThanOrEq(from);
+        }
+
+        if (to > 0) {
+            query.field("createDate").lessThanOrEq(to);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        return super.query(query);
+    }
+}

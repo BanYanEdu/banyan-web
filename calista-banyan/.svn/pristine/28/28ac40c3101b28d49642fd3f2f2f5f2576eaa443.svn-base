@@ -1,0 +1,11 @@
+package com.inet.calista.crm.constant;
+
+/**
+ * AppInfo.
+ *
+ * @author thoangtran
+ * @version AppInfo 2018 05-21 13:43
+ */
+public interface AppInfo {
+  String APP_NAME = "CRM";
+}

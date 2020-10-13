@@ -1,0 +1,74 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.erp.common.data.ERPItemStatus;
+import com.inet.xportal.cms.web.util.TabBaseUtil;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * ProductURateDataservice.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ProductURateDataservice.java Dec 12, 2017 11:45:34 AM $
+ * @since 1.0
+ */
+@Named(value = "ECMItemupdaterate")
+@XPortalDataService(description = "Product service")
+@XPortalPageRequest(uri = "commerce/product/updaterate",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ProductURateDataservice extends ProductContentBase {
+    /**
+     * @return
+     */
+    @Override
+    protected String statusLoad() {
+        return ERPItemStatus.USED.name();
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.cms.web.marketplace.dataservice.ApplicationSummaryBase#service(com.inet.xportal.cms.web.model.ApplicationSummary, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected final WebDataService service(final CMSFirm cmsfirm,
+                                           final OrganizationDTO orgItem,
+                                           final ECMItem summary,
+                                           final AbstractBaseAction action,
+                                           final Map<String, Object> params) throws WebOSBOException {
+        TabBaseUtil.UpdateRating(summary.getCmsTab(), action, params);
+
+        productBO.update(summary.getUuid(), summary);
+
+        return new ObjectWebDataservice<>(summary);
+    }
+}

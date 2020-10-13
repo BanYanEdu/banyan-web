@@ -1,0 +1,18 @@
+package com.inet.calista.crm.service.activity.task;
+
+import com.inet.calista.collatask.bo.task.TaskBo;
+import com.inet.calista.crm.service.CRMAbstractService;
+
+import javax.inject.Inject;
+
+/**
+ * TaskAbstractService.
+ *
+ * @author thoangtran
+ * @version TaskAbstractService 2018 05-08 15:55
+ */
+
+public abstract class TaskAbstractService extends CRMAbstractService {
+  @Inject
+  protected TaskBo taskBo;
+}

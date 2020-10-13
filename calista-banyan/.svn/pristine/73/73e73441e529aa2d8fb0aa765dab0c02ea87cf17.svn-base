@@ -1,0 +1,61 @@
+package com.inet.calista.crm.service.setting.dicts;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.setting.DictionaryBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.calista.crm.util.CommonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * FindByMasterService.
+ *
+ * @author thoangtran
+ * @version FindByMasterService 2018 04-10 13:45
+ */
+@Named("crm_setting_dict_masterfindbykeysservice")
+@XPortalDataService(roles = { Roles.SETTING_DICT}, description = "Find dictionaries by given keys")
+@XPortalPageRequest(uri = "crm/setting/dicts/master/fbykeys", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class FindByMasterService extends CRMAbstractService {
+  @Inject
+  private DictionaryBo bo;
+
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile,
+                                   final AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try{
+      // get the key to search
+      String keys = XParamUtils.getString(CommonConstant.KEYS, params);
+      if (Strings.isNullOrEmpty(keys)) {
+        putError(action, CommonConstant.KEYS, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      return new ObjectWebDataservice<>(bo.findByKeys(CommonUtils.toStringList(keys), CommonConstant.MASTER));
+    } catch (Exception ex) {
+      CRMBusinessException iex =  new CRMBusinessException("Error occurs during find by key on master dictionary", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

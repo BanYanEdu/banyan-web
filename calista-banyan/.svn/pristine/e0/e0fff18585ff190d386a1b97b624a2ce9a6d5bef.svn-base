@@ -1,0 +1,139 @@
+package com.inet.calista.crm.bo;
+
+import com.inet.calista.common.CalConstant;
+import com.inet.calista.common.bo.CalNoSqlBo;
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.util.CommonUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.xdb.data.SearchResult;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+import java.util.List;
+
+/**
+ * CRMNoSqlBo.
+ *
+ * @author thoangtran
+ * @version CRMNoSqlBo 2018 04-04 14:47
+ */
+@Slf4j
+public abstract class CRMNoSqlBo<T extends NoSqlModel<T>> extends CalNoSqlBo<T> {
+  public static final String CONTENT_CONTEXT_NAME = CalConstant.DB_CONTEXT;
+  /**
+   * Constructor default
+   * @param magicContentBF
+   * @param collection
+   */
+  public CRMNoSqlBo(MagicContentBF magicContentBF, String collection) {
+    super(magicContentBF, collection);
+  }
+
+  /**
+   * Create query by orgCode
+   * @param orgCode
+   * @return
+   */
+  protected QueryImpl<JSONDB> getQueryOwner(String orgCode) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field("orgCode").equal(orgCode);
+    return query;
+  }
+
+
+
+  /**
+   * Load contact by uuid and belong orgCode
+   * @param uuid
+   * @param orgCode
+   * @return
+   */
+  public T loadById(String uuid, String orgCode){
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("_id").equal(new ObjectId(uuid));
+    System.out.println("Query: " + query.getQueryObject().toJson());
+    log.debug("Query: ", query.getQueryObject().toJson());
+    return this.load(query);
+  }
+
+  /**
+   * Delete contact by uuid and belong orgCode
+   * @param uuid
+   * @param orgCode
+   */
+  public void delete(String uuid, String orgCode) {
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("_id").equal(new ObjectId(uuid));
+    this.remove(query);
+  }
+
+  /**
+   *
+   * @param uuids
+   * @param orgCode
+   */
+  public void delete(List<String> uuids, String orgCode) {
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("_id").in(CommonUtils.toObjectIdList(uuids));
+    //query.or(query.criteria("type").doesNotExist(), query.criteria("type").equal(Collections.EMPTY_LIST));
+    this.remove(query);
+  }
+
+  /**
+   *
+   * @param uuids
+   * @param tenantId
+   */
+  public void deleteImmediately(List<String> uuids, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("_id").in(CommonUtils.toObjectIdList(uuids));
+    this.remove(query);
+  }
+  /**
+   * Check record is belong tenant
+   * @param uuid
+   * @param orgCode
+   * @return
+   */
+  public boolean isBelongOrg(String uuid, String orgCode){
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("_id").equal(new ObjectId(uuid));
+    return this.count(query) == 1;
+  }
+
+  /**
+   * Search
+   * @param query      the give Query
+   * @param pageNumber the give offset
+   * @param pageSize   the give limit item
+   * @return
+   */
+  protected SearchDTO<T> search(final QueryImpl<JSONDB> query, int pageNumber, int pageSize) {
+    query.offset(pageNumber * pageSize).limit(pageSize);
+
+    return this.query(query);
+  }
+
+  protected SearchResult<JSONDB> pagination(final QueryImpl<JSONDB> query, int pageNumber, int pageSize) {
+    query.skip(pageNumber * pageSize).limit(pageSize);
+    return this.rawQuery(query);
+  }
+
+  /**
+   *
+   * @param query
+   * @param from
+   * @param localField
+   * @param foreignField
+   * @param as
+   */
+  protected void lookupEquality(QueryImpl<JSONDB> query, String from, String localField, String foreignField, String as) {
+    query.pipeline("$lookup", Document.parse("{'from': '%s', 'localField': '%s', 'foreignField': '%s','as' :'%s'}"));
+  }
+
+}
+

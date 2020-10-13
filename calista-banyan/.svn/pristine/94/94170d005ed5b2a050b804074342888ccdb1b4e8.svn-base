@@ -1,0 +1,352 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo.common;
+
+import com.inet.calista.global.bo.GLNoSqlBo;
+import com.inet.calista.global.dto.LocationCriteria;
+import com.inet.calista.global.dto.SearchCriteria;
+import com.inet.calista.global.model.common.GlobalCity;
+import com.inet.calista.global.model.common.GlobalCountry;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.BusinessException;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.mongodb.BasicDBList;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * GlobalCityBo.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalCityBo.java Aug 20, 2013 3:36:26 PM nguyen_dv $
+ * @since 1.0
+ */
+@Named("GlobalCityBo")
+public class GlobalCityBo extends GLNoSqlBo<GlobalCity> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalCityBo.class);
+
+    @Inject
+    private GlobalCountryBo countryBO;
+
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    public GlobalCityBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_city");
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(GlobalCity item) throws WebOSBOException {
+        return super.add(item, "countryID", "code");
+    }
+
+    /**
+     * @param country
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlobalCity loadByCode(String country, String code) throws WebOSBOException {
+        GlobalCountry countryItem = countryBO.loadByCode(country);
+        if (countryItem != null)
+            return loadByCountryID(countryItem.getUuid(), code);
+
+        return null;
+    }
+
+    /**
+     * @param countryID
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlobalCity loadByCountryID(String countryID, String code) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("countryID").equal(countryID)
+                .field("code").equal(code);
+
+        return super.load((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param countryID
+     * @param name
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlobalCity loadByName(String countryID, String name) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+
+        if (StringUtils.hasLength(countryID)) {
+            query.field("countryID").equal(countryID);
+        }
+        query.field("name").equal(name);
+
+        return super.load((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param countryID
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<GlobalCity> loadByCodes(String countryID, List<String> codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("countryID").equal(countryID)
+                .field("code").in(codes);
+
+        return query((QueryImpl<JSONDB>) query).getItems();
+    }
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    // codes = [countryID|code]
+    public List<GlobalCity> findByKeyList(List<String> codes) throws WebOSBOException {
+
+        try {
+            logger.debug("GlobalCityBo.findByKeyList ...");
+
+            BasicDBList dbojlist = new BasicDBList();
+            dbojlist.add("$countryID");
+            dbojlist.add("|");
+            dbojlist.add("$code");
+
+            DBObject dboj = new BasicDBObject();
+            dboj.put("$concat", dbojlist);
+
+            DBObject dbojFind = new BasicDBObject();
+            dbojFind.put("conditionField", dboj);
+            dbojFind.put("countryID", "$countryID");
+            dbojFind.put("code", "$code");
+            dbojFind.put("name", "$name");
+
+            DBObject dbojCondition = new BasicDBObject();
+            dbojCondition.put("$in", codes);
+
+            DBObject dbojMatch = new BasicDBObject();
+            dbojMatch.put("conditionField", dbojCondition);
+
+            logger.debug("parameters:");
+            logger.debug("dboj = [{}]", dboj);
+            logger.debug("dbojFind = [{}]", dbojFind);
+            logger.debug("dbojCondition = [{}]", dbojCondition);
+
+            final Query<JSONDB> query = new QueryImpl<JSONDB>().projection(dbojFind).match(dbojMatch);
+
+            List<GlobalCity> rsl = query((QueryImpl<JSONDB>) query, GlobalCity.class).getItems();
+
+            logger.debug("rsl = [{}]", rsl);
+
+            return rsl;
+
+        } catch (Throwable e) {
+            logger.debug("GlobalCityBo.findByKeyList ... fail =>", e);
+            return null;
+        }
+
+    }
+
+    /**
+     * @param codeID
+     * @return
+     * @throws WebOSBOException
+     */
+    public String getAddress(String codeID) throws WebOSBOException {
+        return getAddress(super.load(codeID));
+    }
+
+    /**
+     * @param country
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public String getAddress(String country, String code) throws WebOSBOException {
+        return getAddress(loadByCode(country, code));
+    }
+
+    /**
+     * @param cityItem
+     * @return
+     * @throws WebOSBOException
+     */
+    public String getAddress(GlobalCity cityItem) throws WebOSBOException {
+        if (cityItem != null) {
+            String address = countryBO.getAddress(cityItem.getCountryID());
+            if (StringUtils.hasLength(address))
+                return cityItem.getName() + ", " + address;
+            else
+                return cityItem.getName();
+        }
+
+        return null;
+    }
+
+    /**
+     * @param countryID
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlobalCity> queryByCountryID(String countryID) throws WebOSBOException {
+        if (StringUtils.hasLength(countryID)) {
+            final Query<JSONDB> query = new QueryImpl<JSONDB>().field("countryID").equal(countryID);
+            return query((QueryImpl<JSONDB>) query);
+        }
+        return null;
+    }
+
+    /**
+     * @param criteria
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlobalCity> search(SearchCriteria<LocationCriteria> criteria) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        final LocationCriteria locationCriteria = criteria.getCriteria();
+
+        if (StringUtils.hasLength(locationCriteria.getParentId())) {
+            query.field("countryID").equal(locationCriteria.getParentId());
+        }
+
+        if (StringUtils.hasLength(locationCriteria.getKeyword())) {
+            query.or(query.criteria("code").like(locationCriteria.getKeyword()),
+                    query.criteria("name").like(locationCriteria.getKeyword()));
+        }
+        return super.search(query, criteria.getPageNumber(), criteria.getPageSize());
+    }
+
+    /**
+     * @param country
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlobalCity> queryByCountryCode(String country) throws WebOSBOException {
+        GlobalCountry countryItem = countryBO.loadByCode(country);
+        if (countryItem != null)
+            return queryByCountryID(countryItem.getUuid());
+        return null;
+    }
+
+    /**
+     * @param uuid
+     */
+    public void removeById(String uuid) {
+        final GlobalCity city = this.load(uuid);
+        if (city != null) {
+            this.remove(uuid);
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("countryID");
+
+        ensureIndex("countryID,code");
+        ensureIndex("countryID,name");
+
+        if (count() > 0)
+            return;
+
+        logger.debug("init city data from city-data.json file");
+
+        String json = ResourceUtil.getResourceAsString("city-data.json");
+        if (StringUtils.hasLength(json)) {
+            JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+            if (arrJson.size() > 0) {
+                logger.debug("load {} items", arrJson.size());
+
+                Map<String, String> countries = new HashMap<String, String>();
+                for (int idx = 0; idx < arrJson.size(); idx++) {
+                    JSONObject jsonItem = (JSONObject) arrJson.get(idx);
+                    GlobalCity item = JSONUtil.json2Bean(GlobalCity.class, jsonItem);
+
+                    String country = jsonItem.getString("country");
+                    if (!countries.containsKey(country)) {
+                        GlobalCountry countryItem = countryBO.loadByCode(country);
+                        if (countryItem != null)
+                            countries.put(country, countryItem.getUuid());
+                    }
+
+                    if (countries.containsKey(country) && StringUtils.hasLength(item.getCode())
+                            && StringUtils.hasLength(item.getName())) {
+                        logger.debug("add this city {}", item.getName());
+                        try {
+                            item.setCountryID(countries.get(country));
+
+                            // load this item
+                            GlobalCity dbitem = loadByCountryID(item.getCountryID(), item.getCode());
+
+                            // update this item
+                            if (dbitem == null || !StringUtils.hasLength(dbitem.getUuid())) {
+                                // add new item
+                                super.add(item);
+                            }
+                        } catch (BusinessException e) {
+                            logger.debug("Load from database fail.", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlobalCity> getClassConvetor() {
+        return GlobalCity.class;
+    }
+}

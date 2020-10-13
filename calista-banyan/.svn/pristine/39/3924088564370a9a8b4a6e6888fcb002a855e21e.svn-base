@@ -1,0 +1,22 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * JobApp Status
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobAppStatus.java Feb 9, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class JobAppStatus {
+    private String statusCode;
+    private Integer statusRatingScores;
+    private String statusUpdatedBy;
+    private Long statusUpdatedDate;
+}

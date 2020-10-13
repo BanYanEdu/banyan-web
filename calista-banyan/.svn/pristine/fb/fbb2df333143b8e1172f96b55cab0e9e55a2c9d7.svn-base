@@ -1,0 +1,71 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.data;
+
+import com.inet.calista.ecommerce.model.ECMItem;
+
+/**
+ * com.inet.xportal.ecommerce.data.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMProdSale.java Sep 21, 2018 08:54 phongtt $
+ * @since 1.0
+ */
+public class ECMProdSale {
+    private ECMItem product = null;
+    private ECMProdBarcode barcode = null;
+
+    public ECMItem getProduct() {
+        return product;
+    }
+
+    public void setProduct(final ECMItem product) {
+        this.product = product;
+    }
+
+    public ECMProdSale withProduct(final ECMItem product) {
+        this.product = product;
+        return this;
+    }
+
+    public ECMProdBarcode getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(final ECMProdBarcode barcode) {
+        this.barcode = barcode;
+    }
+
+    public ECMProdSale withBarcode(final ECMProdBarcode barcode) {
+        this.barcode = barcode;
+        return this;
+    }
+
+    public boolean isNull() {
+        return isProdNull() && isBarcodeNull();
+    }
+
+    public boolean isProdNull() {
+        return product == null;
+    }
+
+    public boolean isBarcodeNull() {
+        return barcode == null;
+    }
+}

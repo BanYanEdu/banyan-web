@@ -1,0 +1,274 @@
+package com.inet.calista.global.bo;
+
+import com.inet.base.util.FileUtils;
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.document.model.ObjectDocument;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.module.web.plugin.BeanFirmInitiateInvoke;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.MimeTypeUtil;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.File;
+import java.util.List;
+
+/**
+ * GlbReportTemplateBo.
+ *
+ * @author thoangtran
+ * @version GlbReportTemplateBo 2019 07-02 11:14
+ */
+@Named("glbExcelTemplateBo")
+public class GlbReportTemplateBo extends GlbNoSqlBO<GlbReportTemplate> implements BeanInitiateInvoke, BeanFirmInitiateInvoke {
+  @Inject
+  protected GlbObjectDocumentBo objectDocumentBo;
+
+  @Inject
+  protected GlbReportTemplateBo(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+    super(businessFacade, "gl_report_template");
+  }
+
+  /**
+   * Save template
+   * @param template
+   * @return
+   */
+  public GlbReportTemplate save(GlbReportTemplate template) {
+    template.setUuid(this.add(template,"organId","module","type","name","application"));
+    return template;
+  }
+  /**
+   * Load GlbReportTemplate by identify and organId
+   * @param uuid the given identify of record
+   * @param organId the given organId of subfirm
+   * @return GlbReportTemplate
+   */
+  public GlbReportTemplate load(String uuid, String organId) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field(GlobalConstant.UUID).equal(uuid);
+    return this.load(query);
+  }
+
+  /**
+   * Load report template file
+   * @param uuid
+   * @param organId
+   * @param file
+   * @return
+   */
+  public GlbReportTemplate loadTemplateFile(String uuid, String organId, File file) {
+    GlbReportTemplate template = this.load(uuid, organId);
+    if(null != template && StringUtils.hasLength(template.getContentUid())) {
+      objectDocumentBo.getLast(template.getContentUid(), file);
+    }
+    return template;
+  }
+  /**
+   * List Module by application and organId
+   * @param application
+   * @param organId
+   * @return
+   */
+  public List<String> listModules(String application, String organId) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field("application").equal(application);
+    return this.distinct("module", query);
+  }
+
+  /**
+   * Get list type by app, set of module, organId
+   * @param application
+   * @param module
+   * @param organId
+   * @return
+   */
+  public List<String> listTypes(String application, String module, String organId) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field("application").equal(application);
+    query.field("module").equal(module);
+    return this.distinct("type", query);
+  }
+
+  /**
+   * Get list excel template in organization by application, module and type
+   *
+   * @param organId the given code of organization
+   * @param app the given application name
+   * @param module the given module
+   * @param type the given type
+   * @return SearchDTO<GlbReportTemplate> match with query
+   */
+  public SearchDTO<GlbReportTemplate> list(String organId, String app, String module, String type) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field("application").equal(app);
+    if(StringUtils.hasLength(module)) {
+      query.field("module").equal(module);
+    }
+    if(StringUtils.hasLength(type)) {
+      query.field("type").equal(type);
+    }
+    return this.query(query);
+  }
+
+  /**
+   *
+   * check template was inited
+   * @param app
+   * @param module
+   * @param type
+   * @return
+   */
+  private boolean checkInited(String app, String module, String type, String name){
+
+    return this.count(createQuery(GlobalConstant.CLOUD_MNGM, app, module, type, name)) > 0;
+  }
+
+  /**
+   * Load for init template
+   * @param app
+   * @param module
+   * @param type
+   * @param name
+   * @return
+   */
+  private GlbReportTemplate loadBy(String app, String module, String type, String name) {
+    return this.load(createQuery(GlobalConstant.CLOUD_MNGM, app, module, type, name));
+  }
+
+  /**
+   * Create query
+   * @param app
+   * @param module
+   * @param type
+   * @param name
+   * @return
+   */
+  private QueryImpl<JSONDB> createQuery(String organId, String app, String module, String type, String name){
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(organId);
+    query.field("application").equal(app);
+    query.field("module").equal(module);
+    query.field("type").equal(type);
+    query.field("name").equal(name);
+    return query;
+  }
+
+  @Override
+  protected Class<GlbReportTemplate> getClassConvetor() {
+    return GlbReportTemplate.class;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+    initTemplate(WebContext.INSTANCE.cache().getApplication());
+  }
+
+  private void createIndex(){
+    ensureIndex("organId,application,module,type");
+  }
+
+  /**
+   * @param application
+   */
+  public void initTemplate(String application) {
+    String reportTemplate = String.format("%s-report-template.json", application);
+    logger.debug("Init report template !!!");
+    try {
+      String json = ResourceUtil.getResourceAsString(reportTemplate);
+      if (StringUtils.hasLength(json)) {
+        JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+        String mimetype, extension, file;
+        boolean forceUpdate = false;
+        boolean isSave = false;
+        boolean createNew = false;
+        if (arrJson.size() > 0) {
+          for (int idx = 0; idx < arrJson.size(); idx++) {
+            JSONObject object =  (JSONObject) arrJson.get(idx);
+            try{
+              GlbReportTemplate item = JSONUtil.json2Bean(GlbReportTemplate.class, object);
+              forceUpdate = object.optBoolean("forceUpdate", false);
+
+              if((createNew = !checkInited(application, item.getModule(), item.getType(), item.getName()))  || forceUpdate ) {
+                isSave = true;
+              }
+              if(isSave){
+                logger.debug("Template will save: {}", object.toString());
+                file = object.getString("file");
+                extension = FileUtils.getExtension(file);
+                mimetype = MimeTypeUtil.getMimeTypeByExtention(extension);
+                item.setMimetype(mimetype);
+                item.setExtension(extension);
+                item.setApplication(application);
+                item.setOrganId(GlobalConstant.CLOUD_MNGM);
+                // save file
+                String contentUid = objectDocumentBo.saveFile(ResourceUtil.getResourceAsInputStream(file), item.getName());
+                item.setContentUid(contentUid);
+                if(createNew){
+                  this.save(item);
+                } else {
+                  GlbReportTemplate exist = this.loadBy(application, item.getModule(), item.getType(), item.getName());
+                  if(StringUtils.hasLength(exist.getContentUid())){
+                    objectDocumentBo.deleteFile(exist.getContentUid());
+                  }
+                  exist.setContentUid(contentUid);
+                  this.update(exist.getUuid(), exist);
+                }
+              }
+            }catch (Exception ex) {
+              logger.error("Can't init report template: {}", ex);
+            }
+          }
+        }
+      }
+    } catch (Exception ex) {
+      logger.error("Can't init report template {} fail!", ex);
+    }
+  }
+
+  @Override
+  public void firmInitiation(FirmInformation firmInformation) {
+    logger.debug("Report template will init for :{}", firmInformation.getOrganId());
+    QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(GlobalConstant.ORGAN_ID).equal(GlobalConstant.CLOUD_MNGM);
+    SearchDTO<GlbReportTemplate> templates = this.query(query);
+    if(null != templates && templates.getItems().size() > 0) {
+      templates.getItems().forEach( template -> {
+        cloneTemplate(firmInformation.getOrganId(), template);
+      });
+
+    }
+  }
+
+  /**
+   * Clone template for firm
+   * @param organId
+   * @param template
+   */
+  private void cloneTemplate(String organId, GlbReportTemplate template) {
+    ObjectDocument objectDocument = new ObjectDocument();
+    objectDocumentBo.copyFile(template.getContentUid(), objectDocument);
+    template.setContentUid(objectDocument.getUuid());
+    template.setOrganId(organId);
+    template.setUuid("");
+    this.save(template);
+  }
+}

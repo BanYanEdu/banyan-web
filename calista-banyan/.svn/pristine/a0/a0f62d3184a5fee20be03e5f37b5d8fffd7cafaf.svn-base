@@ -1,0 +1,204 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo;
+
+import java.util.List;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.calista.common.bo.CalNoSqlBo;
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.xdb.data.SearchResult;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * CollaborationTaskBo.
+ *
+ * @author Duyen Tang
+ * @version $Id: CollaborationTaskBo.java Dec 26, 2017 1:53:03 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class CollaborationTaskBo<T extends BaseModel> extends CalNoSqlBo<T> {
+
+  /**
+   * Create {@link CollaborationTaskBo} instance
+   * 
+   * @param contentBf the given {@link MagicContentBF} instance
+   * @param collectionName the given collection name
+   */
+  protected CollaborationTaskBo(MagicContentBF contentBf, String collectionName) {
+    super(contentBf, collectionName);
+  }
+  
+  /**
+   * Find {@link T} with given UUID
+   * 
+   * @param uuid the given {@link T} UUID
+   * @param include include or exclude fields
+   * @param fields the given fields
+   * @return
+   */
+  public T findByUuid(String uuid, boolean include, String... fields) {
+    QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field("_id").equal(CommonUtils.toObjectId(uuid));
+    
+    // projection data
+    query.retrievedFields(include, fields);
+
+    return load(query);
+  }
+  
+  /**
+   * Create search query with paging
+   * 
+   * @param searchCriteria the given {@link SearchCriteria} information
+   * @return the query
+   */
+  protected <V> QueryImpl<JSONDB> createSearchQuery(SearchCriteria<V> searchCriteria) {
+    final QueryImpl<JSONDB> query = new QueryImpl<JSONDB>();
+    query.limit(searchCriteria.getPageSize());
+    query.offset(searchCriteria.getPageNumber() * searchCriteria.getPageSize());
+    
+    return query;
+  }
+  
+  /**
+   * Create search query with paging
+   * 
+   * @param searchCriteria the given {@link SearchCriteria} information
+   * @return the query
+   */
+  protected <V> QueryImpl<JSONDB> createSearchQueryWithOrgCode(SearchCriteria<V> searchCriteria) {
+    final QueryImpl<JSONDB> query = createSearchQuery(searchCriteria);
+    query.field("orgCode").equal(searchCriteria.getOrgCode());
+    
+    return query;
+  }
+  
+  /**
+   * Count pipeline result
+   * 
+   * @param query the query
+   * @return the total of result
+   */
+  protected int countPipeline(QueryImpl<JSONDB> query) {
+    // count total result of pipeline
+    query.pipeline("$count", "passing_scores");
+    
+    SearchResult<JSONDB> result = rawQuery(query);
+    if (CollectionUtils.isEmpty(result.getItems())) {
+      // there is no result return
+      return 0;
+    }
+    
+    // get total result
+    return result.getItems().get(0).getInteger("passing_scores");
+  }
+  
+  /**
+   * Create query with given organization code
+   * 
+   * @param orgCode the given organization code
+   * @return the query
+   */
+  protected QueryImpl<JSONDB> createQuery(String orgCode) {
+    QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field("orgCode").equal(orgCode);
+    
+    return query;
+  }
+  
+  /**
+   * Append search LIKE on given field with given value to given query
+   * 
+   * @param query the given query
+   * @param fieldName the given field name
+   * @param searchValue the given search value
+   * @return search on given field or not
+   */
+  protected boolean searchLike(QueryImpl<JSONDB> query, String fieldName, String searchValue) {
+    if (!Strings.isNullOrEmpty(searchValue)) {
+      query.field(fieldName).like(searchValue);
+      
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Append search EQUAL on given field with given value to given query
+   * 
+   * @param query the given query
+   * @param fieldName the given field name
+   * @param searchValue the given search value
+   * @return search on given field or not
+   */
+  protected boolean searchEqual(QueryImpl<JSONDB> query, String fieldName, String searchValue) {
+    if (!Strings.isNullOrEmpty(searchValue)) {
+      query.field(fieldName).equal(searchValue);
+      
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Append search IN on given field with given value to given query
+   * 
+   * @param query the given query
+   * @param fieldName the given field name
+   * @param searchValues the given search values
+   * @return search on given field or not
+   */
+  protected boolean searchIn(QueryImpl<JSONDB> query, String fieldName, List<?> searchValues) {
+    if (searchValues != null && !searchValues.isEmpty()) {
+      query.field(fieldName).in(searchValues);
+      
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Append search BETWEEN two date on given field to given query
+   * 
+   * @param query the given query
+   * @param fieldName the given field name
+   * @param from the given from date
+   * @param to the given date to
+   */
+  protected void searchBetweenDate(QueryImpl<JSONDB> query, String fieldName, long from, long to) {
+    // search on date from
+    if (from > 0) {
+      query.field(fieldName).greaterThanOrEq(DateUtils.startTimeInMillisOf(from));
+    }
+    
+    // search on date to
+    if (to > 0) {
+      query.field(fieldName).lessThanOrEq(DateUtils.endTimeInMillisOf(to));
+    }
+  }
+}

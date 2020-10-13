@@ -1,0 +1,55 @@
+package com.inet.calista.crm.service.activity.event;
+
+import com.inet.calista.crm.model.activity.Event;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.calista.crm.util.JsonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtran
+ * @version CreateService 2019 01-22 15:49
+ */
+@Named("crm_activity_event_createservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Event role")
+@XPortalPageRequest(uri = "crm/activity/event/create", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CreateService extends EventService {
+
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile subFirmProfile, AbstractBaseAction abstractBaseAction, Map<String, Object> params) throws WebOSBOException {
+    try{
+      final Event event = action.getModel(Event.class);
+      resolveCreateModel(event);
+      event.setCommunications(getCommunications(params));
+      event.setResponsible(getResponsible(params));
+      //resoveEvent(event);
+      event.setUuid(this.eventBo.add(event));
+      return new ObjectWebDataservice<>(event);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during saving event", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

@@ -1,0 +1,248 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.common.utils.CommonUtils;
+import com.inet.calista.common.utils.JsonUtils;
+import com.inet.calista.global.data.DictionaryType;
+import com.inet.calista.global.dto.DictionaryCriteria;
+import com.inet.calista.global.dto.MapData;
+import com.inet.calista.global.dto.SearchCriteria;
+import com.inet.calista.global.model.GlobalDictionary;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * DictionaryBo.
+ *
+ * @author thoangtran
+ * @version DictionaryBo 2018 04-10 10:14
+ */
+@Named("GLDictionaryBO")
+@Slf4j
+public class GLDictionaryBO extends GLNoSqlBo<GlobalDictionary> implements BeanInitiateInvoke {
+
+	/**
+	 * Constructor
+	 * 
+	 * @param contentBf
+	 */
+	@Inject
+	protected GLDictionaryBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBf) {
+		super(contentBf, "gl_dictionary");
+	}
+
+	/**
+	 * List keys
+	 * 
+	 * @return
+	 */
+	public List<GlobalDictionary> listKeys() {
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("type").equal(DictionaryType.KEY.name());
+		query.order("order");
+		return this.query(query).getItems();
+	}
+
+	/**
+	 * 
+	 * @param keys
+	 * @return
+	 */
+	public MapData<String, List<GlobalDictionary>> findByKeys(List<String> keys) 
+	{
+		final MapData<String, List<GlobalDictionary>> data = new MapData<>();
+		for (String key : keys) 
+		{
+			data.put(key, loadByKey(key));
+		}
+		return data;
+	}
+
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public List<GlobalDictionary> queryByKey(String key) 
+	{
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("key").equal(key);
+		query.field("type").equal(DictionaryType.ITEM.name());
+		query.order("order");
+		return this.query(query).getItems();
+	}
+
+	/**
+	 *
+	 * @param criteria
+	 * @return
+	 */
+	public SearchDTO<GlobalDictionary> search(SearchCriteria<DictionaryCriteria> criteria) 
+	{
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		DictionaryCriteria qCriteria = criteria.getCriteria();
+		if (StringUtils.hasLength(qCriteria.getKey())) {
+			query.field("key").equal(qCriteria.getKey());
+		}
+		if (StringUtils.hasLength(qCriteria.getType())) {
+			query.field("type").equal(qCriteria.getType());
+		}
+		if (StringUtils.hasLength(qCriteria.getKeyword())) {
+			query.or(query.criteria("value").like(qCriteria.getKeyword()),
+					query.criteria("description").like(qCriteria.getKeyword()));
+		}
+		query.order("order");
+		log.debug("search by : {}", query);
+		return this.search(query, criteria.getPageNumber(), criteria.getPageSize());
+	}
+
+	/**
+	 *
+	 * @param ids
+	 * @return
+	 */
+	public List<GlobalDictionary> findByIds(List<String> ids) {
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("uuid").in(ids);
+		return this.query(query).getItems();
+	}
+
+	/**
+	 *
+	 * @param ids
+	 */
+	public void remove(List<String> ids) {
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("_id").in(CommonUtils.toObjectIdList(ids));
+		query.field("system").notEqual(true);
+		System.out.println(query.getQueryObject().toString());
+		this.remove(query);
+	}
+
+	/**
+	 * Remove by key
+	 * 
+	 * @param key
+	 */
+	public void removeByKey(String key) {
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("key").equal(key);
+		query.field("system").notEqual(true);
+		this.remove(query);
+	}
+
+	/**
+	 * check exist
+	 * 
+	 * @param key
+	 * @param value
+	 * @param type
+	 * @return
+	 */
+	public boolean isExisted(String key, String value, String type) {
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("type").equal(type).field("key").equal(key);
+		if (GlobalDictionary.Type.item.name().equals(type)) {
+			query.field("value").equal(value);
+		}
+		return this.count(query) > 0;
+	}
+
+	/**
+	 *
+	 * @param uuid
+	 * @param system
+	 * @return
+	 */
+	public GlobalDictionary system(String uuid, boolean system) {
+		final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("system", system);
+		this.update(uuid, update);
+		return this.load(uuid);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() 
+	{
+		ensureIndex("type,order");
+		ensureIndex("key,type");
+		
+		String dicts = ResourceUtil.getResourceAsString("dictionary.json");
+		if (!Strings.isNullOrEmpty(dicts)) {
+			if (!dicts.startsWith("[")) {
+				dicts = String.format("[%s]", dicts);
+			}
+		}
+
+		JSONArray array = JsonUtils.toJsonArray(dicts);
+		if (array != null && array.length() > 0) {
+			JSONObject object;
+			String key, value, desc, type;
+			boolean system = false;
+			for (int index = 0; index < array.length(); index++) {
+				try {
+					object = array.getJSONObject(index);
+					key = JsonUtils.getString(object, "key");
+					value = JsonUtils.getString(object, "value");
+					desc = JsonUtils.getString(object, "description");
+					type = JsonUtils.getString(object, "type", "item");
+					system = JsonUtils.getBoolean(object, "system", false);
+					if (!Strings.isNullOrEmpty(key) && !Strings.isNullOrEmpty(value) && !isExisted(key, value, type)) {
+						this.add(new GlobalDictionary(key, value, desc, type, JsonUtils.getInt(object, "order"),
+								system));
+					}
+				} catch (JSONException ex) {
+					log.warn("Error to get data to initialize at index: {} by message : {}", index, ex);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 
+	 */
+	@Override
+	protected Class<GlobalDictionary> getClassConvetor() {
+		return GlobalDictionary.class;
+	}
+}

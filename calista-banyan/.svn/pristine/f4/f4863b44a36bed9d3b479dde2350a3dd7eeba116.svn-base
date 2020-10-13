@@ -1,0 +1,50 @@
+package com.inet.calista.global.model.category;
+
+import com.inet.calista.global.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Date;
+
+/**
+ * GlobalDictionary.
+ *
+ * @author thoangtran
+ * @version GlobalDictionary 2018 08-06 11:57
+ */
+@Getter
+@Setter
+public class GlobalDictionary extends NoSqlModel<GlobalDictionary> {
+  private long modifiedDate = new Date().getTime();
+  private long createdDate = new Date().getTime();
+  private String modifiedBy;
+  private String key;
+  private String value;
+  private String description;
+  private String type  = Type.item.name();
+  private int order = -1;
+
+  private boolean system = false;
+  public GlobalDictionary() {
+  }
+
+  public GlobalDictionary(String key, String value, String description, String type, int order, boolean system) {
+    this.key = key;
+    this.value = value;
+    this.description = description;
+    this.order = order;
+    this.type = type;
+    this.system = system;
+  }
+
+
+  public  enum Type{
+    item,
+    key
+  }
+
+  @Override
+  protected boolean equals(GlobalDictionary other) {
+    return false;
+  }
+}

@@ -1,0 +1,188 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.data.GlbAddress;
+import com.inet.calista.global.data.GlbBank;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.RestEasy3Util;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: GlbOrganizationBO.java Nov 05, 2018 16:50 phongtt $
+ * @since 1.0
+ */
+@Named("GlbOrganizationBO")
+public class GlbOrganizationBO extends GlbNoSqlBO<GlbOrganization> implements BeanInitiateInvoke {
+    static String API_THONG_TIN_DOANH_NGHIEP = "https://thongtindoanhnghiep.co/api/company/";
+    static Map<String, Class<?>> childrenMap;
+
+    static {
+        childrenMap = new HashMap<>();
+        childrenMap.put("officeAddress", GlbAddress.class);
+        childrenMap.put("banks", GlbBank.class);
+    }
+
+    @Inject
+    public GlbOrganizationBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBf) {
+        super(contentBf, "gl_organization");
+    }
+
+    @Override
+    protected Class<GlbOrganization> getClassConvetor() {
+        return GlbOrganization.class;
+    }
+
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenMap;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("organId");
+        ensureIndex("name");
+        ensureIndex("primaryEmail");
+    }
+
+    @Override
+    public String add(final GlbOrganization model) throws WebOSBOException {
+        if (StringUtils.hasLength(model.getOrganId())) {
+            final GlbOrganization data = loadByOrganId(model.getOrganId());
+
+            if (data != null) {
+                return data.getUuid();
+            }
+        }
+        return super.add(model);
+    }
+
+    /**
+     * @param organ
+     * @param lstViolationDTO
+     * @return
+     */
+    public boolean verifyBank(final GlbOrganization organ,
+                              final GlbBank bank,
+                              List<ViolationDTO> lstViolationDTO) {
+
+        if (organ == null) {
+            logger.error("Organ is missed !...");
+            lstViolationDTO.add(new ViolationDTO("ORGAN", "ORGAN_IS_MISSED", 0, ""));
+            return false;
+        } else {
+            if (CollectionUtils.isEmpty(organ.getBanks())) {
+                organ.setBanks(new ArrayList<>());
+            }
+        }
+
+        if (bank == null) {
+            logger.error("Bank is missed !...");
+            lstViolationDTO.add(new ViolationDTO("BANK", "BANK_IS_MISSED", 0, ""));
+            return false;
+        }
+
+        if (!StringUtils.hasLength(bank.getBankName())) {
+            logger.error("Bank name is required !...");
+            lstViolationDTO.add(new ViolationDTO("BANK", "BANK_NAME_IS_REQUIRED", 0, ""));
+            return false;
+        }
+        if (!StringUtils.hasLength(bank.getBankAccount())) {
+            logger.error("Bank account is required !...");
+            lstViolationDTO.add(new ViolationDTO("BANK", "BANK_ACCOUNT_IS_REQUIRED", 0, ""));
+            return false;
+        }
+        if (!StringUtils.hasLength(bank.getBankBranch())) {
+            logger.error("Bank branch is required !...");
+            lstViolationDTO.add(new ViolationDTO("BANK", "BANK_BRANCH_IS_REQUIRED", 0, ""));
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param taxCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public JSONObject apiTaxCode(String taxCode) throws WebOSBOException {
+        try {
+            String url = API_THONG_TIN_DOANH_NGHIEP + taxCode;
+            String result = RestEasy3Util.getJson(url);
+            return JSONObject.fromObject(result);
+        } catch (Throwable ex) {
+            //ignore exception
+        }
+
+        return new JSONObject();
+    }
+
+    /**
+     * @param organId
+     * @return
+     */
+    public GlbOrganization loadByOrganId(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(GlobalConstant.ORGAN_ID).equal(organId);
+        return this.load(query);
+    }
+
+    /**
+     * @param organName
+     * @return
+     */
+    public GlbOrganization loadByOrganName(String organName) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("name").equal(organName);
+        return this.load(query);
+    }
+
+    /**
+     * @param taxCode
+     * @return
+     */
+    public GlbOrganization loadByTaxCode(String taxCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("taxCode").equal(taxCode);
+        return this.load(query);
+    }
+}

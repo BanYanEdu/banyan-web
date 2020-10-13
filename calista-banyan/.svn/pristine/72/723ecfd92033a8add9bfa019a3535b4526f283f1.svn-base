@@ -1,0 +1,17 @@
+package com.inet.calista.hrm.bo;
+
+import com.inet.calista.common.bo.CalNoSqlBo;
+import com.inet.calista.hrm.model.HRMModel;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+
+/**
+ * HRMBo.
+ *
+ * @author thoangtran
+ * @version HRMBo 2018 10-08 10:48
+ */
+public abstract class HRMBo<T extends HRMModel> extends CalNoSqlBo<T> {
+    protected HRMBo(MagicContentBF contentBf, String collectionName) {
+        super(contentBf, collectionName);
+    }
+}

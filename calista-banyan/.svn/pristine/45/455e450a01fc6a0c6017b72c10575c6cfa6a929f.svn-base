@@ -1,0 +1,213 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model.project;
+
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * Activity.
+ *
+ * @author Duyen Tang
+ * @version $Id: Activity.java Apr 3, 2018 2:41:05 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Activity extends BaseModel {
+  private String authUname;
+  private String authName;
+  private long exeDate;
+  private String action;
+  private String note;
+  
+  private String projectUuid;
+  
+  // the reference information
+  private String refType;
+  private String refUuid;
+  private String refName;
+
+  /**
+   * Create {@link Activity} instance
+   */
+  public Activity() {}
+
+  /**
+   * Create {@link Activity} instance from given information
+   * 
+   * @param projectUuid the given {@link Project} UUID
+   * @param authUname the given author user name
+   * @param authName the given author name
+   * @param exeDate the given execute date
+   * @param action the given action
+   * @param refType the given reference type
+   * @param refUuid the given reference UUID
+   * @param refName the given reference name
+   * @param note the given note
+   */
+  public Activity(String projectUuid, String authUname, String authName, 
+      long exeDate, String action, String refType, String refUuid, String refName, String note) {
+    this.projectUuid = projectUuid;
+    this.authUname = authUname;
+    this.authName = authName;
+    this.exeDate = exeDate;
+    this.action = action;
+    this.refType = refType;
+    this.refUuid = refUuid;
+    this.refName = refName;
+    this.note = note;
+  }
+
+  /**
+   * @return the projectUuid
+   */
+  public String getProjectUuid() {
+    return projectUuid;
+  }
+
+  /**
+   * @param projectUuid the projectUuid to set
+   */
+  public void setProjectUuid(String projectUuid) {
+    this.projectUuid = projectUuid;
+  }
+
+  /**
+   * @return the authUname
+   */
+  public String getAuthUname() {
+    return authUname;
+  }
+
+  /**
+   * @param authUname the authUname to set
+   */
+  public void setAuthUname(String authUname) {
+    this.authUname = authUname;
+  }
+
+  /**
+   * @return the authName
+   */
+  public String getAuthName() {
+    return authName;
+  }
+
+  /**
+   * @param authName the authName to set
+   */
+  public void setAuthName(String authName) {
+    this.authName = authName;
+  }
+
+  /**
+   * @return the exeDate
+   */
+  public long getExeDate() {
+    return exeDate;
+  }
+
+  /**
+   * @param exeDate the exeDate to set
+   */
+  public void setExeDate(long exeDate) {
+    this.exeDate = exeDate;
+  }
+
+  /**
+   * @return the action
+   */
+  public String getAction() {
+    return action;
+  }
+
+  /**
+   * @param action the action to set
+   */
+  public void setAction(String action) {
+    this.action = action;
+  }
+
+  /**
+   * @return the refUuid
+   */
+  public String getRefUuid() {
+    return refUuid;
+  }
+
+  /**
+   * @param refUuid the refUuid to set
+   */
+  public void setRefUuid(String refUuid) {
+    this.refUuid = refUuid;
+  }
+
+  /**
+   * @return the refName
+   */
+  public String getRefName() {
+    return refName;
+  }
+
+  /**
+   * @param refName the refName to set
+   */
+  public void setRefName(String refName) {
+    this.refName = refName;
+  }
+
+  /**
+   * @return the refType
+   */
+  public String getRefType() {
+    return refType;
+  }
+
+  /**
+   * @param refType the refType to set
+   */
+  public void setRefType(String refType) {
+    this.refType = refType;
+  }
+
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+  
+  /**
+   * Action.
+   *
+   * @author Duyen Tang
+   * @version $Id: ProjectActivity.java Apr 4, 2018 4:29:45 PM tttduyen $
+   *
+   * @since 1.0
+   */
+  public enum Action {
+    add,
+    update,
+    delete,
+    remove
+  }
+}

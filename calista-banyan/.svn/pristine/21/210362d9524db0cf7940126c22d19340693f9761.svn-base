@@ -1,0 +1,203 @@
+package com.inet.calista.crm.bo.setting;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.dto.MapData;
+import com.inet.calista.crm.model.setting.configuration.Dictionary;
+import com.inet.calista.crm.util.CommonUtils;
+import com.inet.calista.crm.util.JsonUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * DictionaryBo.
+ *
+ * @author thoangtran
+ * @version DictionaryBo 2018 04-10 10:14
+ */
+@Named("crm_setting_dictbo")
+@Slf4j
+public class DictionaryBo extends CRMNoSqlBo<Dictionary>  implements BeanInitiateInvoke {
+
+  /**
+   * Constructor
+   * @param contentBf
+   */
+  @Inject
+  public DictionaryBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_setting_dicts");
+  }
+
+  /**
+   *
+   * @param tenantId
+   * @return
+   */
+  public List<Dictionary> findAll(String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    return this.query(query).getItems();
+  }
+
+  /**
+   * List keys
+   * @param tenantId
+   * @return
+   */
+  public List<Dictionary> listKeys(String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("type").equal(Dictionary.Type.key.name());
+    return this.query(query).getItems();
+  }
+
+  public MapData<String, List<Dictionary>> findByKeys( List<String> keys, String tenantId){
+    final MapData<String, List<Dictionary>> data = new MapData<>();
+    for(String key: keys) {
+      data.put(key, findByKey(key, tenantId));
+    }
+    return data;
+  }
+
+  public List<Dictionary> findByKey(String key, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("key").equal(key);
+    query.field("type").equal(Dictionary.Type.item.name());
+    return this.query(query).getItems();
+  }
+
+  /**
+   *
+   * @param tenantId
+   * @param ids
+   * @return
+   */
+  public List<Dictionary> findByIds(List<String> ids, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("uuid").in(ids);
+    return this.query(query).getItems();
+  }
+
+  public void remove(List<String> ids, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("_id").in(CommonUtils.toObjectIdList(ids));
+    System.out.println(query.getQueryObject().toString());
+    this.remove(query);
+  }
+
+  /**
+   * key the given key of item
+   * value the given value of item
+   * @return Dictionary
+   */
+  public Dictionary getItem(String key, String value, String ownerId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(ownerId);
+    query.field(CommonConstant.KEY).equal(key);
+    query.field(CommonConstant.VALUE).equal(value);
+    return this.load(query);
+  }
+
+  /**
+   *
+   * @param key
+   * @param value
+   * @param ownerId
+   * @return
+   */
+  public String getItemText(String key, String value, String ownerId) {
+    final Dictionary dictionary = getItem(key, value, ownerId);
+    if(null != dictionary) {
+      return dictionary.getDescription();
+    }
+    return value;
+  }
+
+  /**
+   * Remove by key
+   * @param key
+   * @param tenantId
+   */
+  public void removeByKey(String key, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("key").equal(key);
+    this.remove(query);
+  }
+
+  /**
+   * check exist
+   * @param tenantId
+   * @param key
+   * @param value
+   * @param type
+   * @return
+   */
+  public boolean isExisted(String key, String value, String type, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("type").equal(type).field("key").equal(key);
+    if(Dictionary.Type.item.name().equals(type)){
+      query.field("value").equal(value);
+    }
+    return this.count(query) > 0;
+  }
+
+
+  @Override
+  public void init() {
+    if (logger.isInfoEnabled()) {
+      logger.info("Begin initialize data for dictionary information");
+    }
+
+    String dicts = ResourceUtil.getResourceAsString("dictionary.json");
+    if (!Strings.isNullOrEmpty(dicts)) {
+      if (!dicts.startsWith("[")) {
+        dicts = String.format("[%s]", dicts);
+      }
+    }
+
+    JSONArray array = JsonUtils.toJsonArray(dicts);
+    if (array != null && array.length() > 0) {
+      JSONObject object;
+      String key, value, desc, type;
+      for (int index = 0; index < array.length(); index++) {
+        try {
+          object = array.getJSONObject(index);
+          key = JsonUtils.getString(object, "key");
+          value = JsonUtils.getString(object, "value");
+          desc = JsonUtils.getString(object, "description");
+          type = JsonUtils.getString(object, "type", "item");
+          if (!Strings.isNullOrEmpty(key) && !Strings.isNullOrEmpty(value) && !isExisted( key, value, type, CommonConstant.MASTER)) {
+            this.add(new Dictionary(CommonConstant.MASTER, key, value, desc, type, JsonUtils.getInt(object, "order")));
+          }
+        } catch (JSONException ex) {
+          logger.warn("Error to get data to initialize at index: {} by message : {}", index, ex);
+        }
+      }
+    }
+
+    indexKeys();
+    if (logger.isInfoEnabled()) {
+      logger.info("End initialize data for dictionary information");
+    }
+  }
+
+  private void indexKeys() {
+    ensureIndex("uuid");
+    ensureIndex("key,type");
+  }
+
+  @Override
+  protected Class<Dictionary> getClassConvetor() {
+    return Dictionary.class;
+  }
+}

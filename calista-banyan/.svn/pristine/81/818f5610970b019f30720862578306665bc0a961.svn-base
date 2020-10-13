@@ -1,0 +1,63 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.api;
+
+/**
+ * com.inet.xportal.erp.api.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPFactoryCounter.java Apr 28, 2018 08:54 phongtt $
+ * @since 1.0
+ */
+public interface ERPFactoryCounter {
+    /**
+     * @param organId
+     * @param counterId
+     * @return
+     */
+    public void init(String organId, String counterId, String prefix);
+
+    /**
+     * @param organId
+     * @param counterId
+     * @return
+     */
+    public String builder(String organId, String counterId);
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param date
+     * @return
+     */
+    public String builder(String organId, String counterId, long date);
+
+    /**
+     * @param organId
+     * @param counterId
+     */
+    public void increase(String organId, String counterId);
+
+    /**
+     * @param organId
+     * @param counterId
+     * @param date
+     */
+    public void increase(String organId, String counterId, long date);
+}

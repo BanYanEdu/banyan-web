@@ -1,0 +1,111 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import java.util.List;
+
+import com.inet.calista.common.bo.CalistaAbstractBO;
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * CRMNoSqlBo.
+ *
+ * @author thoangtran
+ * @version CRMNoSqlBo 2018 04-04 14:47
+ */
+public abstract class GLNoSqlBo<T extends BaseModel> extends CalistaAbstractBO<T> 
+{
+	/**
+	 * 
+	 * @param contentBf
+	 * @param collectionName
+	 */
+	protected GLNoSqlBo(MagicContentBF contentBf, String collectionName) 
+	{
+		super(contentBf, collectionName);
+	}
+
+	/**
+	 * 
+	 * @param query
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	protected QueryImpl<JSONDB> pagination(final QueryImpl<JSONDB> query, int pageNumber, int pageSize) 
+	{
+		query.offset(pageNumber * pageSize)
+			 .limit(pageSize);
+		return query;
+	}
+
+	/**
+	 *
+	 * @param query
+	 * @param pageNumber
+	 * @param pageSize
+	 * @return
+	 */
+	@Override
+	protected SearchDTO<T> search(final QueryImpl<JSONDB> query, int pageNumber, int pageSize) {
+		this.pagination(query, pageNumber, pageSize);
+		return this.query(query);
+	}
+
+	/**
+	 *
+	 * @param uuids
+	 */
+	public void delete(List<String> uuids) 
+	{
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("uuid").in(uuids);
+		this.remove(query);
+	}
+
+	/**
+	 *
+	 * @param uuid
+	 * @return
+	 */
+	public boolean existById(String uuid) 
+	{
+		final QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field(GlobalConstant.UUID).equal(uuid);
+		return this.count(query) > 0;
+	}
+
+	/**
+	 *
+	 * @param code
+	 * @param uuid
+	 * @return
+	 */
+//	public boolean existByCode(String code, String uuid) {
+//		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+//				.field("code").equal(code);
+//		if (StringUtils.hasLength(uuid)) 
+//			query.field("_id").notEqual(new ObjectId(uuid));
+//		return this.count((QueryImpl<JSONDB>) query) > 0;
+//	}
+}

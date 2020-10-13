@@ -1,0 +1,58 @@
+package com.inet.calista.crm.service.setting.sysconfig;
+
+import com.inet.calista.crm.bo.setting.SystemConfigurationBo;
+import com.inet.calista.crm.model.setting.configuration.SystemConfiguration;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CloneDefaultConfigService.
+ *
+ * @author thoangtran
+ * @version CloneDefaultConfigService 2018 04-10 09:21
+ */
+@Named("crm_setting_sysconf_master_clone")
+@XPortalDataService(roles = { Roles.SETTING_CONFIG}, description = "System config role")
+@XPortalPageRequest(uri = "crm/setting/sys-config/master/clone", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CloneDefaultConfigService extends CRMAbstractService {
+
+  @Inject
+  private SystemConfigurationBo systemConfigurationBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile subFirmProfile, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try{
+      SearchDTO<SystemConfiguration> masterConfigs = systemConfigurationBo.findAllMaster(StringUtils.EMPTY_STRING);
+      if(masterConfigs.getTotal() > 0){
+        for (SystemConfiguration sys: masterConfigs.getItems()) {
+          systemConfigurationBo.save(new SystemConfiguration(sys.getKey(), sys.getValue(), sys.getDescription(), sys.isVisible(), subFirmProfile.getOrganiId()));
+        }
+      }
+      return new ObjectWebDataservice<>(systemConfigurationBo.findByTenant(subFirmProfile.getOrganiId(), StringUtils.EMPTY_STRING));
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during initial configuration", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    }
+  }
+}

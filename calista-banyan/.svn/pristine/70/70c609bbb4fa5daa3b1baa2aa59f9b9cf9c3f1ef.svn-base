@@ -1,0 +1,43 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.service.common.BinaryViewAbstraction;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+
+import javax.inject.Named;
+
+/**
+ * ShopProdImgViewService.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopProdImgViewService.java Dec 12, 2017 3:58:00 PM $
+ * @since 1.0
+ */
+@Named("shopprodimgview")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/prod/img/view",
+        inherit = true,
+        action = WebConstant.FILE_DOWNLOAD_ACTON,
+        result = WebConstant.ACTION_XSTREAM_CACHE_RESULT)
+public class ShopProdImgViewService extends BinaryViewAbstraction {
+}

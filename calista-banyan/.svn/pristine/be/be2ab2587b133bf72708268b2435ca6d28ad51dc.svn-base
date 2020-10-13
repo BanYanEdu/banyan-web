@@ -1,0 +1,271 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.model.FollowUp;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * FollowUpBO.
+ *
+ * @author Duyen Tang
+ * @version $Id: FollowUpBO.java Jan 26, 2018 11:15:13 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("collatask_followupbo")
+public class FollowUpBO extends CollaborationTaskBO<FollowUp> implements BeanInitiateInvoke {
+
+	/**
+	 * Create {@link FollowUpBO} instance
+	 * 
+	 * @param contentBf
+	 *            the given {@link MagicContentBF}
+	 */
+	@Inject
+	protected FollowUpBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+		super(contentBf, "collatask_follow_up");
+	}
+
+	/**
+	 * Save or update {@link FollowUp}
+	 * 
+	 * @param followUp
+	 *            the given {@link FollowUp} information
+	 * @return the UUID of {@link FollowUp}
+	 */
+	public String addOrUpdate(FollowUp followUp) 
+	{
+		FollowUp existed = loadBy(followUp.getOrgCode(), followUp.getAuthorUname(), followUp.getRefUuid(), followUp.getRefType());
+		if (existed == null) {
+			return add(followUp);
+		}
+
+		existed.setDate(followUp.getDate());
+		existed.setNote(followUp.getNote());
+		update(existed.getUuid(), existed);
+
+		return existed.getUuid();
+	}
+
+	/**
+	 * Find reference UUID in current day by given conditions
+	 * 
+	 * @param exeUname
+	 *            the given executor user name
+	 * @param type
+	 *            the given type
+	 * @param refType
+	 *            the given reference type
+	 * @return the result
+	 */
+	public List<String> findTodayRefUuidBy(String orgCode, String exeUname, String refType) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+
+		query.field("authorUname").equal(exeUname)
+			 .field("orgCode").equal(orgCode);
+			 
+		// or condition MUST BE started with AND
+		query.and(query.or(query.criteria("date").lessThanOrEq(0), 
+						  query.and(query.criteria("date").greaterThanOrEq(DateUtils.startTimeInMillisOf(System.currentTimeMillis())),
+								    query.criteria("date").lessThanOrEq(DateUtils.endTimeInMillisOf(System.currentTimeMillis())))));
+
+		if (!Strings.isNullOrEmpty(refType)) 
+		{
+			query.field("refType").equal(refType);
+		}
+
+		query.retrievedFields(true, "refUuid");
+
+		SearchDTO<FollowUp> results = query(query);
+		if (results != null && !CollectionUtils.isEmpty(results.getItems())) 
+		{
+			return results.getItems().stream().map(FollowUp::getRefUuid).collect(Collectors.toList());
+		}
+
+		return null;
+	}
+
+	/**
+	 * Remove {@link FollowUp} by given condition
+	 * 
+	 * @param authorUname
+	 *            the given author user name
+	 * @param refUuid
+	 *            the given reference UUID
+	 */
+	public void removeBy(String orgCode, String authorUname, String refUuid) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("refUuid").equal(refUuid)
+			 .field("orgCode").equal(orgCode);
+
+		if (!Strings.isNullOrEmpty(authorUname)) {
+			query.field("authorUname").equal(authorUname);
+		}
+
+		remove(query);
+	}
+
+	/**
+	 * Load {@link FollowUp} by given condition
+	 * 
+	 * @param orgCode
+	 *            the given organization code
+	 * @param authorUname
+	 *            the given author user name
+	 * @param refUuid
+	 *            the given reference UUID
+	 * @param refType
+	 *            the given reference type
+	 * @return the result
+	 */
+	public FollowUp loadBy(String orgCode, String authorUname, String refUuid, String refType) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("authorUname").equal(authorUname)
+			 .field("orgCode").equal(orgCode)
+			 .field("refUuid").equal(refUuid)
+			 .field("refType").equal(refType);
+
+		return load(query);
+	}
+
+	/**
+	 * Find {@link FollowUp} by given condition
+	 * 
+	 * @param orgCode
+	 *        Given organization code
+	 * @param authorUname
+	 *        Given author user name
+	 * @param refUuids
+	 *        Given list of reference UUIDs
+	 * @param refType
+	 *        Given reference type
+	 * @return the results
+	 */
+	public List<FollowUp> findBy(String orgCode, String authorUname, List<String> refUuids, String refType) {
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("authorUname").equal(authorUname)
+			 .field("orgCode").equal(orgCode)
+			 .field("refUuid").in(refUuids)
+			 .field("refType").equal(refType);
+
+		SearchDTO<FollowUp> result = query(query);
+		
+		return result != null ? result.getItems() : null;
+	}
+
+	/**
+	 * Find {@link FollowUp} by given conditions
+	 * 
+	 * @param orgCode
+	 *        Given organization code
+	 * @param authorUname
+	 *        Given author user name
+	 * @param type
+	 *        Given type
+	 * @param refType
+	 *         Given reference type
+	 * @return the result
+	 */
+	public List<FollowUp> findByWithOrder(String orgCode, String authorUname, String type, String refType,String order) 
+	{
+		QueryImpl<JSONDB> query = createQueryBy(orgCode, authorUname, type, refType, order);
+		
+		SearchDTO<FollowUp> result = query(query);
+		return result != null ? result.getItems() : null;
+	}
+
+	/**
+	 * Create query by given conditions
+	 * 
+	 * @param orgCode
+	 *            the given organization code
+	 * @param authorUname
+	 *            the given author user name
+	 * @param type
+	 *            the given type
+	 * @param refType
+	 *            the given reference type
+	 * @return the query
+	 */
+	public QueryImpl<JSONDB> createQueryBy(String orgCode, String authorUname, String type, String refType, String order) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("orgCode").equal(orgCode)
+			 .field("authorUname").equal(authorUname);
+
+		if (!Strings.isNullOrEmpty(type)) {
+			query.field("type").equal(type);
+		}
+
+		if (!Strings.isNullOrEmpty(refType)) {
+			query.field("refType").equal(refType);
+		}
+
+		if (!Strings.isNullOrEmpty(order)) {
+			// order by date
+			query.order(order);
+		}
+
+		return query;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<FollowUp> getClassConvetor() {
+		return FollowUp.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() {
+		ensureIndex("orgCode,refUuid");
+		ensureIndex("orgCode,refUuid,authorUname");
+		ensureIndex("orgCode,refUuid,authorUname,date");
+		
+		ensureIndex("orgCode,authorUname");
+		ensureIndex("orgCode,authorUname,refType");
+		ensureIndex("orgCode,authorUname,type");
+		ensureIndex("orgCode,authorUname,date");
+		ensureIndex("orgCode,authorUname,date,refType");
+		ensureIndex("orgCode,authorUname,refUuid,refType");
+		ensureIndex("orgCode,authorUname,refType,type");
+	}
+}

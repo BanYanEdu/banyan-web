@@ -1,0 +1,22 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Language Skill
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: LanguageSkill.java Mar 5, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class LanguageSkill {
+    private String uuid;
+    private String languageCode;
+    private String proficiencyLevelCode;
+    private String remark;
+}

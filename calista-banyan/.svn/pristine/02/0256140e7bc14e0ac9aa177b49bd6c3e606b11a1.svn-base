@@ -1,0 +1,15 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * InvitationStatus.
+ *
+ * @author thoangtran
+ * @version InvitationStatus 2018 04-06 15:08
+ */
+public enum InvitationStatus {
+  yes,
+  no,
+  maybe,
+  awaiting_response,
+  invite_not_sent
+}

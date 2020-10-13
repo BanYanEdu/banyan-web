@@ -1,0 +1,131 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.AttachmentBO;
+import com.inet.calista.collatask.bo.FollowUpBO;
+import com.inet.calista.collatask.bo.project.ProjectBO;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.task.Process;
+import com.inet.calista.collatask.dto.task.ViewDto;
+import com.inet.calista.collatask.model.Attachment;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.collatask.util.JsonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+/**
+ * ViewService.
+ *
+ * @author Duyen Tang
+ * @version $Id: ViewService.java Jan 25, 2018 1:48:27 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_viewservice")
+@XPortalDataService(roles = { Roles.TASK }, description = "")
+@XPortalPageRequest(uri = "colla/tasks/view", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ViewService extends CollabarationTaskService {
+	@Inject
+	private TaskBO taskBo;
+	@Inject
+	private AttachmentBO attBo;
+	@Inject
+	private FollowUpBO fuBo;
+	@Inject
+	private ProjectBO projectBo;
+
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			putError(action, CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty);
+			return FAILURE_RESULT;
+		}
+
+		// load task by UUID
+		Task task = taskBo.view(getOrgCode(site, subFirm), getUsername(), uuid);
+		if (task == null) {
+			putError(action, CollaTaskJsonConstants.UUID, ErrorCode.invalid);
+			return FAILURE_RESULT;
+		}
+
+		// find attachment of this task
+		List<Attachment> attachments = attBo.findByRefUuidAndType(task.getOrgCode(), uuid, ReferenceType.task.name());
+
+		// mark read for user
+		this.markRead(task);
+
+		Project project = null;
+		if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+			// load project by project UUID
+			project = projectBo.findByUuid(task.getOrgCode(), task.getProjectUuid(), true, "code", "name");
+		}
+
+		return new ObjectWebDataservice<>(new ViewDto(task, attachments,
+				fuBo.loadBy(getOrgCode(site, subFirm), getUsername(), task.getUuid(), ReferenceType.task.name()),
+				project, task.isHasChild() ? taskBo.findByParentUuid(task.getOrgCode(), task.getUuid()) : null));
+	}
+
+	/**
+	 * Mark read on given document
+	 * 
+	 * @param task
+	 *            the given {@link Task}
+	 */
+	private void markRead(Task task) {
+		if (getUsername().equals(task.getAssignee().getReceiverUname()) && task.getAssignee().getViewDate() <= 0) {
+			long current = System.currentTimeMillis();
+
+			for (Process item : task.getProcesses()) {
+				if (getUsername().equals(item.getReceiverUname()) && item.getViewDate() == 0) {
+					item.setViewDate(current);
+				}
+			}
+			;
+
+			// update process of document
+			UpdateImpl<JSONDB> update = new UpdateImpl<>();
+			update.set("processes", JsonUtils.toJsonList(task.getProcesses()));
+			update.set("assignee.viewDate", current);
+			taskBo.update(task.getUuid(), update);
+		}
+	}
+}

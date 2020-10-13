@@ -1,0 +1,59 @@
+package com.inet.calista.crm.service.activity.event;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * LoadByIdService.
+ *
+ * @author thoangtran
+ * @version LoadByIdService 2019 01-25 10:49
+ */
+@Named("crm_activity_event_loadbyidservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Event role")
+@XPortalPageRequest(uri = "crm/activity/event/lbid", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class LoadByIdService extends EventService{
+
+  @Override
+  protected WebDataService service(final SiteDataModel siteDataModel, final SubFirmProfile firmProfile,final AbstractBaseAction action,final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String uuid = XParamUtils.getString(CommonConstant.UUID, params);
+      if(Strings.isNullOrEmpty(uuid)) {
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      if(!this.eventBo.isBelongOrg(uuid, firmProfile.getOrganiId())){
+        putError(action, CommonConstant.UUID, ErrorCode.not_belong_tenant);
+        return FAILURE_RESULT;
+      }
+      return new ObjectWebDataservice<>(this.eventBo.loadById(uuid, firmProfile.getOrganiId()));
+
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during load by id event", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

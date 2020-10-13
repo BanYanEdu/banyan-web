@@ -1,0 +1,271 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.purchase.model;
+
+import com.inet.calista.erp.book.model.ERPCashBook;
+import com.inet.calista.erp.book.model.ERPDiaryBook;
+import com.inet.calista.erp.book.model.ERPStockBook;
+import com.inet.calista.erp.common.data.ERPInfoData;
+import com.inet.xportal.web.exception.WebOSBOException;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * com.inet.xportal.erp.saleecm.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPPurchaseInvoice.java May 04, 2018 08:42 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPPurchaseInvoice<T extends ERPPurchaseItem> extends ERPInfoData {
+    private String uuid;
+
+    //infor employee
+    private String employeeId;
+    private String employeeName;
+
+    //Info customer
+    private String supplierId;
+    private String supplierName;
+
+    private String storageId;
+    private String stockVoucher;
+
+    private String currencyId;
+    private float rate;
+
+    private List<T> items = new ArrayList<>();
+
+    private float totalAmount;
+    //totalAmountEx = totalAmount * rate
+    private float totalAmountEx;
+
+    private float discPercent;
+    //totalDiscAmount = totalAmount * discPercent/100
+    private float totalDiscAmount;
+    //totalDiscAmountEx = totalDiscAmount * rate
+    private float totalDiscAmountEx;
+
+    //VAT will calc (before or after) discount
+    private boolean vatBfDisc = false;
+    private float vatPercent;
+    // VATBfDisc
+    // case: false ==> totalVATAmount = (totalAmount-totalDiscAmount) * vatPercent/100
+    // case: true ==> totalVATAmount = totalAmount * vatPercent/100
+    private float totalVATAmount;
+    //totalVATAmountEx = totalVATAmount * rate
+    private float totalVATAmountEx;
+
+    //totalPayment = totalAmount - totalDiscAmount + totalVATAmount
+    private float totalPayment;
+    //totalPaymentEx = totalPayment * rate
+    private float totalPaymentEx;
+
+    private String note;
+
+
+    /**
+     * @return
+     */
+    public ERPPurchaseInvoice calc() {
+        float itemAmount = 0;
+        if (!CollectionUtils.isEmpty(this.getItems())) {
+            for (T item : this.getItems()) {
+                itemAmount += item.getAmount();
+            }
+        }
+        this.setTotalAmount(itemAmount);
+
+        //Calculator discount percent
+        if (this.getDiscPercent() > 100) {
+            this.setDiscPercent(100);
+        } else if (this.getDiscPercent() < 0) {
+            this.setDiscPercent(0);
+        }
+
+        if (this.getDiscPercent() > 0) {
+            this.setTotalDiscAmount(itemAmount * getDiscPercent() / 100);
+        } else if (this.getTotalDiscAmount() > 0) {
+            if (getTotalAmount() > 0) {
+                this.setDiscPercent(this.getTotalDiscAmount() * 100 / getTotalAmount());
+            } else {
+                this.setDiscPercent(0);
+            }
+        }
+
+        //Calculator vat percent
+        if (this.getVatPercent() > 100) {
+            this.setVatPercent(100);
+        } else if (this.getVatPercent() < 0) {
+            this.setVatPercent(0);
+        }
+
+        if (this.getVatPercent() > 0) {
+            this.setTotalVATAmount(itemAmount * getVatPercent() / 100);
+        } else if (this.getTotalVATAmount() > 0) {
+            if (getTotalAmount() > 0) {
+                this.setVatPercent(this.getTotalVATAmount() * 100 / getTotalAmount());
+            } else {
+                this.setVatPercent(0);
+            }
+        }
+
+        //Calculator payment amount
+        this.setTotalPayment(this.getTotalAmount() + this.getTotalVATAmount() - this.getTotalDiscAmount());
+
+        //Calculator amount follow exchange rate of currency
+        if (this.getRate() < 0) {
+            this.setRate(1);
+        }
+
+        this.setTotalAmountEx(this.getTotalAmount() * this.getRate());
+        this.setTotalDiscAmountEx(this.getTotalDiscAmount() * this.getRate());
+        this.setTotalVATAmountEx(this.getTotalVATAmount() * this.getRate());
+        this.setTotalPaymentEx(this.getTotalPayment() * this.getRate());
+
+        return this;
+    }
+
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPStockBook> stockBooks() throws WebOSBOException {
+        final List<ERPStockBook> books = new ArrayList<>();
+
+        if (!CollectionUtils.isEmpty(getItems())) {
+            for (T item : getItems()) {
+                final ERPStockBook book = new ERPStockBook();
+
+                book.setOrganId(getOrganId());
+                book.setVoucherCode(getCode());
+                book.setVoucherDate(getPostedDate() > 0 ? getPostedDate() : getCreateDate());
+
+                book.setCurrency(getCurrencyId());
+                book.setRate(getRate());
+                //0: in; 1: out
+                book.setInOut(0);
+                book.setStorageId(getStorageId());
+
+                book.setProdId(item.getProdId());
+                book.setProdCode(item.getProdCode());
+                book.setProdName(item.getProdName());
+
+                book.setScanCode(item.getScanCode());
+                book.setSku(item.getSku());
+                book.setGroup(item.getGroup());
+                book.setUnit(item.getUnit());
+
+                book.setQty(item.getQty());
+                book.setPrice(item.getPrice());
+                book.setAmount(item.getAmount());
+
+                books.add(book);
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPDiaryBook> diaryBooks() throws WebOSBOException {
+        final List<ERPDiaryBook> books = new ArrayList<>();
+
+        if (!CollectionUtils.isEmpty(getItems())) {
+            for (T item : getItems()) {
+                final ERPDiaryBook book = new ERPDiaryBook();
+
+                book.setOrganId(getOrganId());
+                book.setVoucherCode(getCode());
+                book.setVoucherDate(getPostedDate() > 0 ? getPostedDate() : getCreateDate());
+
+                book.setCurrency(getCurrencyId());
+                book.setRate(getRate());
+                book.setStorageId(getStorageId());
+
+                book.setEmployeeId(getEmployeeId());
+                book.setEmployeeName(getEmployeeName());
+                book.setSupplierId(getSupplierId());
+                book.setSupplierName(getSupplierName());
+
+                book.setTotalAmount(getTotalAmount());
+                book.setTotalAmountEx(getTotalAmountEx());
+                book.setTotalDiscAmount(getTotalDiscAmount());
+                book.setTotalDiscAmountEx(getTotalDiscAmountEx());
+                book.setTotalVatAmount(getTotalVATAmount());
+                book.setTotalVatAmountEx(getTotalVATAmountEx());
+                book.setTotalPaymentAmount(getTotalPayment());
+                book.setTotalPaymentAmountEx(getTotalPaymentEx());
+
+                book.setProdId(item.getProdId());
+                book.setProdCode(item.getProdCode());
+                book.setProdName(item.getProdName());
+
+                book.setScanCode(item.getScanCode());
+                book.setSku(item.getSku());
+                book.setGroup(item.getGroup());
+                book.setUnit(item.getUnit());
+
+                book.setQty(item.getQty());
+                book.setPrice(item.getPrice());
+                book.setDiscAmount(item.getDiscAmount());
+                book.setVatAmount(item.getVatAmount());
+                book.setAmount(item.getAmount());
+
+                books.add(book);
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPCashBook cashBook() throws WebOSBOException {
+        final ERPCashBook book = new ERPCashBook();
+
+        book.setOrganId(getOrganId());
+        book.setVoucherCode(getCode());
+        book.setVoucherDate(getPostedDate() > 0 ? getPostedDate() : getCreateDate());
+
+        book.setCurrency(getCurrencyId());
+        book.setRate(getRate());
+        //0: in; 1: out
+        book.setInOut(0);
+
+        book.setAmount(getTotalAmount());
+        book.setDiscAmount(getTotalDiscAmount());
+        book.setVatAmount(getTotalVATAmount());
+        book.calc();
+
+        return book;
+    }
+}

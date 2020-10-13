@@ -1,0 +1,208 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.registservice;
+
+import com.inet.calista.global.bo.GlbInvitationBO;
+import com.inet.calista.global.bo.GlbNotifyBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbContact;
+import com.inet.calista.global.model.GlbInvitation;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.cache.RedirectPageManager;
+import com.inet.xportal.web.cache.XUriManager;
+import com.inet.xportal.web.util.HttpRequestUtil;
+import com.inet.xportal.web.util.PageUtil;
+import com.inet.xportal.web.util.StringUUID;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.registservice.
+ *
+ * @author Phong Tran
+ * @version : RegisterAbstraction.java Jul 15, 2019 10:39 phongtt $
+ * @since 1.0
+ */
+public abstract class RegisterAbstraction extends GlbAbstraction {
+    @Inject
+    protected GlbNotifyBO notifyBO;
+
+    @Inject
+    protected GlbInvitationBO inviteBO;
+
+    /**
+     * @param glbContact
+     * @param glbOrgan
+     * @param username
+     * @param email
+     * @param phone
+     * @param fName
+     * @param mName
+     * @param lName
+     * @param params
+     * @return
+     */
+    public GlbInvitation addInvite(final GlbContact glbContact,
+                                   final GlbOrganization glbOrgan,
+                                   String username, String email, String phone,
+                                   String fName, String mName, String lName,
+                                   final AbstractBaseAction action,
+                                   final Map<String, Object> params) {
+
+        if (glbOrgan != null) {
+            final GlbInvitation invite = new GlbInvitation();
+            invite.setSendBy(glbContact.getUserCode());
+            invite.setSender(glbContact.getFullName());
+            invite.setSendDate(System.currentTimeMillis());
+
+            invite.setOrganId(glbOrgan.getOrganId());
+            invite.setCode(StringUUID.uniqueToken());
+
+            invite.setUsername(username);
+            invite.setEmail(email);
+            invite.setPhone(phone);
+
+            invite.setFirstName(fName);
+            invite.setMiddleName(mName);
+            invite.setLastName(lName);
+            invite.setFullName(invite.fullNameBuilder());
+
+            String groups = XParamUtils.getString("groups", params, StringUtils.EMPTY_STRING);
+            invite.setGroups(CollectionUtils.asList(groups.split(",")));
+            inviteBO.add(invite);
+
+            return invite;
+        }
+
+        return null;
+    }
+
+
+    /**
+     * @param invite
+     * @param glbOrgan
+     * @param action
+     * @return
+     */
+    public JSONObject sendInvite(final GlbInvitation invite,
+                                 final GlbOrganization glbOrgan,
+                                 final AbstractBaseAction action) {
+        final JSONObject result = new JSONObject();
+
+        if (glbOrgan != null) {
+            String category = GlbInvitationBO.INVITE_CODE;
+            String language = action.getMultilangual();
+
+            result.put("sendEmail", false);
+            if (StringUtils.hasLength(invite.getEmail())) {
+                result.put("sendEmail", true);
+                notifyBO.sendMail(invite.getOrganId(), category, language,
+                        glbOrgan.getPrimaryEmail(), Arrays.asList(invite.getEmail()).toArray(new String[]{}),
+                        variableBuilder(invite, glbOrgan, action));
+
+            }
+
+            result.put("sendPush", false);
+
+            result.put("sendSms", false);
+        }
+
+        return result;
+    }
+
+    /**
+     * @param invite
+     * @param organ
+     * @param action
+     * @return
+     */
+    private Map<String, Object> variableBuilder(final GlbInvitation invite,
+                                                final GlbOrganization organ,
+                                                final AbstractBaseAction action) {
+        final Map<String, Object> variables = new HashMap<>();
+
+        if (organ != null) {
+            variables.put("organName", organ.getName());
+        }
+
+        if (invite != null) {
+            variables.put("sender", invite.getSender());
+            variables.put("inviteCode", invite.getCode());
+            variables.put("receiver", invite.getFullName());
+            variables.put("secQryStr", securedQryStr(invite, organ, action));
+        }
+
+        return variables;
+    }
+
+    /**
+     * @param invite
+     * @param organ
+     * @param action
+     * @return
+     */
+    private String securedQryStr(final GlbInvitation invite,
+                                 final GlbOrganization organ,
+                                 final AbstractBaseAction action) {
+        String invitationPage = RedirectPageManager.INSTANCE.redirectToPath("reg-cas", "INVITATION_PAGE");
+        logger.debug("found invitation page {}", invitationPage);
+
+        String srcVerify = "gl/contact/invite/process";
+        String pageVerify = action.verifyRedirectPage(srcVerify) + XUriManager.INSTANCE.getExtension();
+        final String[] arrURI = new String[]{
+                action.getCtxPath(),
+                action.getSitePrefix(),
+                pageVerify};
+
+        String url = PageUtil.uriBuilder(action.getHttpServletRequest(), arrURI);
+
+        String[] arrParam = new String[]{};
+        if (invite != null && organ != null) {
+            arrParam = new String[]{
+                    "prefix=" + action.getSitePrefix(),
+                    ",organId=" + (StringUtils.hasLength(invite.getOrganId()) ? invite.getOrganId() : ""),
+                    ",organName=" + (StringUtils.hasLength(organ.getName()) ? organ.getName() : ""),
+                    ",inviteCode=" + (StringUtils.hasLength(invite.getCode()) ? invite.getCode() : ""),
+                    ",account=" + (StringUtils.hasLength(invite.getUsername()) ? invite.getUsername() : ""),
+                    ",fname=" + (StringUtils.hasLength(invite.getFirstName()) ? invite.getFirstName() : ""), //invite.getFirstName(),
+                    ",mname=" + (StringUtils.hasLength(invite.getMiddleName()) ? invite.getMiddleName() : ""), //invite.getMiddleName(),
+                    ",lname=" + (StringUtils.hasLength(invite.getLastName()) ? invite.getLastName() : ""), //invite.getLastName(),
+                    ",fullName=" + (StringUtils.hasLength(invite.getFullName()) ? invite.getFullName() : ""), //invite.getFullName(),
+                    ",email=" + (StringUtils.hasLength(invite.getEmail()) ? invite.getEmail() : "") //invite.getEmail()
+            };
+        }
+
+        url = PageUtil.uriParam(url, arrParam);
+        logger.debug("The activated URI with parameter {}", url);
+
+        String strSecured = HttpRequestUtil.queryStringSecured(null, url);
+        if (strSecured.contains("?")) {
+            return strSecured.substring(strSecured.indexOf("?") + 1);
+        }
+        return StringUtils.EMPTY_STRING;
+    }
+}

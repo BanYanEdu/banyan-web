@@ -1,0 +1,271 @@
+package com.inet.calista.global.bo.contact;
+
+import com.inet.calista.global.bo.GLNoSqlBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.dto.GLAddress;
+import com.inet.calista.global.dto.SearchCriteria;
+import com.inet.calista.global.dto.SuggestProfile;
+import com.inet.calista.global.dto.search.QSearchCriteria;
+import com.inet.calista.global.model.contact.GLContact;
+import com.inet.xportal.common.profile.BaseAccountDTO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.CriteriaContainer;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ContactInfoBo.
+ *
+ * @author thoangtran
+ * @version ContactInfoBo 2018 04-14 09:37
+ */
+@Named("GLContactBO")
+@Slf4j
+public class GLContactBO extends GLNoSqlBo<GLContact> implements BeanInitiateInvoke {
+
+    @Inject
+    public GLContactBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+        super(contentBf, GLContact.COLLECTION_NAME);
+    }
+
+    @Override
+    public String add(final GLContact model) throws WebOSBOException {
+        if (StringUtils.hasLength(model.getUserCode())) {
+            final GLContact data = loadByUserCode(model.getUserCode());
+            logger.debug("found ContactInfo {} with userCode {}", data, model.getUserCode());
+
+            if (data != null) {
+                return data.getUuid();
+            }
+        }
+
+        return super.add(model);
+    }
+
+    /**
+     * Quick search criteria
+     *
+     * @param criteria
+     * @return
+     */
+    public SearchDTO<GLContact> search(SearchCriteria<QSearchCriteria> criteria) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("deleted").notEqual(true);
+        QSearchCriteria qSearchCriteria = criteria.getCriteria();
+        if (null != qSearchCriteria && StringUtils.hasLength(qSearchCriteria.getKeyword())) {
+            query.or(
+                    query.criteria("lastName").startsWith(qSearchCriteria.getKeyword()),
+                    query.criteria("firstName").startsWith(qSearchCriteria.getKeyword()),
+                    query.criteria("mobilePhone").startsWith(qSearchCriteria.getKeyword()),
+                    query.criteria("description").startsWith(qSearchCriteria.getKeyword())
+            );
+        }
+        pagination(query, criteria.getPageNumber(), criteria.getPageSize());
+        return this.query(query);
+    }
+
+    /**
+     * @param userCode
+     * @return
+     */
+    public GLContact loadByUserCode(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(CommonConstant.USER_CODE).equal(userCode);
+
+        GLContact contactInfo = this.load(query);
+        if (contactInfo == null) {
+            contactInfo = new GLContact();
+            syncUserLdap(contactInfo, userCode);
+        }
+        return contactInfo;
+    }
+
+    /**
+     * @param userCode
+     */
+    private void syncUserLdap(GLContact contactInfo, String userCode) {
+        logger.debug("syncUserLdap {}", userCode);
+        try {
+            final BaseAccountDTO baseAccount = ConfigureLoader.INSTANCE.ini()
+                    .getHdlUserProfile()
+                    .loadAccountProfile(userCode);
+
+            logger.debug("found baseAccount {}", baseAccount);
+            if (baseAccount != null) {
+                String fName = StringUtils.hasLength(baseAccount.getFname()) ? baseAccount.getFname() : "";
+                String mName = StringUtils.hasLength(baseAccount.getMname()) ? baseAccount.getMname() : "";
+                String lName = StringUtils.hasLength(baseAccount.getLname()) ? baseAccount.getLname() : "";
+
+                contactInfo.setUserCode(userCode);
+                contactInfo.setFirstName(fName);
+                contactInfo.setMiddleName(mName);
+                contactInfo.setLastName(lName);
+                contactInfo.setFullName(contactInfo.fullNameBuilder());
+                contactInfo.setCreatedDate(System.currentTimeMillis());
+                contactInfo.setModifiedDate(System.currentTimeMillis());
+
+                contactInfo.setUuid(super.add(contactInfo));
+            }
+        } catch (Throwable ex) {
+            logger.warn("syncUserLdap fail!", ex);
+        }
+    }
+
+    /**
+     * @param userCode
+     * @return
+     */
+    public GLContact loadByUserBase(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(CommonConstant.USER_CODE).equal(userCode);
+        query.retrievedFields(true, "userCode", "firstName", "middleName", "lastName", "fullName", "avatar");
+
+        GLContact contactInfo = this.load(query);
+        if (contactInfo == null) {
+            contactInfo = new GLContact();
+            syncUserLdap(contactInfo, userCode);
+        }
+        return contactInfo;
+    }
+
+
+    /**
+     * Load Contact info by canon Id
+     *
+     * @return
+     */
+    public GLContact verifyUserCode(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(CommonConstant.USER_CODE).equal(userCode);
+        query.retrievedFields(true, "userCode", "primaryEmail", "firstName", "middleName", "lastName", "sex");
+
+        return this.load(query);
+    }
+
+    /**
+     * @param userCodes
+     * @param keyword
+     * @return
+     */
+    public SearchDTO<GLContact> queryByUserCode(String userCodes, String keyword) {
+        List<String> users = new ArrayList<>();
+        if (StringUtils.hasLength(userCodes)) {
+            users = CollectionUtils.asList(userCodes.split(","));
+        }
+        return this.queryByUserCode(users, keyword);
+    }
+
+    /**
+     * @param users
+     * @param keyword
+     * @return
+     */
+    public SearchDTO<GLContact> queryByUserCode(final List<String> users, String keyword) {
+        return this.queryByUserCode(users, keyword, 0, 0);
+    }
+
+    /**
+     * @param keyword
+     * @param limit
+     * @param offset
+     * @return
+     */
+    public SearchDTO<SuggestProfile> suggestion(String keyword, int limit, int offset) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("officePhone").like(keyword),
+                    query.criteria("mobilePhone").like(keyword),
+                    query.criteria("primaryEmail").like(keyword),
+                    query.criteria("fullName").like(keyword)
+            ));
+
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+
+        return this.query(query, SuggestProfile.class);
+    }
+
+    /**
+     * @param users
+     * @param keyword
+     * @param limit
+     * @param offset
+     * @return
+     */
+    public SearchDTO<GLContact> queryByUserCode(final List<String> users, String keyword, int limit, int offset) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        final CriteriaContainer container = query.or();
+
+        if (!CollectionUtils.isEmpty(users)) {
+            container.add(query.criteria(CommonConstant.USER_CODE).in(users));
+        } else {
+            container.add(query.criteria(CommonConstant.USER_CODE).like(keyword));
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            container.add(query.criteria("officePhone").like(keyword));
+            container.add(query.criteria("mobilePhone").like(keyword));
+            container.add(query.criteria("primaryEmail").like(keyword));
+            container.add(query.criteria("fullName").like(keyword));
+        }
+
+        query.and(container);
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+
+        //.field(CommonConstant.USER_CODE).in(users);
+        return this.query(query);
+    }
+
+    @Override
+    protected Class<GLContact> getClassConvetor() {
+        return GLContact.class;
+    }
+
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        final Map<String, Class<?>> children = new HashMap<>();
+        children.put("address", GLAddress.class);
+        return super.childrenConvertMap();
+    }
+
+    @Override
+    public void init() {
+        createIndex();
+    }
+
+    private void createIndex() {
+        ensureIndex("userCode");
+        ensureIndex("lastName,firstName,mobilePhone,description,deleted");
+    }
+}

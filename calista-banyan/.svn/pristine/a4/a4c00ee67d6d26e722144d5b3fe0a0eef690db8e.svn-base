@@ -1,0 +1,75 @@
+package com.inet.jobportal.model.employer;
+
+import com.inet.jobportal.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * JobPost
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPost.java Dec 21, 2018 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class JobPost {
+    private String uuid;
+    private String organId;
+    private String employerName;
+    private String employerLogoUrl;
+    private String contactName;
+    private String contactPhoneNumber;
+    private String contactAddress;
+    private String contactEmail;
+    private String applyLanguageCode;
+    private String jobpostCode;
+    private String jobCode;
+    private String jobTitle;
+    private Integer qty;
+    private List<String> jobCategories = new ArrayList<>();
+    private List<Address> locations = new ArrayList<>();
+    private String jobLevelCode;
+    private String jobTypeCode;
+    private String eduLevelCode;
+    private String genderCode;
+    private String tempTags;
+    private List<String> tags = new ArrayList<>();
+    private Long expiryDate;
+    private Long applyDueDate;
+    private String jobDesc;
+    private String jobRequirements;
+    private String jobBenefits;
+    private String salaryTermCode;
+    private Double salaryAmountFrom;
+    private Double salaryAmountTo;
+    private Boolean ageRequired;
+    private Integer ageFrom;
+    private Integer ageTo;
+    private Boolean experienceRequired;
+    private Double experienceFrom;
+    private Double experienceTo;
+    private Boolean confidential;
+    private Boolean released;
+    private Boolean approved;
+    private Boolean inactive;
+    private Boolean searchable;
+    private Boolean remarked;           // special remark
+    private String remark;
+    private Integer visitorCount;
+    private Integer visitCount;
+    private Integer jobappCount;
+    private Integer jobappReviewCount;
+    private String adminStatusCode;
+    private Long createdDate;
+    private Long createdBy;
+    private Long modifiedDate;
+    private Long modifiedBy;
+    private Long lockedDate;
+    private Long lockedBy;
+}

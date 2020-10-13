@@ -1,0 +1,163 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.proj;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Member;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.model.project.Project.Status;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+
+/**
+ * UpdateService.
+ *
+ * @author Duyen Tang
+ * @version $Id: UpdateService.java Mar 2, 2018 5:20:22 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_project_updateservice")
+@XPortalDataService(roles = { Roles.PROJECT }, description = "")
+@XPortalPageRequest(uri = "colla/projects/update", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class UpdateService extends ProjectService {
+
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		try {
+			// get project information
+			Project project = action.getModel(Project.class);
+			if (Strings.isNullOrEmpty(project.getUuid())) {
+				putError(action, CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty);
+				return FAILURE_RESULT;
+			}
+
+			// check project code
+			if (Strings.isNullOrEmpty(project.getCode())) {
+				putError(action, CollaTaskJsonConstants.CODE, ErrorCode.must_not_empty);
+				return FAILURE_RESULT;
+			}
+
+			// check project name
+			if (Strings.isNullOrEmpty(project.getName())) {
+				putError(action, CollaTaskJsonConstants.NAME, ErrorCode.must_not_empty);
+				return FAILURE_RESULT;
+			}
+
+			// load project from given UUID
+			Project existed = loadProject(getOrgCode(site, subFirm), params);
+
+			if (existed == null || !canEdit(getUsername(), existed)) {
+				putError(action, CollaTaskJsonConstants.CONSTRAINT, ErrorCode.forbidden);
+				return FAILURE_RESULT;
+			}
+
+			// fill information
+			existed.setCode(project.getCode());
+			existed.setName(project.getName());
+			existed.setDesc(project.getDesc());
+			existed.setType(project.getType());
+			existed.setStartDate(project.getStartDate());
+			existed.setDeadline(project.getDeadline());
+			existed.setStatus(project.getStatus());
+			existed.setAssignerName(project.getAssignerName());
+			existed.setAssignerUname(project.getAssignerUname());
+			existed.setTags(CommonUtils.toStringSet(XParamUtils.getString(CollaTaskJsonConstants.TAGS_STR, params)));
+
+			// compute completed date
+			if (Status.completed.name().equals(project.getStatus())
+					|| Status.closed.name().equals(project.getStatus())) {
+				if (existed.getCompletedDate() <= 0) {
+					existed.setCompletedDate(System.currentTimeMillis());
+				}
+			} else {
+				existed.setCompletedDate(0);
+			}
+
+			// update members
+			updateMembers(existed, getMembers(
+					JSONArray.fromObject(XParamUtils.getString(CollaTaskJsonConstants.MEMBERS_STR, params))));
+
+			// update project information
+			projectBo.update(existed.getUuid(), existed);
+
+			return new ObjectWebDataservice<>(existed);
+		} catch (ValidationException ex) {
+			action.getViolation().add(ex.getError());
+			return FAILURE_RESULT;
+		}
+	}
+
+	/**
+	 * Update members for project
+	 * 
+	 * @param project
+	 *            the given {@link Project} information
+	 * @param members
+	 *            the list of members
+	 */
+	private void updateMembers(Project project, List<Member> members) {
+		if (CollectionUtils.isEmpty(members)) {
+			project.setMembers(null);
+			return;
+		}
+
+		if (CollectionUtils.isEmpty(project.getMembers())) {
+			project.setMembers(members);
+			return;
+		}
+
+		// convert list existed members to map
+		Map<String, Member> existedMemberMap = project.getMembers().stream()
+				.collect(Collectors.toMap(Member::getUname, Function.identity()));
+
+		// update join date for member
+		members.forEach(member -> {
+			if (existedMemberMap.containsKey(member.getUname())) {
+				member.setJoinDate(existedMemberMap.get(member.getUname()).getJoinDate());
+			}
+		});
+
+		// update member for project
+		project.setMembers(members);
+	}
+
+}

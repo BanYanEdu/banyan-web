@@ -1,0 +1,137 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.data.GlbAddress;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: GlbOrganizationBO.java Nov 05, 2018 16:50 phongtt $
+ * @since 1.0
+ */
+@Named("GlbOrganizationBO")
+public class GlbOrganizationBO extends GlbNoSqlBO<GlbOrganization> implements BeanInitiateInvoke {
+    private final static Map<String, Class<?>> childrenMap;
+    static {
+        childrenMap = new HashMap<>();
+        childrenMap.put("officeAddress", GlbAddress.class);
+    }
+
+    /**
+     * 
+     * @param contentBf
+     */
+    @Inject
+    public GlbOrganizationBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBf) {
+        super(contentBf, "gl_organization");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+     */
+    @Override
+    protected Class<GlbOrganization> getClassConvetor() {
+        return GlbOrganization.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenMap;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("organId");
+        ensureIndex("name");
+        ensureIndex("primaryEmail");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(final GlbOrganization model) throws WebOSBOException {
+        if (StringUtils.hasLength(model.getOrganId()))
+        {
+        		final GlbOrganization data = loadByOrganId(model.getOrganId());
+        		if (data != null) 
+        			return data.getUuid();
+        }
+        
+        return super.add(model);
+    }
+
+    /**
+     * @param organId
+     * @return
+     */
+    public GlbOrganization loadByOrganId(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(GlobalConstant.ORGAN_ID).equal(organId);
+        return this.load(query);
+    }
+
+    /**
+     * @param organName
+     * @return
+     */
+    public GlbOrganization loadByOrganName(String organName) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("name").equal(organName);
+        return this.load(query);
+    }
+
+    /**
+     * @param taxCode
+     * @return
+     */
+    public GlbOrganization loadByTaxCode(String taxCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("taxCode").equal(taxCode);
+        return this.load(query);
+    }
+}

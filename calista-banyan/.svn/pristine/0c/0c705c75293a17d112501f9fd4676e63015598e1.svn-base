@@ -1,0 +1,20 @@
+package com.inet.calista.global.model.common;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * TaxInfo.
+ *
+ * @author thoangtran
+ * @version TaxInfo 2018 07-18 10:29
+ */
+@Getter
+@Setter
+public class TaxInfo {
+  private String taxCode;
+  private String issueDateIso;
+  private long issueDate;
+  private String issuer;
+
+}

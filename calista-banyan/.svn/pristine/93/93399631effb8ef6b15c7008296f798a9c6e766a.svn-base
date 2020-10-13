@@ -1,0 +1,146 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMGroup;
+import com.inet.calista.ecommerce.model.ECMProgram;
+import com.inet.calista.erp.common.bo.ERPGroupBase;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.CriteriaContainer;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * ECMGroupBO.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMGroupBO.java Dec 02, 2017 09:46 phongtt $
+ * @since 1.0
+ */
+@Named("ECMGroupBO")
+public class ECMGroupBO extends ERPGroupBase<ECMGroup> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(ECMGroupBO.class);
+
+    @Inject
+    protected ECMGroupBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ECMGroup> getClassConvetor() {
+        return ECMGroup.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("name");
+        ensureIndex("parent");
+        ensureIndex("name,parent");
+        ensureIndex("organId,name");
+        ensureIndex("organId,parent");
+        ensureIndex("organId,name,parent");
+    }
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> builderCampaign(final List<String> codes) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+        final SearchDTO<ECMProgram> programs = WebContext.INSTANCE.cache()
+                .getBean(ECMProgramBO.class)
+                .queryProgram(codes);
+
+        if (programs != null && programs.getTotal() > 0) {
+            final CriteriaContainer container = new QueryImpl<>().or();
+
+            for (ECMProgram program : programs.getItems()) {
+                final QueryImpl<JSONDB> condition = new QueryImpl<>();
+
+                if (!CollectionUtils.isEmpty(program.getGroups())) {
+                    condition.and(
+                            condition.criteria("organId").equal(program.getOrganId()),
+                            condition.criteria("name").in(program.getGroups())
+                    );
+                } else {
+                    condition.and(
+                            condition.criteria("organId").equal(program.getOrganId()),
+                            condition.criteria("name").equal("CampaignGroupIsEmpty")
+                    );
+                }
+
+                container.add(condition);
+            }
+
+            query.and(container);
+        } else {
+            query.field("name").equal("CampaignCodesIsEmpty");
+        }
+
+        logger.debug("campaign group builder is {}", query);
+        return query;
+    }
+
+    /**
+     * @param codes
+     * @param keyword
+     * @param parent
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMGroup> queryByCampaign(final List<String> codes, String keyword, String parent) throws WebOSBOException {
+        final QueryImpl<JSONDB> select = builderCampaign(codes);
+
+        if (StringUtils.hasLength(keyword))
+            select.field("name").like(keyword);
+
+        if (StringUtils.hasLength(parent)) {
+            select.field("parent").equal(parent);
+        } else {
+            select.and(select.or(
+                    select.criteria("parent").equal(""),
+                    select.criteria("parent").doesNotExist()
+            ));
+        }
+
+        return super.query(select);
+    }
+}

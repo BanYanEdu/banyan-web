@@ -1,0 +1,27 @@
+package com.inet.calista.crm.model.common;
+
+/**
+ * Priority.
+ *
+ * @author thoangtran
+ * @version Priority 2018 04-06 14:36
+ */
+public enum Priority {
+  high(1),
+  medium(2),
+  low(3);
+  private int value;
+
+  // private constructor
+  Priority(int value) {
+    this.value = value;
+  }
+
+  public int getValue() {
+    return value;
+  }
+
+  public void setValue(int value) {
+    this.value = value;
+  }
+}

@@ -1,0 +1,25 @@
+package com.inet.calista.crm.dto;
+
+import com.inet.calista.crm.model.essentials.Entity;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * ContactDto.
+ *
+ * @author thoangtran
+ * @version ContactDto 2018 04-16 11:44
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class ContactDto {
+  //~ class properties
+  private FullContact contact;
+  private Entity entity;
+
+
+}

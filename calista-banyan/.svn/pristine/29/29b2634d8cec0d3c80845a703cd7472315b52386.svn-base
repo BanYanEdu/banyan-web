@@ -1,0 +1,33 @@
+package com.inet.calista.global.bo;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.xportal.document.bo.AbstractionDocumentBO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+
+/**
+ * 
+ * GlbDocumentBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbDocumentBO.java Feb 11, 2020 2:56:33 PM $
+ *
+ * @since 1.0
+ */
+@Named("GlbDocumentBO")
+public class GlbDocumentBO extends AbstractionDocumentBO {
+
+	/**
+	 * Create {@link GlbDocumentBO} instance
+	 *
+	 * @param contentBF
+	 *            the given {@link MagicContentBF} instance
+	 */
+	@Inject
+	protected GlbDocumentBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBF) {
+		super(contentBF, "gl_file_binary");
+	}
+}

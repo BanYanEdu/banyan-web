@@ -1,0 +1,105 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.service;
+
+import com.inet.calista.erp.util.ERPUtil;
+import com.inet.xportal.module.web.bo.FirmOutletBO;
+import com.inet.xportal.module.web.model.FirmOutlet;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPCoreAbstraction.java May 08, 2018 10:48 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPCoreAbstraction extends PluginSubfirmAbstraction {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPCoreAbstraction.class);
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @return
+     */
+    protected final String getOrganId(final SiteDataModel siteData,
+                                      final SubFirmProfile subFirm) {
+        return ERPUtil.getOrganId(siteData, subFirm);
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @return
+     */
+    protected final String getPrefix(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm) {
+        return ERPUtil.getPrefix(siteData, subFirm);
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @return
+     */
+    protected final String getOutletId(final SiteDataModel siteData,
+                                       final SubFirmProfile subFirm,
+                                       final AbstractBaseAction action) {
+
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final SearchDTO<FirmOutlet> getOutlets(final SiteDataModel siteData,
+                                                     final SubFirmProfile subFirm,
+                                                     final AbstractBaseAction action) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String serviceID = StringUtils.EMPTY_STRING;
+        int num = -1;
+
+        final SearchDTO<FirmOutlet> outlets = WebContext.INSTANCE.cache()
+                .getBean(FirmOutletBO.class)
+                .query(organId, serviceID, num, num);
+
+        if (outlets == null) {
+            return new SearchDTO<>();
+        }
+
+        logger.debug("found {} outlet(s) by organ {}", outlets.getTotal(), organId);
+
+        return outlets;
+    }
+}

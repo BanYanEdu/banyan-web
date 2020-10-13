@@ -1,0 +1,14 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * NotifyStatus.
+ *
+ * @author thoangtran
+ * @version NotifyStatus 2018 04-13 17:34
+ */
+public enum  NotifyStatus {
+  created,
+  sent,
+  delivered,
+  fail
+}

@@ -1,0 +1,84 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.listener;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.data.task.History;
+import com.inet.calista.collatask.data.task.Process;
+import com.inet.calista.collatask.message.CreateTaskMessage;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.util.FieldModificationUtils;
+import com.inet.xportal.web.annotation.XPortalEvent;
+import com.inet.xportal.web.event.EventProvider;
+
+/**
+ * CreatetTaskListener.
+ *
+ * @author Duyen Tang
+ * @version $Id: CreatetTaskListener.java Mar 26, 2018 5:14:39 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colladoc_createttasklistener")
+@XPortalEvent
+public class CreateTaskListener implements EventProvider<CreateTaskMessage> {
+  private static final Logger LOG = LoggerFactory.getLogger(CreateTaskListener.class);
+  @Inject
+  private TaskBO taskBo;
+
+  @Override
+  public void delivery(CreateTaskMessage message) {
+    LOG.info("Receive task creation message");
+    if (Strings.isNullOrEmpty(message.getName()) || Strings.isNullOrEmpty(message.getCreatorUname()) 
+        || message.getAssignee() == null || Strings.isNullOrEmpty(message.getAssignee().getUname())) {
+      LOG.error("Missing data for creating task.");
+      return;
+    }
+    
+    Task task = new Task(
+        message.getName(), message.getDesc(), message.getAssignedDate(), message.getDeadline(), 
+        message.getCreatorUname(), message.getCreatorName(), message.getOrgCode(),
+        message.getApplication(), message.getQueryStr()
+      );
+    task.setStatus(Status.waiting.name());
+    
+    // create process for assignee
+    Process process = new Process(message.getCreatorUname(), message.getCreatorName(), 
+        System.currentTimeMillis(), message.getNote(), message.getAssignee().getUname(), message.getAssignee().getName());
+    process.setStatus(Process.Status.waiting.name());
+    task.addProcess(process);
+    task.setAssignee(process);
+    task.setCoordinators(message.getCoordinators());
+    task.setWatchers(message.getWatchers());
+    
+    // add history
+    task.addHistory(new History(message.getCreatorUname(), message.getCreatorName(), 
+        FieldModificationUtils.modify("name", null, task.getName())));
+    
+    LOG.info("Begin to save task");
+    // save task 
+    taskBo.add(task);
+  }
+
+}

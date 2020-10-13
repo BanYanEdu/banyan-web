@@ -1,0 +1,90 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.logtime;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.collatask.bo.LogTimeBO;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * FindByService.
+ *
+ * @author Duyen Tang
+ * @version $Id: FindByService.java Apr 28, 2018 11:03:06 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_log_time_findbyservice")
+@XPortalDataService(roles = {Roles.BIZ_COMMON}, description = "")
+@XPortalPageRequest(uri = "colla/logtimes/fby",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class FindByService extends CollabarationTaskService {
+  @Inject
+  private LogTimeBO logTimeBo;
+  @Inject
+  private TaskBO taskBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    try {
+      String refUuid = getRequireNotEmpty(CollaTaskJsonConstants.REF_UUID, params);
+      String refType = getRequireNotEmpty(CollaTaskJsonConstants.REF_TYPE, params);
+      
+      Task task = taskBo.findByUuid(getOrgCode(site, subFirm), refUuid, true, "spentTime");
+      if (task == null) {
+        putError(action, CollaTaskJsonConstants.REF_UUID, ErrorCode.invalid);
+        return FAILURE_RESULT;
+      }
+      
+      
+      String authUname = XParamUtils.getString(CollaTaskJsonConstants.AUTH_UNAME, params);
+      int pageSize = XParamUtils.getPageSize(params, -1);
+      int pageNumber = XParamUtils.getPageNumber(params, 0);
+      
+      Map<String, Object> result = new HashMap<>(2);
+      result.put("detail", logTimeBo.findBy(authUname, refUuid, refType, pageSize, pageNumber));
+      result.put("totalTime", task.getSpentTime());
+      
+      return new ObjectWebDataservice<>(result);
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      return FAILURE_RESULT;
+    }
+  }
+
+}

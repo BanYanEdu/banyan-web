@@ -1,0 +1,176 @@
+package com.inet.calista.crm.bo.setting;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.model.setting.internal.Group;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import com.inet.calista.crm.util.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * GroupBo.
+ *
+ * @author thoangtran
+ * @version GroupBo 2018 04-12 15:46
+ */
+@Named("crm.groupBo")
+public class GroupBo extends CRMNoSqlBo<Group> implements BeanInitiateInvoke {
+  /**
+   * Constructor
+   * @param contentBf
+   */
+  @Inject
+  public GroupBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_setting_groups");
+  }
+
+  /**
+   * Save group
+   * @param group
+   * @return
+   */
+  public Group save(Group group) {
+    if(StringUtils.hasLength(group.getUuid())) {
+      this.update(group.getUuid(), group);
+    } else group.setUuid(this.add(group));
+    return group;
+  }
+
+  /**
+   *
+   * @param uuid
+   * @param group
+   * @param tenantId
+   * @return
+   */
+  public Group updateInfo(String uuid, Group group, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    final UpdateImpl<JSONDB> updateImp = new UpdateImpl<>();
+    updateImp.set("name", group.getName())
+        .set("description", group.getDescription())
+        .set("modifiedDate", DateUtils.now().getTime())
+        .set("modifiedBy", group.getModifiedBy())
+        .set("active", group.isActive())
+        .set("indicator", group.getIndicator());
+    this.update(updateImp, query);
+    return this.load(uuid);
+  }
+
+
+  /**
+   * Find by name
+   * @param name the given name for criteria
+   * @param tenantId the given scope tenant id
+   * @return
+   */
+  public SearchDTO<Group> findByName(String name, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("deleted").notEqual(true);
+    if(StringUtils.hasLength(name)){
+      query.field("name").like(name);
+    }
+    return this.query(query);
+  }
+
+  /**
+   * Find available
+   * @param name
+   * @param tenantId
+   * @return
+   */
+  public SearchDTO<Group> findAvailable(String name, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("deleted").notEqual(true);
+    query.field("active").equal(true);
+    if(StringUtils.hasLength(name)){
+      query.field("name").like(name);
+    }
+    return this.query(query);
+  }
+
+  /**
+   * Find group member is belong
+   * @param referId
+   * @param tenantId
+   * @return
+   */
+  public List<Group> findByMemberBelong(String referId, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("members.refId").equal(referId);
+    return this.query(query).getItems();
+  }
+
+  /**
+   * Mark delete
+   * @param ids
+   * @param tenantId
+   */
+  public void markDeleted(List<String> ids, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("uuid").in(ids);
+    final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+    update.set("deleted", true);
+    this.update(update, query);
+  }
+  /**
+   * Add mener
+   * @param uuid
+   * @param linkTo
+   * @param tenantId
+   */
+  public void addToSetMembers(String uuid, LinkTo linkTo, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("uuid").equal(uuid);
+    final UpdateImpl<JSONDB> updateImp = new UpdateImpl<>();
+    updateImp.add("members", linkTo.createDocument(), false);
+    this.update(updateImp, query);
+  }
+
+  /**
+   * Remove member
+   * @param uuid
+   * @param linkTo
+   * @param tenantId
+   */
+  public void removeMember(String uuid, LinkTo linkTo, String tenantId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("uuid").equal(uuid);
+    final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+    update.removeAll("members", linkTo);
+  }
+
+  /**
+   * Load by id
+   * @param uuid
+   * @param orgCode
+   * @return
+   */
+  public Group loadById(String uuid, String orgCode){
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("uuid").equal(uuid);
+    return this.load(query);
+  }
+
+  @Override
+  protected Class<Group> getClassConvetor() {
+    return Group.class;
+  }
+
+
+  @Override
+  public void init() {
+    ensureIndex("uuid");
+    ensureIndex("name,deleted");
+    ensureIndex("members.refId,deleted");
+  }
+}

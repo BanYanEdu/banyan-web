@@ -1,0 +1,60 @@
+package com.inet.jobportal.model.employer;
+
+import com.inet.jobportal.model.sys.SystemData;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * EmployerProfile
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: EmployerProfile.java Dec 20, 2018 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class EmployerProfile {
+    private String uuid;
+    private String organId;
+    private String name;
+    private String nameOther;
+    private String introduction;
+    private String logoUrl;
+    private String addressFull;
+    private String telephone;
+    private String website;
+    private String countryCode;
+    private String countryName;
+    private String countryNameVi;
+    private String countryNameEn;
+    private String provinceCode;
+    private String provinceName;
+    private String provinceNameVi;
+    private String provinceNameEn;
+    private String contactName;
+    private String contactPhoneNumber;
+    private String contactAddress;
+    private String contactEmail;
+    private String sizeCode;
+    private Boolean inactive;
+    private Boolean searchable;
+    private String createdBy;
+    private Long createdDate;
+    private String modifiedBy;
+    private Long modifiedDate;
+    private String adminStatusCode;
+    private String adminStatusVi;
+    private String adminStatusEn;
+    private Long adminDate;
+    private String adminBy;
+    private String lockedBy;
+    private Long lockedDate;
+    private Boolean approved;       // to be removed
+    private String approvedBy;      // to be removed
+    private Long approvedDate;      // to be removed
+    private Boolean suspended;      // to be removed
+    private String suspendedBy;     // to be removed
+    private Long suspendedDate;     // to be removed
+}

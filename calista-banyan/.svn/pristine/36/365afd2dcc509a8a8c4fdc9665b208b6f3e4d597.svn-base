@@ -1,0 +1,207 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbCity;
+import com.inet.calista.global.model.GlbCountry;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * GlobalCityBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalCityBO.java May 20, 2019 1:28:48 PM $
+ * @since 1.0
+ */
+@Named("GlbCityBO")
+public class GlbCityBO extends GlbNoSqlBO<GlbCity> implements BeanInitiateInvoke {
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    public GlbCityBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_city");
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(GlbCity item) throws WebOSBOException {
+        GlbCity info = loadByCode(item.getCountryID(), item.getCode());
+        if (info != null)
+            return info.getUuid();
+        return super.add(item);
+    }
+
+    /**
+     * @param countryID
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlbCity loadByCode(String countryID, String code) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("countryID").equal(countryID)
+                .field("code").equal(code);
+
+        return load((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param countryID
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbCity> queryByCode(String countryID, List<String> codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("countryID").equal(countryID)
+                .field("code").in(codes);
+
+        return query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param countryCode
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbCity> search(String countryCode, String keyword) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>().field("countryID").equal(countryCode);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)));
+        }
+
+        return query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param countryCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbCity> queryByCountryCode(String countryCode) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("countryID").equal(countryCode);
+        return query((QueryImpl<JSONDB>) query);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("countryID");
+        ensureIndex("countryID,code");
+
+        if (count() > 0)
+            return;
+
+        initCity();
+    }
+
+    /**
+     *
+     */
+    public void initCity() {
+        super.remove(new QueryImpl<>());
+
+        logger.debug("init city data from global-city.json file");
+        String json = ResourceUtil.getResourceAsString("global-city.json");
+        if (StringUtils.hasLength(json)) {
+            JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+            if (arrJson.size() > 0) {
+                final Map<String, GlbCountry> map = new HashMap<>();
+
+                for (int idx = 0; idx < arrJson.size(); idx++) {
+                    JSONObject jsonItem = (JSONObject) arrJson.get(idx);
+                    GlbCity item = JSONUtil.json2Bean(GlbCity.class, jsonItem);
+
+                    String country = StringUtils.EMPTY_STRING;
+                    if (jsonItem.has("country")) {
+                        country = jsonItem.getString("country");
+                    }
+                    if (StringUtils.hasLength(country)) {
+                        GlbCountry countryItem = map.get(country);
+                        if (countryItem == null) {
+                            countryItem = WebContext.INSTANCE.cache()
+                                    .getBean(GlbCountryBO.class)
+                                    .loadByCode(country);
+                        }
+
+                        if (countryItem != null) {
+                            map.put(country, countryItem);
+
+                            if (StringUtils.hasLength(item.getCode())
+                                    && StringUtils.hasLength(item.getName())) {
+                                try {
+                                    item.setCountryID(country);
+                                    // add new item
+                                    item.setUuid(add(item));
+
+                                    logger.debug("add city {} success.", JSONObject.fromObject(item));
+                                } catch (Exception e) {
+                                    logger.error("init city {} - {} fail.", item.getCode(), item.getName());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlbCity> getClassConvetor() {
+        return GlbCity.class;
+    }
+}

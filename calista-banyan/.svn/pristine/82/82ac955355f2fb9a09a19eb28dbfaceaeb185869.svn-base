@@ -1,0 +1,91 @@
+package com.inet.jobportal.service.employer.jobpost;
+
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * JobPostUpdateDS.
+ *
+ * @author Duy Tan Nguyen
+ * @version $Id: JobPostUpdateDS.java Dec 23, 2018 11:50:48 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportaljobpostupdate")
+@XPortalDataService(roles = {"jobportal_employer_jobpost"}, description="Job Portal - Job Post")
+@XPortalPageRequest(uri="jobportal/employer/jobpost/update",
+        transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobPostUpdateDS extends JobPortalAbsractService {
+    @Inject
+    private JobPostBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String organId = firmProfile.getOrganiId();
+        JobPost item = action.getModel(JobPost.class);
+        String countryCode = XParamUtils.getString("countryCode", params,"");
+        String tempLocationCodes = XParamUtils.getString("tempLocationCodes", params,"");
+        String tempLocationNames = XParamUtils.getString("tempLocationNames", params,"");
+        String tempJobCategories = XParamUtils.getString("tempJobCategories", params,"");
+        String tempTags = XParamUtils.getString("tempTags", params,"");
+
+        if (!tempTags.equals("")) {
+            String[] arrayTags = tempTags.split("\\;");
+            List<String> tags = new ArrayList<>();
+
+            for (int i=0;i<arrayTags.length;i++){
+                tags.add(arrayTags[i]);
+            }
+            item.setTags(tags);
+        } else {
+            List<String> tags = new ArrayList<>();
+            item.setTags(tags);
+        }
+
+        if (!tempJobCategories.equals("")) {
+            String[] arrayJobCategories = tempJobCategories.split("\\;");
+            List<String> cat = new ArrayList<>();
+
+            for (int j=0;j<arrayJobCategories.length;j++){
+                cat.add(arrayJobCategories[j]);
+            }
+            item.setJobCategories(cat);
+        } else {
+            List<String> cat = new ArrayList<>();
+            item.setJobCategories(cat);
+        }
+
+        if (organId.equals(item.getOrganId())) {
+            if (StringUtils.hasLength(item.getUuid())) {
+                bo.update(item.getUuid(), item);
+                bo.addLocations(item.getUuid(), tempLocationCodes, tempLocationNames, countryCode);
+                return new ObjectWebDataservice<>(item);
+            } else {
+                return new ObjectWebDataservice<>(item);
+            }
+        } else {
+            // TO BE MODIFIED
+            return new ObjectWebDataservice<>(item);
+        }
+    }
+}

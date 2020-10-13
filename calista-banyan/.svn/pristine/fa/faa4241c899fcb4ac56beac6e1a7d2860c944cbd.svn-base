@@ -1,0 +1,15 @@
+package com.inet.calista.crm.anotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
+/**
+ * Searchable.
+ *
+ * @author thoangtran
+ * @version Searchable 2019 01-30 11:46
+ */
+@Target(ElementType.FIELD)
+public @interface Searchable {
+   String field() default "";
+}

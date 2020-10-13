@@ -1,0 +1,141 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.registservice;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.bo.GlbContactBO;
+import com.inet.calista.global.bo.GlbInvitationBO;
+import com.inet.calista.global.model.GlbContact;
+import com.inet.calista.global.model.GlbInvitation;
+import com.inet.xportal.common.profile.BaseUserModel;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.module.web.payment.AccountRegisterAbstraction;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.service.contact.profile.
+ *
+ * @author Phong Tran
+ * @version $Id: InviteProcessService.java Nov 20, 2018 15:45 phongtt $
+ * @since 1.0
+ */
+@Named("glcontactinviteprocess")
+@XPortalDataService(description = CalistaConstant.ROLE_COMMUNITY_DESC)
+@XPortalPageRequest(uri = "gl/contact/invite/process",
+        inherit = true,
+        postMethod = true,
+        model = "com.inet.xportal.nosql.web.data.UserRegisterForm",
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class RegisterConfirmService extends AccountRegisterAbstraction {
+    @Inject
+    private GlbContactBO contactBO;
+
+    @Inject
+    private GlbInvitationBO inviteBO;
+
+    @Override
+    protected List<String> userRoles(final FirmInformation profile,
+                                     final BaseUserModel user,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        return biz(profile, user, action, params);
+    }
+
+
+    /**
+     * @param profile
+     * @param user
+     * @param action
+     * @param params
+     * @throws WebOSBOException
+     */
+    private List<String> biz(final FirmInformation profile,
+                             final BaseUserModel user,
+                             final AbstractBaseAction action,
+                             final Map<String, Object> params) throws WebOSBOException {
+
+        String code = XParamUtils.getString("code", params, StringUtils.EMPTY_STRING);
+        String organId = XParamUtils.getString("organId", params, StringUtils.EMPTY_STRING);
+        final GlbInvitation invite = inviteBO.loadSentCode(organId, code);
+        logger.debug("found invite {} with code {}", invite, code);
+        if (invite != null) {
+            if (XParamUtils.getBoolean("refuse", params, false)) {
+                invite.setStatus(0);
+            } else {
+                invite.setStatus(1);
+            }
+            inviteBO.update(invite.getUuid(), invite);
+
+
+            //user agree join organization
+            if (invite.getStatus() == 1) {
+                String position = StringUtils.EMPTY_STRING;
+                String department = StringUtils.EMPTY_STRING;
+                String userCode = user.getUsername();
+                String fname = XParamUtils.getString("fname", params, invite.getFirstName());
+                String mname = XParamUtils.getString("mname", params, invite.getMiddleName());
+                String lname = XParamUtils.getString("lname", params, invite.getLastName());
+
+                GlbContact contact = contactBO.loadByUserCode(userCode);
+                if (contact == null) {
+                    contact = new GlbContact();
+                    contact.setUserCode(userCode);
+                    contact.setFirstName(fname);
+                    contact.setMiddleName(mname);
+                    contact.setLastName(lname);
+                    contact.setFullName(contact.fullNameBuilder());
+                    contact.setCreatedDate(System.currentTimeMillis());
+                    contact.setModifiedDate(System.currentTimeMillis());
+                    contactBO.add(contact);
+                }
+
+
+                return invite.getGroups();
+
+                /*
+                final MemberDTO member = new MemberDTO(userCode, contact.getFullName(), position);
+                if (profile.isEmailEnabled()) {
+                    member.setProfileID("mailAddress");
+                }
+                member.setRole(position);
+                logger.debug("User " + userCode + " added into organ " + invite.getOrganId() + " has contact {}", contact);
+                this.firmAccBO.add(invite.getOrganId(), member);
+                if (StringUtils.hasLength(department)) {
+                    this.firmAccBO.departmentUpdate(invite.getOrganId(), department, member, position);
+                }
+                */
+            }
+        }
+
+
+        return new ArrayList<>();
+    }
+}

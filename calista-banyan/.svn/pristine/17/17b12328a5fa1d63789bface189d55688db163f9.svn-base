@@ -1,0 +1,64 @@
+package com.inet.calista.global.subfirmservice;
+
+import java.io.OutputStream;
+import java.util.Map;
+
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileDownloadAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.IStreamRead;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * 
+ * ExcelTplDownloadService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ExcelTplDownloadService.java Feb 11, 2020 2:32:31 PM $
+ *
+ * @since 1.0
+ */
+@Named("glexceltmpldownload")
+@XPortalDataService(roles = { NoSQLConstant.ROLE_SUBADMIN }, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/download", 
+	inherit = true, 
+	action = WebConstant.FILE_DOWNLOAD_ACTON,
+	result = WebConstant.ACTION_XSTREAM_RESULT)
+public class ExcelTplDownloadService extends ExcelTplAbstraction 
+{
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.subfirmservice.ExcelTplAbstraction#service(java.lang.String, com.inet.calista.global.model.GlbReportTemplate, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(String organId, 
+			final GlbReportTemplate template, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		return new ObjectWebDataservice<>(((FileDownloadAction) action).service(false, 
+				template.getMimetype(), 
+				template.templateFullName(), 
+				new IStreamRead() 
+		{
+					/*
+					 * (non-Javadoc)
+					 * @see com.inet.xportal.web.interfaces.IStreamRead#read(java.io.OutputStream)
+					 */
+					@Override
+					public void read(OutputStream stream) {
+						templateBo.loadTemplateFile(template.getUuid(), template.getOrganId(), stream);
+						
+					}
+		}));
+	}
+}

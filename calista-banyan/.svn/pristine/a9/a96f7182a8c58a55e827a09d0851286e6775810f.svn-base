@@ -1,0 +1,64 @@
+/*****************************************************************
+   Copyright 2020 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.noteservice;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.global.model.GlbMetaNote;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * 
+ * MyNoteDeleteDataservice.
+ *
+ * @author Hien Nguyen
+ * @version $Id: MyNoteDeleteDataservice.java Jan 31, 2020 11:11:50 AM $
+ *
+ * @since 1.0
+ */
+@Named("mynotesdelete")
+@XPortalDataService(roles={NoSQLConstant.ROLE_USER}, description = "Notes service")
+@XPortalPageRequest(uri = "mynotes/delete",
+	inherit = true,
+	transaction = true,
+	result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class MyNoteDeleteDataservice extends MyNoteAbstraction {
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.notes.userservice.MyNoteAbstraction#service(com.inet.xportal.notes.model.MetaNote, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(final GlbMetaNote model,
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		if (StringUtils.hasLength(model.getUuid()))
+			noteBO.remove(model.getUuid());
+		
+		return new ObjectWebDataservice<>(model);
+	}
+}

@@ -1,0 +1,130 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMWishList;
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMSaleWebBO.java Jun 07, 2018 10:22 phongtt $
+ * @since 1.0
+ */
+@Named("ECMWishListBO")
+public class ECMWishListBO extends ERPBaseBO<ECMWishList> implements BeanInitiateInvoke {
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+    }
+
+    @Inject
+    protected ECMWishListBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "ecm_wishlist");
+    }
+
+    @Override
+    protected Class<ECMWishList> getClassConvetor() {
+        return ECMWishList.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("organId");
+        ensureIndex("prodCode");
+        ensureIndex("userCode");
+    }
+
+    /**
+     * @param userCode
+     * @param uuid
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMWishList loadWishList(String userCode, String uuid) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("userCode").equal(userCode);
+        query.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid));
+
+        return super.load(query);
+    }
+
+    /**
+     * @param userCode
+     * @param organId
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMWishList> wishList(String userCode, String organId, String keyword) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("userCode").equal(userCode);
+        query.field("wishList").equal(true);
+
+        if (StringUtils.hasLength(organId)) {
+            query.field("organId").equal(organId);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param userCode
+     * @param organId
+     * @param prodCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMWishList loadProd(String userCode, String organId, String prodCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("userCode").equal(userCode);
+        query.field("organId").equal(organId);
+        query.field("prodCode").equal(prodCode);
+
+        return super.load(query);
+    }
+}

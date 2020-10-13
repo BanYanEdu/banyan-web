@@ -1,0 +1,11 @@
+package com.inet.calista.global.model.common;
+
+/**
+ * Tax.
+ *
+ * @author thoangtran
+ * @version Tax 2018 07-17 10:38
+ */
+public class Tax {
+
+}

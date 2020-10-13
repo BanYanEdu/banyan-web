@@ -1,0 +1,164 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMProgram;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ECMProgramBO.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMProgramBO.java Dec 02, 2017 09:46 phongtt $
+ * @since 1.0
+ */
+@Named("ECMProgramBO")
+public class ECMProgramBO extends MagicContentBO<ECMProgram> implements BeanInitiateInvoke {
+
+    @Inject
+    protected ECMProgramBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "ecm_program");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ECMProgram> getClassConvetor() {
+        return ECMProgram.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("programCode");
+        ensureIndex("organId,programCode");
+        ensureIndex("groups");
+        ensureIndex("products");
+    }
+
+    @Override
+    public String add(final ECMProgram info) throws WebOSBOException {
+        return super.add(info, "organId", "programCode");
+    }
+
+    /**
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMProgram> queryProgram(String code) throws WebOSBOException {
+        final List<String> codes = new ArrayList<>();
+        codes.add(code);
+        return queryProgram(codes);
+    }
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMProgram> queryProgram(final List<String> codes) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("programCode").in(codes);
+
+        return super.query(query);
+    }
+
+
+    /**
+     * @param organId
+     * @param programCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMProgram loadByProgram(String organId, String programCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("programCode").equal(programCode);
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @param oldGName
+     * @param newGName
+     * @throws WebOSBOException
+     */
+    public void changeGroup(String organId, String oldGName, String newGName) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("groups").equal(oldGName);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("groups.$", newGName);
+
+        super.update(update, query);
+    }
+
+    /**
+     * @param organId
+     * @param oldPCode
+     * @param newPCode
+     * @throws WebOSBOException
+     */
+    public void changeProduct(String organId, String oldPCode, String newPCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("products").equal(oldPCode);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("products.$", newPCode);
+
+        super.update(update, query);
+    }
+
+    /**
+     * @param oldOrgan
+     * @param newOrgan
+     * @throws WebOSBOException
+     */
+    public void changeOrgan(String oldOrgan, String newOrgan) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(oldOrgan);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("organId", newOrgan);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+}

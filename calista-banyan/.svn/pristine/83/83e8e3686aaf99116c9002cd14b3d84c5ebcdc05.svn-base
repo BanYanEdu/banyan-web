@@ -1,0 +1,56 @@
+package com.inet.calista.crm.service.activity.task;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * FindByService.
+ *
+ * @author thoangtran
+ * @version FindByService 2018 05-08 15:52
+ */
+@Named("crm_activity_tasks_fbyservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Biz common")
+@XPortalPageRequest(uri = "crm/activity/tasks/fbyrefId", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class FindByService extends TaskAbstractService {
+  @Override
+  protected WebDataService service(final SiteDataModel siteDataModel, final SubFirmProfile subFirmProfile,final AbstractBaseAction action,final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String refId = XParamUtils.getString(CollaTaskJsonConstants.REF_UUID, params);
+      if(Strings.isNullOrEmpty(refId)){
+        putError(action, CollaTaskJsonConstants.REF_UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      final QueryImpl<JSONDB> query = new QueryImpl<>();
+      query.field(CollaTaskJsonConstants.REF_UUID).equal(refId);
+      return new ObjectWebDataservice<>(taskBo.query(query));
+    } catch (Exception ex) {
+      CRMBusinessException iex =  new CRMBusinessException("Error occurs during finding task by ref id", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

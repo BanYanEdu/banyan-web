@@ -1,0 +1,38 @@
+package com.inet.calista.global.model;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.global.GlobalConstant;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * GlbReportTemplate.
+ *
+ * @author thoangtran
+ * @version GlbReportTemplate 2019 07-02 10:55
+ */
+@Getter
+@Setter
+public class GlbReportTemplate extends BaseModel {
+	private String organId = GlobalConstant.CLOUD_MNGM;
+	private String application;
+	private String module;
+	private String type;
+	private int version = 2;
+	private String contentUid;
+	private String name;
+	private String mimetype;
+	private String extension;
+	private String description;
+
+	/**
+	 * 
+	 * @return
+	 */
+	public String templateFullName()
+	{
+		return StringUtils.hasLength(extension) ? name + "." + extension : name;
+	}
+}

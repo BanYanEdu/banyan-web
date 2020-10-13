@@ -1,0 +1,432 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.service;
+
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.calista.erp.common.service.ERPCoreAbstraction;
+import com.inet.calista.erp.masterdata.bo.ERPPriceDailyBO;
+import com.inet.calista.erp.masterdata.bo.ERPPriceListBO;
+import com.inet.calista.erp.masterdata.data.ERPPriceItem;
+import com.inet.calista.erp.masterdata.model.ERPPriceDaily;
+import com.inet.calista.erp.masterdata.model.ERPPriceList;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.erp.masterdata.service.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPPriceListAbstraction.java Jan 04, 2019 15:13 phongtt $
+ * @since 1.0
+ */
+public abstract class ERPPriceListAbstraction extends ERPCoreAbstraction {
+    @Inject
+    protected ERPPriceListBO priceListBO;
+
+    @Inject
+    protected ERPPriceDailyBO priceDailyBO;
+
+    /**
+     * @return
+     */
+    protected abstract String counterId();
+
+    /**
+     * @return
+     */
+    protected abstract String priceListType();
+
+    /**
+     * @param organId
+     * @param type
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final SearchDTO<ERPPriceDaily> priceForDay(String organId, String type) throws WebOSBOException {
+        return priceForDay(organId, type, 0);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final SearchDTO<ERPPriceDaily> priceForDay(String organId, String type, long date) throws WebOSBOException {
+        return priceForDay(organId, type, StringUtils.EMPTY_STRING, StringUtils.EMPTY_STRING, date);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final SearchDTO<ERPPriceDaily> priceForDay(String organId, String type, String prodCode, String currencyId, long date) throws WebOSBOException {
+        return priceDailyBO.priceForDay(organId, type, prodCode, currencyId, date);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceDaily priceForDayLoad(String organId, String type, String outletId, String areaId, String prodCode, String currencyId, long date) throws WebOSBOException {
+        return priceDailyBO.loadPriceForDay(organId, type, outletId, areaId, prodCode, currencyId, date);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @throws WebOSBOException
+     */
+    protected final void priceForDayBuilder(String organId, String type) throws WebOSBOException {
+        final Calendar cal = Calendar.getInstance();
+        priceForDayBuilder(organId, type, cal.getTimeInMillis());
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @throws WebOSBOException
+     */
+    protected final void priceForDayBuilder(String organId, String type, long date) throws WebOSBOException {
+        priceDailyBO.priceForDayBuilder(organId, type, date);
+    }
+
+    /**
+     * @param info
+     * @param item
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceItem priceItemRemove(final ERPPriceList info,
+                                                 final ERPPriceItem item,
+                                                 final AbstractBaseAction action,
+                                                 final Map<String, Object> params) throws WebOSBOException {
+        if (info != null && info.getItems().contains(item)) {
+            info.getItems().remove(item);
+            priceListBO.update(info.getUuid(), info);
+
+            if (info.isDef()) {
+                priceDailyBO.priceForDayMessage(info.getOrganId(), priceListType());
+            }
+
+            return item;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param info
+     * @param items
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final List<ERPPriceItem> priceItemRemove(final ERPPriceList info,
+                                                       final List<ERPPriceItem> items,
+                                                       final AbstractBaseAction action,
+                                                       final Map<String, Object> params) throws WebOSBOException {
+        final List<ERPPriceItem> list = new ArrayList<>();
+        if (info != null && !CollectionUtils.isEmpty(items)) {
+            for (ERPPriceItem item : items) {
+                if (info.getItems().contains(item)) {
+                    info.getItems().remove(item);
+                    list.add(item);
+                }
+
+                if (!CollectionUtils.isEmpty(list)) {
+                    priceListBO.update(info.getUuid(), info);
+                }
+            }
+
+            if (info.isDef()) {
+                priceDailyBO.priceForDayMessage(info.getOrganId(), priceListType());
+            }
+        }
+
+        return list;
+    }
+
+    /**
+     * @param info
+     * @param item
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceItem priceItemAdd(final ERPPriceList info,
+                                              final ERPPriceItem item,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params) throws WebOSBOException {
+
+        if (info != null) {
+            if (info.getItems().contains(item)) {
+                info.getItems().remove(item);
+            }
+
+            info.getItems().add(item);
+            priceListBO.update(info.getUuid(), info);
+
+            if (info.isDef()) {
+                priceDailyBO.priceForDayMessage(info.getOrganId(), priceListType());
+            }
+
+            return item;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param info
+     * @param items
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final List<ERPPriceItem> priceItemAdd(final ERPPriceList info,
+                                                    final List<ERPPriceItem> items,
+                                                    final AbstractBaseAction action,
+                                                    final Map<String, Object> params) throws WebOSBOException {
+        final List<ERPPriceItem> list = new ArrayList<>();
+        if (info != null && !CollectionUtils.isEmpty(items)) {
+            for (ERPPriceItem item : items) {
+                if (info.getItems().contains(item)) {
+                    info.getItems().remove(item);
+                }
+
+                info.getItems().add(item);
+                list.add(item);
+
+                if (!CollectionUtils.isEmpty(list)) {
+                    priceListBO.update(info.getUuid(), info);
+                }
+            }
+
+            if (info.isDef()) {
+                priceDailyBO.priceForDayMessage(info.getOrganId(), priceListType());
+            }
+        }
+
+        return list;
+    }
+
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceList priceListLoad(final SiteDataModel siteData,
+                                               final SubFirmProfile subFirm,
+                                               final AbstractBaseAction action,
+                                               final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String code = XParamUtils.getString("code", params, StringUtils.EMPTY_STRING);
+
+        final ERPPriceList item = priceListBO.loadByCode(organId, code);
+        if (item == null) {
+            logger.error("Pricelist {} is not found.", code);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        return item;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final String priceListDelete(final SiteDataModel siteData,
+                                           final SubFirmProfile subFirm,
+                                           final AbstractBaseAction action,
+                                           final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+
+        String priceIds = XParamUtils.getString("priceIds", params, StringUtils.EMPTY_STRING);
+
+        String deleteIds = StringUtils.EMPTY_STRING;
+        if (StringUtils.hasLength(priceIds)) {
+            for (String priceId : priceIds.split(";")) {
+                if (priceListBO.loadById(organId, priceId) != null) {
+                    priceListBO.remove(priceId);
+                    deleteIds += priceId + ";";
+                }
+            }
+        }
+
+        return deleteIds;
+    }
+
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceList priceListUpdate(final SiteDataModel siteData,
+                                                 final SubFirmProfile subFirm,
+                                                 final AbstractBaseAction action,
+                                                 final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String code = XParamUtils.getString("code", params, StringUtils.EMPTY_STRING);
+
+        final ERPPriceList item = priceListBO.loadByInfo(organId, code);
+        if (item == null) {
+            logger.error("Pricelist {} is not found.", code);
+            action.fieldError("PRICELIST", "CODE_NOT_FOUND");
+        }
+
+        final ERPPriceList data = action.getModel(ERPPriceList.class);
+        data.setUuid(item.getUuid());
+        data.setOrganId(item.getOrganId());
+        data.setType(item.getType());
+        data.setItems(item.getItems());
+        if (data.getFromDate() > 0) {
+            data.setFromDate(DateUtils.startTimeInMillisOf(data.getFromDate()));
+        }
+        if (data.getToDate() > 0) {
+            data.setToDate(DateUtils.endTimeInMillisOf(data.getToDate()));
+        }
+        data.setProperties(pricePropBuilder(params));
+        data.validTime();
+
+        priceListBO.update(data.getUuid(), data);
+
+        if (data.isDef()) {
+            priceListBO.clearDefault(organId, data.getType(), data.getCode());
+
+            priceDailyBO.priceForDayMessage(organId, priceListType());
+        }
+
+        return data;
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final ERPPriceList priceListAdd(final SiteDataModel siteData,
+                                              final SubFirmProfile subFirm,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params) throws WebOSBOException {
+
+        final ERPPriceList data = action.getModel(ERPPriceList.class);
+
+        String counterId = counterId();
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = StringUtils.EMPTY_STRING;
+
+        data.setOrganId(organId);
+        data.setType(priceListType());
+
+        data.setCode(priceListBO.counterGenerate(organId, outletId, counterId, data.getCode()));
+
+        if (!StringUtils.hasLength(data.getType())) {
+            logger.error("priceList type missed.");
+            action.fieldError("PRICELIST", "TYPE_IS_MISSED");
+        }
+
+        if (!StringUtils.hasLength(data.getCode())) {
+            logger.error("code is missed !.");
+            action.fieldError("PRICELIST", "CODE_IS_MISSED");
+        }
+
+        if (priceListBO.checkCodeExists(organId, outletId, data.getCode())) {
+            logger.error("priceList {} is duplicate.", data.getCode());
+            action.fieldError("PRICELIST", "CODE_IS_DUPLICATE");
+        }
+
+        if (data.getFromDate() > 0) {
+            data.setFromDate(DateUtils.startTimeInMillisOf(data.getFromDate()));
+        }
+        if (data.getToDate() > 0) {
+            data.setToDate(DateUtils.endTimeInMillisOf(data.getToDate()));
+        }
+        data.setProperties(pricePropBuilder(params));
+        data.validTime();
+
+        data.setUuid(priceListBO.add(data));
+
+        if (data.isDef()) {
+            priceListBO.clearDefault(organId, data.getType(), data.getCode());
+
+            priceDailyBO.priceForDayMessage(organId, data.getType());
+        }
+
+        return data;
+    }
+
+
+    /**
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final JSONObject pricePropBuilder(final Map<String, Object> params) throws WebOSBOException {
+        final JSONObject properties = new JSONObject();
+        for (String key : params.keySet()) {
+            if (key.startsWith("_")) {
+                properties.put(key.substring(1), params.get(key));
+            }
+        }
+
+        return properties;
+    }
+}

@@ -1,0 +1,146 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.AttachmentBo;
+import com.inet.calista.collatask.bo.FollowUpBo;
+import com.inet.calista.collatask.bo.project.ProjectBo;
+import com.inet.calista.collatask.bo.task.TaskBo;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.model.project.Activity.Action;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * DeleteService.
+ *
+ * @author Duyen Tang
+ * @version $Id: DeleteService.java Jan 25, 2018 4:44:01 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_deleteservice")
+@XPortalDataService(roles = {Roles.TASK}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/delete",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class DeleteService extends TaskService {
+  private static final Logger LOG = LoggerFactory.getLogger(DeleteService.class);
+  @Inject
+  private TaskBo taskBo;
+  @Inject
+  private AttachmentBo attBo;
+  @Inject
+  private FollowUpBo fuBo;
+  @Inject
+  private ProjectBo projectBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    try {
+      // load task by UUID
+      Task task = loadTask(params, true, "orgCode", "creatorUname", "assignee", "progress",
+          "projectUuid", "spentTime", "status", "parentUuid");
+      
+      if (!canDelete(task)) {
+        putError(action, "author_or_status", ErrorCode.forbidden_to_delete);
+        return FAILURE_RESULT;
+      }
+
+      // remove attachment of given task
+      attBo.deleteByRefUuidAndType(task.getUuid(), ReferenceType.task.name());
+      
+      // remove all follow up of given task
+      fuBo.removeBy(task.getOrgCode(), null, task.getUuid());
+      
+      // remove task
+      taskBo.remove(task.getUuid(), task.getParentUuid());
+      
+      // delete social activity
+      deleteActivity(action, task);
+      
+      if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+        // add project activity
+        addProjectActivity(Action.delete, task, "");
+        
+        if (task.getSpentTime() > 0) {
+          // decrease spent time for project
+          projectBo.increaseSpentTime(task.getProjectUuid(), -task.getSpentTime());
+        }
+      }
+      
+      return SUCCESS_RESULT;
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      return FAILURE_RESULT;
+    }
+  }
+  
+  /**
+   * Check given task can delete or not
+   * 
+   * @param task the given task
+   * @return the result
+   */
+  private boolean canDelete(Task task) {
+    return getUsername().equals(task.getCreatorUname()) 
+        && (Status.waiting.name().equals(task.getStatus())
+            || Status.destroy.name().equals(task.getStatus())
+            || (Status.processing.name().equals(task.getStatus())
+                && getUsername().equals(task.getAssignee().getReceiverUname())
+                && task.getProgress() == 0));
+  }
+  
+  /**
+   * Delete social activity
+   * 
+   * @param action the given {@link AbstractBaseAction}
+   */
+  private void deleteActivity(AbstractBaseAction action, Task task) {
+    try {
+      action.getRequestParams().put("application", WebContext.INSTANCE.cache().getApplication());
+      action.getRequestParams().put("contextID", task.getUuid());
+      action.getRequestParams().put("codeshared", task.getUuid()); 
+      
+      action.serviceExecute("socialactivitydelete", false);
+    } catch (Throwable ex) {
+      action.getViolation().clear();
+      // ignore this error
+      LOG.warn("Error occurs during deleting activity when delete task", ex);
+    }
+  }
+}

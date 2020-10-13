@@ -1,0 +1,33 @@
+package com.inet.calista.crm.model.setting.internal;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Group.
+ *
+ * @author thoangtran
+ * @version Group 2018 04-06 10:10
+ */
+@Getter
+@Setter
+public class Group extends NoSqlModel<Group> {
+  private String createdBy;
+  private long createdDate;
+  private long modifiedDate;
+  private String modifiedBy;
+  private String name;
+  private String description;
+  private Set<LinkTo> members = new HashSet<>();
+  private String indicator;
+  private boolean active = true;
+  private boolean deleted = false;
+  @Override
+  protected boolean equals(Group other) {
+    return false;
+  }
+}

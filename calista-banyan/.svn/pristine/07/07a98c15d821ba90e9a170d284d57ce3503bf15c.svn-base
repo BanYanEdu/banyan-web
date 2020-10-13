@@ -1,0 +1,92 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbEmail;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * FirmEmailTmplUpdateService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: FirmEmailTmplUpdateService.java Feb 11, 2020 9:24:54 AM $
+ *
+ * @since 1.0
+ */
+@Named("glfirmemailupdate")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/firm/email/update",
+        transaction = true,
+        xssLevel = -1,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class FirmEmailTmplUpdateService extends EmailAbstraction 
+{
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.subfirmservice.EmailAbstraction#service(com.inet.calista.global.model.GlbEmail, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+    @Override
+    protected WebDataService service(final GlbEmail template,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException 
+    {
+    		String srvVariable = XParamUtils.getString("srvVariable", params);
+    		if (StringUtils.hasLength(srvVariable))
+    			template.setSrvVariable(srvVariable);
+    		
+    		String language = XParamUtils.getString("language",params);
+    		if (StringUtils.hasLength(language))
+    			template.setLanguage(language);
+    		
+    		template.setInactive(XParamUtils.getBoolean("inactive", params, template.isInactive()));
+    		
+    		String emailName = XParamUtils.getString("emailName", params);
+    		if (StringUtils.hasLength(emailName))
+    			template.setEmailName(emailName);
+    		
+    		String emailSubject = XParamUtils.getString("emailSubject", params);
+    		if (StringUtils.hasLength(emailSubject))
+    			template.setEmailSubject(emailSubject);
+    		
+    		String emailContent = XParamUtils.getString("emailContent", params);
+    		if (StringUtils.hasLength(emailContent))
+    			template.setEmailContent(emailContent);
+    	    
+        templateBO.update(template.getUuid(), template);
+
+        return new ObjectWebDataservice<>(template);
+    }
+}

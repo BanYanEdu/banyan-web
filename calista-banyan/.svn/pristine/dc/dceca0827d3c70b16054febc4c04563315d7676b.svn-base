@@ -1,0 +1,52 @@
+package com.inet.calista.crm.model.activity;
+
+import com.inet.calista.crm.model.common.Communication;
+import com.inet.calista.crm.model.common.Responsible;
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.model.common.Priority;
+import com.inet.calista.crm.model.common.Visibility;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Event.
+ *
+ * @author thoangtran
+ * @version Event 2018 04-06 12:02
+ */
+@Getter
+@Setter
+@EqualsAndHashCode
+public class Event extends NoSqlModel<Event> {
+  private String subject; // TEN su kien
+  private String description; //  noi dung su kien
+  private long startTime= -1; // date & time
+  private String startTimeIso;
+  private long endTime = -1;
+  private String endTimeIso;
+  private Set<Communication> communications = new HashSet<>();
+  private Responsible responsible;
+
+  private String status = EventStatus.planned.name();
+  private String activeType; // MEETING
+  private String location;
+  private int priority = Priority.medium.getValue();
+  private String visibility = Visibility.PUBLIC.name();
+  // Relate to
+  private String ownerType = ModuleList.contact.name(); // required
+  private String ownerId;
+  private String ownerTitle;
+
+  private String parentId;
+  // relate to contact
+
+
+  @Override
+  protected boolean equals(Event other) {
+    return false;
+  }
+}

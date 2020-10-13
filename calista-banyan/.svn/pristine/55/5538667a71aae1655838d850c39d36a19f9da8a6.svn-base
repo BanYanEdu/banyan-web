@@ -1,0 +1,86 @@
+package com.inet.jobportal.bo.candidate;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.candidate.JobVisit;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * Job Portal JobVisit BO.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobVisitBO.java Feb 6, 2019 3:24:24 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("JobVisitBO")
+public class JobVisitBO extends MagicContentBO<JobVisit> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(JobVisit.class);
+
+    @Inject
+    public JobVisitBO(@ContentContext(context = AppConstants.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "jobportal_candidate_job_visit");
+    }
+
+    @Override
+    public String add(JobVisit item) throws WebOSBOException {
+        return super.add(item);
+    }
+
+    @Override
+    public void update(String uuid, JobVisit item) throws WebOSBOException {
+        super.update(uuid, item);
+    }
+
+    public SearchDTO<JobVisit> search(Query<JSONDB> query) throws WebOSBOException {
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    // Hanlding Jobpost Visit by Candidate
+    public void handling(String jobpostId, String username, Long visitDate ) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("jobpostId").equal(jobpostId);
+        query.field("username").equal(username);
+
+        // Add or Update Job Visit
+        JobVisit jobVisit = new JobVisit();
+        if(this.search(query).getTotal() > 0) {
+            jobVisit = this.search(query).getItems().get(0);
+
+            jobVisit.setLastVisitedDate(visitDate);
+            this.update(jobVisit.getUuid(), jobVisit);
+        } else {
+            jobVisit.setUsername(username);
+            jobVisit.setJobpostId(jobpostId);
+            jobVisit.setLastVisitedDate(visitDate);
+
+            this.add(jobVisit);
+        }
+    }
+
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("username");
+        ensureIndex("jobpostId");
+        //ensureIndex("description");
+    }
+
+    @Override
+    protected Class<JobVisit> getClassConvetor() {
+        return JobVisit.class;
+    }
+}

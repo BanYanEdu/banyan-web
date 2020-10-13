@@ -1,0 +1,10 @@
+package com.inet.calista.crm.model.setting.automation;
+
+/**
+ * WorkFlow.
+ *
+ * @author thoangtran
+ * @version WorkFlow 2018 04-06 11:27
+ */
+public class WorkFlow {
+}

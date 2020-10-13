@@ -1,0 +1,110 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.data;
+
+import com.google.common.base.Strings;
+
+/**
+ * Executor.
+ *
+ * @author Duyen Tang
+ * @version $Id: Executor.java Dec 29, 2017 2:12:01 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Executor {
+  private String uname;
+  private String name;
+  private String orgCode;
+
+  /**
+   * Create {@link Executor} instance
+   */
+  public Executor() {}
+
+  /**
+   * Create {@link Executor} instance
+   * 
+   * @param uname the given user name
+   * @param name the given name
+   * @param orgCode the given organization code
+   */
+  public Executor(String uname, String name, String orgCode) {
+    this.uname = uname;
+    this.name = name;
+    this.orgCode = orgCode;
+  }
+
+  /**
+   * @return the uname
+   */
+  public String getUname() {
+    return uname;
+  }
+
+  /**
+   * @param uname the uname to set
+   */
+  public void setUname(String uname) {
+    this.uname = uname;
+  }
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the orgCode
+   */
+  public String getOrgCode() {
+    return orgCode;
+  }
+
+  /**
+   * @param orgCode the orgCode to set
+   */
+  public void setOrgCode(String orgCode) {
+    this.orgCode = orgCode;
+  }
+  
+  @Override
+  public int hashCode() {
+    return uname.hashCode();
+  }
+  
+  @Override
+  public boolean equals(Object object) {
+    if (!(object instanceof Executor)) {
+      return false;
+    }
+    
+    if (Strings.isNullOrEmpty(uname)) {
+      return false;
+    }
+    
+    return uname.equals(((Executor) object).uname);
+  }
+}

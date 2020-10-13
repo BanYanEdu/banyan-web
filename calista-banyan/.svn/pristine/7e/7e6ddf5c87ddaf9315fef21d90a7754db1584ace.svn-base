@@ -1,0 +1,75 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ListWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * ProductCategoryDataservice.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ProductCategoryDataservice.java Dec 12, 2017 12:02:27 PM $
+ * @since 1.0
+ */
+@Named(value = "ECMItemcategory")
+@XPortalDataService(description = "Product service")
+@XPortalPageRequest(uri = "commerce/product/category",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ProductCategoryDataservice extends ProductContentBase {
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    @Override
+    protected ECMItem productLoad(final CMSFirm cmsfirm,
+                                  final OrganizationDTO orgItem,
+                                  final AbstractBaseAction action,
+                                  final Map<String, Object> params) throws WebOSBOException {
+        return null;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.ecommerce.cmsservice.ProductContentBase#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.ecommerce.model.ECMItem, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(CMSFirm cmsfirm,
+                                     OrganizationDTO orgItem,
+                                     ECMItem summary,
+                                     AbstractBaseAction action,
+                                     Map<String, Object> params) throws WebOSBOException {
+        return new ListWebDataservice<String>(productBO.categories(getOwnerId(orgItem)));
+    }
+}

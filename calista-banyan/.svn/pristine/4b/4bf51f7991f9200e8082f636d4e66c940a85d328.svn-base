@@ -1,0 +1,53 @@
+package com.inet.jobportal.service.employer.saved_candidate;
+
+import com.inet.jobportal.bo.employer.SavedCandidateBO;
+import com.inet.jobportal.model.candidate.JobAppStatus;
+import com.inet.jobportal.model.common.Note;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SavedCandidateUpdateStatusDS.
+ *
+ * @author Duy Tan Nguyen
+ * @version $Id: SavedCandidateUpdateStatusDS.java Feb 9, 2019 11:50:48 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportalsavedcandidateupdatestatus")
+@XPortalDataService(roles = {"jobportal_employer_common"}, description = "Employer Common Task")
+@XPortalPageRequest(uri="jobportal/employer/savedcandidate/status/update",
+        transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SavedCandidateUpdateStatusDS extends JobPortalAbsractService {
+    @Inject
+    private SavedCandidateBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+//        String organId = firmProfile.getOrganiId();
+        String uuid = XParamUtils.getString("statusLinkId", params,"");
+        JobAppStatus item = action.getModel(JobAppStatus.class);
+        Note note = action.getModel(Note.class);
+
+        bo.updateStatus(uuid, item);
+        if (!note.getNoteContent().equals("")) {
+            bo.addNote(uuid, note);
+        }
+        return new ObjectWebDataservice<>(item);
+    }
+}

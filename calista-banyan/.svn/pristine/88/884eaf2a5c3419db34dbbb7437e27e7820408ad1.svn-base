@@ -1,0 +1,55 @@
+package com.inet.calista.hrm.service.admin.node;
+
+import com.inet.calista.hrm.bo.NodeBo;
+import com.inet.calista.hrm.constant.Role;
+import com.inet.calista.hrm.model.Node;
+import com.inet.calista.hrm.service.HRMService;
+import com.inet.calista.hrm.service.exception.HRMServiceException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * AddService.
+ *
+ * @author thoangtran
+ * @version AddService 2018 10-08 10:55
+ */
+@Named("hrm_adm_node_addService")
+@XPortalDataService(roles = {Role.ADM_NODE}, description = "Input Template role")
+@XPortalPageRequest(uri = "hrm/adm/node/add", transaction = true, inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class AddService extends HRMService {
+    @Inject
+    private NodeBo nodeBo;
+
+    @Override
+    protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile firmProfile, AbstractBaseAction action, Map<String, Object> map) throws WebOSBOException {
+        try {
+            final Node node = action.getModel(Node.class);
+            node.setOrgCode(firmProfile.getOrganiId());
+            nodeBo.add(node);
+            return new ObjectWebDataservice<>(node);
+        } catch (Exception ex) {
+            HRMServiceException iex = new HRMServiceException("Error occurs during saving node", ex);
+            // log error
+            log.error(iex.getMessage(), iex);
+            putServiceError(action);
+
+            throw iex;
+        }
+    }
+
+
+}

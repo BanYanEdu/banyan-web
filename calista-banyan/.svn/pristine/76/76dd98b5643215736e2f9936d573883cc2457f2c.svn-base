@@ -1,0 +1,17 @@
+package com.inet.calista.hrm.model;
+
+import com.inet.calista.common.model.BaseModel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * HRMModel.
+ *
+ * @author thoangtran
+ * @version HRMModel 2018 10-08 11:06
+ */
+@Getter
+@Setter
+public abstract class HRMModel extends BaseModel {
+    private String orgCode;
+}

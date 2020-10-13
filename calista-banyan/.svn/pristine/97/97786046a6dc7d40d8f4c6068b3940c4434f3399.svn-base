@@ -1,0 +1,29 @@
+package com.inet.jobportal.service.admin;
+
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import javax.inject.Named;
+import java.util.Map;
+
+@Named("jobportaladmindefault")
+@XPortalDataService(roles = {"jobportal_admin"}, description="Job Portal - Admin")
+@XPortalPageRequest(uri="jobportal/admin/default",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class AdminDefaultDS extends JobPortalAbsractService {
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        return new ObjectWebDataservice<>("Job Portal - Admin Default");
+
+    }
+}

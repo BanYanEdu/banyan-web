@@ -1,0 +1,49 @@
+package com.inet.calista.crm.service.template;
+
+import com.inet.calista.crm.dto.search.TemplateSearchCriteria;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * FindByService.
+ *
+ * @author thoangtran
+ * @version FindByService 2019 01-29 16:10
+ */
+@Named("crm_marketing_template  _campaignService")
+@XPortalDataService(roles = { Roles.MARKETING}, description = "Marketing role")
+@XPortalPageRequest(uri = "crm/marketing/template/campaign", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class FindByService extends TemplateService {
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final TemplateSearchCriteria criteria = action.getModel(TemplateSearchCriteria.class);
+      criteria.setProviderID(XParamUtils.getString("providerID","EmailProvider"));
+      criteria.setModule("campaign");
+      criteria.setMine(XParamUtils.getBoolean("mine", false));
+      return new ObjectWebDataservice<>(this.templateBo.findBy(criteria));
+    } catch (Exception ex) {
+      final CRMBusinessException iex = new CRMBusinessException("Error occurs during find template", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

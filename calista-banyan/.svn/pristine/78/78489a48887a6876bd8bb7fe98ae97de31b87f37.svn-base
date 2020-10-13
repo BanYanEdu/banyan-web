@@ -1,0 +1,53 @@
+package com.inet.calista.global.bo.location;
+
+import com.inet.calista.global.bo.GLNoSqlBo;
+import com.inet.calista.global.model.localtion.GlobalRegion;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+@Named("GlobalRegionBo")
+public class GlobalRegionBo extends GLNoSqlBo<GlobalRegion> implements BeanInitiateInvoke {
+
+    @Inject
+    public GlobalRegionBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_region");
+    }
+
+    @Override
+    protected Class<GlobalRegion> getClassConvetor() {
+        return GlobalRegion.class;
+    }
+
+    @Override
+    public void init() {
+    }
+
+    @Override
+    public String add(GlobalRegion item) throws WebOSBOException {
+        return super.add(item, "countryID", "code");
+    }
+
+
+    /**
+     * @param countryID
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlobalRegion> queryByCountryID(String countryID) throws WebOSBOException {
+        if (StringUtils.hasLength(countryID)) {
+            final Query<JSONDB> query = new QueryImpl<JSONDB>().field("countryID").equal(countryID);
+            return query((QueryImpl<JSONDB>) query);
+        }
+        return null;
+    }
+}

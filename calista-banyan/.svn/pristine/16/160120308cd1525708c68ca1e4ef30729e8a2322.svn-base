@@ -1,0 +1,33 @@
+package com.inet.jobportal.model.candidate;
+
+import com.inet.jobportal.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * JobInfo
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobInfo.java Feb 14, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class JobInfo {
+    private String jobTitle;
+    private String salaryTermCode;
+    private Long salaryAmountFrom;
+    private Long salaryAmountTo;
+    private List<String> jobCategories = new ArrayList<>();
+    private String jobTypes;
+    private List<String> tags = new ArrayList<>();
+    private String jobLevelCode;
+    private List<Address> locations = new ArrayList<>();
+    private Boolean readyToRelocate;
+    private String careerObjective;
+}

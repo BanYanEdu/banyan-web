@@ -1,0 +1,43 @@
+package com.inet.calista.crm.bo.template;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.model.template.Template;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * TemplateBo.
+ *
+ * @author thoangtran
+ * @version TemplateBo 2019 02-13 17:28
+ */
+@Named("crm_templatebo")
+@Slf4j
+public class TemplateBo  extends CRMNoSqlBo<Template> implements BeanInitiateInvoke {
+  @Inject
+  public TemplateBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_template");
+  }
+
+  @Override
+  protected Class<Template> getClassConvetor() {
+    return Template.class;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+
+  private void createIndex(){
+    this.ensureIndex("uuid");
+    this.ensureIndex("orgCode");
+    this.ensureIndex("providerID,module");
+    this.ensureIndex("title");
+  }
+}

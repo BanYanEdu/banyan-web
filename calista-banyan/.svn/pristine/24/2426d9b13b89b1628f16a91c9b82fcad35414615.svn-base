@@ -1,0 +1,17 @@
+package com.inet.calista.crm.dto.search;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * EventSearchCriteria.
+ *
+ * @author thoangtran
+ * @version EventSearchCriteria 2019 02-15 15:31
+ */
+@Getter
+@Setter
+public class EventSearchCriteria {
+  private String keyword;
+  private String ownerId;
+}

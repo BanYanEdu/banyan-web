@@ -1,0 +1,290 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.service.inventory;
+
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.common.api.ERPFactoryManager;
+import com.inet.calista.erp.message.ERPBookMessage;
+import com.inet.calista.pos.retail.POSRetailConstant;
+import com.inet.calista.pos.retail.bo.POSStockMovementBO;
+import com.inet.calista.pos.retail.data.POSModule;
+import com.inet.calista.pos.retail.data.POSStockMovementItem;
+import com.inet.calista.pos.retail.model.POSStockMovement;
+import com.inet.calista.pos.retail.service.common.POSRetailAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.SecurityUtil;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: POSPriceListAbstraction.java May 07, 2018 14:08 phongtt $
+ * @since 1.0
+ */
+public abstract class POSStockMovementAbstraction extends POSRetailAbstraction {
+
+    @Inject
+    protected POSStockMovementBO stockBO;
+
+    //using constant STOCKMOVEMENT_ISSUE, STOCKMOVEMENT_ISSUE
+    protected abstract String stockMovementModule();
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     */
+    public final void fireEvent(String organId, String outletId, String code) {
+        String module = stockBO.getModule(stockMovementModule());
+        if (StringUtils.hasLength(module)) {
+            //fire event message
+            new ERPBookMessage()
+                    .withModule(module)
+                    .withOrganId(organId)
+                    .withOutletId(outletId)
+                    .withVoucherId(code)
+                    .execute();
+        }
+    }
+
+    /**
+     * @param info
+     * @param item
+     * @param action
+     */
+    public final void analysis(final POSStockMovement info, final POSStockMovementItem item, final AbstractBaseAction action) {
+        if (ConfigureLoader.INSTANCE.getAnalytics().dataLake()) {
+            logger.debug("analysis data beginning ...");
+            try {
+                final JSONObject data = new JSONObject();
+
+                data.put("country", action.getCountry());
+                data.put("city", StringUtils.EMPTY_STRING);
+                data.put("organId", info.getOrganId());
+                data.put("outletId", info.getOutletId());
+                data.put("employeeId", info.getEmployeeId());
+
+                if (POSModule.RECEIPT_RETAIL.name().equals(info.getModule())) { //in stock
+                    data.put("supplierId", info.getPartnerId());
+                    data.put("module", POSModule.RECEIPT_RETAIL.name());
+                } else if (POSModule.ISSUE_RETAIL.name().equals(info.getModule())) { //out stock
+                    data.put("customerId", info.getPartnerId());
+                    data.put("module", POSModule.ISSUE_RETAIL.name());
+                }
+
+                data.put("voucherCode", info.getCode());
+
+                data.put("currencyId", info.getCurrencyId());
+                data.put("rate", info.getRate());
+
+                data.put("itemCode", item.getProdCode());
+                data.put("sku", item.getSku());
+                data.put("category", item.getGroup());
+
+                data.put("quantity", item.getQty());
+                data.put("price", item.getPrice());
+                data.put("amount", item.getAmount());
+
+                data.put("group1", StringUtils.EMPTY_STRING);
+                data.put("group2", StringUtils.EMPTY_STRING);
+                data.put("group3", StringUtils.EMPTY_STRING);
+                data.put("group4", StringUtils.EMPTY_STRING);
+                data.put("group5", StringUtils.EMPTY_STRING);
+
+                ConfigureLoader.INSTANCE.getAnalytics().events("retail_analytics", data);
+            } catch (Throwable ex) {
+                logger.error("analysis Data fail {}", ex);
+            }
+
+        }
+    }
+
+    /**
+     * @param info
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void invoiceCheck(final POSStockMovement info, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            logger.error("code is required!");
+            action.fieldError("STOCKMOVEMENT", "CODE_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(info.getCurrencyId())) {
+            info.setCurrencyId(ERPConstant.CURRENCY);
+            info.setRate(1);
+        }
+    }
+
+    /**
+     * @param item
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void itemCheck(final POSStockMovementItem item, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(item.getUuid())) {
+            item.setUuid(new ObjectId().toHexString());
+
+            if (!StringUtils.hasLength(item.getProdCode())) {
+                logger.error("Code is required!");
+                action.fieldError("STOCKMOVEMENTITEM", "CODE_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getProdName())) {
+                logger.error("Name is required!");
+                action.fieldError("STOCKMOVEMENTITEM", "NAME_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getUnit())) {
+                logger.error("Unit is required!");
+                action.fieldError("STOCKMOVEMENTITEM", "UNIT_NOT_FOUND");
+            }
+
+            if (item.getQty() <= 0) {
+                logger.error("Qty is greater than 0!");
+                action.fieldError("STOCKMOVEMENTITEM", "QTY_GREATER_0");
+            }
+        }
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @param action
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSStockMovement invoiceLoad(String organId, String outletId, String code, final AbstractBaseAction action) throws WebOSBOException {
+        final POSStockMovement info = stockBO.loadByCode(organId, outletId, code);
+        if (info == null) {
+            logger.error("invoice {} is not found", code);
+            action.fieldError("STOCKMOVEMENT", "CODE_NOT_FOUND");
+        }
+
+        return info;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSStockMovement invoiceLoad(String organId, String outletId, String code) throws WebOSBOException {
+        return stockBO.loadByCode(organId, outletId, code);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSStockMovement invoiceLoad(String organId, String code) throws WebOSBOException {
+        return stockBO.loadByCode(organId, StringUtils.EMPTY_STRING, code);
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSStockMovement invoiceCreate(final SiteDataModel siteData,
+                                          final SubFirmProfile subFirm,
+                                          final AbstractBaseAction action,
+                                          final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+        String counterId = StringUtils.EMPTY_STRING;
+
+        if (POSModule.ISSUE_RETAIL.name().equals(stockMovementModule())) {
+            counterId = POSRetailConstant.COUNTER_ISSUE;
+        } else if (POSModule.RECEIPT_RETAIL.name().equals(stockMovementModule())) {
+            counterId = POSRetailConstant.COUNTER_RECEIPT;
+        } else if (POSModule.TRANSFER_RETAIL.name().equals(stockMovementModule())) {
+            counterId = POSRetailConstant.COUNTER_TRANSFER;
+        }
+
+        final POSStockMovement info = action.getModel(POSStockMovement.class);
+        info.setOrganId(organId);
+        info.setModule(stockMovementModule());
+        info.setEmployeeId(SecurityUtil.getPrincipal());
+        info.setEmployeeName(SecurityUtil.getAlias());
+
+        boolean isDuplicate, useCounter;
+        String counter, infoCode = info.getCode();
+        do {
+            isDuplicate = false;
+
+            counter = ERPFactoryManager.INSTANCE
+                    .counter()
+                    .builder(organId, counterId);
+
+            if (StringUtils.hasLength(counter)) {
+                useCounter = true;
+                info.setCode(counter);
+            } else {
+                useCounter = false;
+                info.setCode(infoCode);
+            }
+
+
+            final POSStockMovement item = invoiceLoad(info.getOrganId(), outletId, info.getCode());
+            logger.debug("found invoice {} with code {}", item, info.getCode());
+
+            if (item != null) {
+                if (useCounter) {
+                    isDuplicate = true;
+                    ERPFactoryManager.INSTANCE
+                            .counter()
+                            .increase(organId, counterId);
+                } else {
+                    logger.error("Invoice {} is exists.", info.getCode());
+                    action.fieldError("STOCKMOVEMENT", "CODE_EXISTS");
+                }
+            }
+        } while (isDuplicate);
+
+        invoiceCheck(info, action);
+
+        info.setUuid(stockBO.add(info));
+
+        if (useCounter) {
+            ERPFactoryManager.INSTANCE
+                    .counter()
+                    .increase(organId, counterId);
+        }
+        return info;
+    }
+}

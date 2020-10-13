@@ -1,0 +1,26 @@
+package com.inet.calista.crm.model.inventory;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Currency.
+ *
+ * @author thoangtran
+ * @version Currency 2018 04-06 17:34
+ */
+@Getter
+@Setter
+public class Currency {
+  private String code;
+  private long value;
+
+  public Currency() {
+  }
+
+  public Currency(String code, long value) {
+    this.code = code;
+    this.value = value;
+  }
+
+}

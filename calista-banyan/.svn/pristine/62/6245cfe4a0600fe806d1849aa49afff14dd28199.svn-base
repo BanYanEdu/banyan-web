@@ -1,0 +1,101 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.customquery;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.model.CustomQuery;
+import com.inet.calista.collatask.model.CustomQuery.Scope;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+
+/**
+ * UpdateService.
+ *
+ * @author Duyen Tang
+ * @version $Id: UpdateService.java Apr 10, 2018 11:03:29 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_customquery_updateservice")
+@XPortalDataService(roles = {Roles.BIZ_COMMON}, description = "")
+@XPortalPageRequest(uri = "colla/custqueries/update",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class UpdateService extends CustomQueryService {
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    CustomQuery customQuery = action.getModel(CustomQuery.class);
+
+    // check query name, type, scope
+    if (isEmpty(action, "name", customQuery.getName())) {
+      return FAILURE_RESULT;
+    }
+    
+    try {
+      // load existed custom query by UUID
+      CustomQuery existed = loadCustomQuery(params);
+      if ((Scope.personal.name().equals(existed.getScope()) && !getUsername().equals(existed.getAuthUname())) ||
+          (Scope.company.name().equals(existed.getScope()) && !SecurityUtil.matchedRoles(action, Roles.CUSTOM_QUERY))) {
+        putError(action, CollaTaskJsonConstants.SCOPE, ErrorCode.forbidden);
+        return FAILURE_RESULT;
+      }
+      
+      // set fields
+      customQuery.setFields(getFields(params));
+      
+      // fill current information
+      customQuery.setAuthName(existed.getAuthName());
+      customQuery.setAuthUname(existed.getAuthUname());
+      customQuery.setOrgCode(existed.getOrgCode());
+      customQuery.setScope(existed.getScope());
+      customQuery.setType(existed.getType());
+      
+      // only set default query for personal query
+      customQuery.setDefaultQuery(customQuery.isDefaultQuery() 
+          && Scope.personal.name().equals(customQuery.getScope()));
+      
+      if (customQuery.isDefaultQuery() && !existed.isDefaultQuery()) {
+        // remove default filter for login user
+        customQueryBo.removeDefaultFilter(existed.getOrgCode(), existed.getAuthUname(), existed.getType());
+      }
+      
+      // update custom query
+      customQueryBo.update(customQuery.getUuid(), customQuery);
+      
+      return new ObjectWebDataservice<>(customQuery);
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      return FAILURE_RESULT;
+    }
+  }
+
+}

@@ -1,0 +1,33 @@
+package com.inet.jobportal.model.employer;
+
+import com.inet.jobportal.model.candidate.JobAppStatus;
+import com.inet.jobportal.model.common.Note;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * SavedCandidate
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedCandidate.java Jan 10, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class SavedCandidate {
+    private String uuid;
+    private String organId;
+    private String employerName;
+    private String username;
+    private String candidateName;
+    private String candidateProfileTitle;
+    private Long savedDate;
+    private String savedBy;
+    private JobAppStatus status;
+    private List<Note> notes = new ArrayList<>();
+}

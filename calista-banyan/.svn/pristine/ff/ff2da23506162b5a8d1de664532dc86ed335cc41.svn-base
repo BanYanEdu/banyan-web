@@ -1,0 +1,100 @@
+/**
+ * ****************************************************************
+ * Copyright (c) 2017 by Chi Cong Nguyen (nbccong@inetcloud.vn)
+ * <p>
+ * Licensed under the iNet Solutions Corp.,;
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.inetcloud.vn/licenses
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.model.localtion;
+
+import com.inet.calista.global.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.StringUtils;
+
+/**
+ * GlobalWard
+ *
+ * @author <a href="mailto:nbccong@inetcloud.vn">Chi Cong Nguyen</a>
+ * @version $Id: GlobalWard.java Jan 17, 2017 14:58:25 nbccong $
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class GlobalWard extends NoSqlModel<GlobalWard> implements GlobalLocation {
+
+    private String uuid;
+
+    // uuid of district
+    private String districtId;
+
+    // code of ward
+    private String code;
+    private String name;
+
+    // optional location
+    private Double longitude;
+    private Double latitude;
+
+    public GlobalWard() {
+    }
+
+    public GlobalWard(String districtId, String code, String name) {
+        this.districtId = districtId;
+        this.code = code;
+        this.name = name;
+    }
+
+    public GlobalWard(String districtId, String code, String name, Double longitude, Double latitude) {
+        this.districtId = districtId;
+        this.code = code;
+        this.name = name;
+        this.longitude = longitude;
+        this.latitude = latitude;
+    }
+
+
+
+    @Override
+    public String toString() {
+        return "GlobalWard{" +
+                "uuid='" + uuid + '\'' +
+                ", districtId='" + districtId + '\'' +
+                ", code='" + code + '\'' +
+                ", name='" + name + '\'' +
+                ", longitude=" + longitude +
+                ", latitude=" + latitude +
+                '}';
+    }
+
+    @Override
+    protected boolean equals(GlobalWard other) {
+        return false;
+    }
+
+    public void clone(final GlobalWard item) {
+        if (StringUtils.hasLength(item.getName()))
+            this.name = item.getName();
+
+        if (StringUtils.hasLength(item.getCode()))
+            this.code = item.getCode();
+
+        if (item.getLongitude() > 0L)
+            this.longitude = item.getLongitude();
+
+        if (item.getLatitude() > 0L)
+            this.latitude = item.getLatitude();
+    }
+}

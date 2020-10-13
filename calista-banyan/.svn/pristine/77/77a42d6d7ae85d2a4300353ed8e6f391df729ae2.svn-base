@@ -1,0 +1,45 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.model;
+
+import com.inet.calista.common.model.BaseModel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 
+ * GlobalSpecialDay.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalSpecialDay.java May 16, 2019 5:03:00 PM $
+ *
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class GlbSpecialDay extends BaseModel {
+    private long date = 0L;
+    private long lunar = 0L;
+    private boolean halfofday = false;
+    private boolean workforced = false;
+    private String description;
+
+    // code of country
+    private String countryID;
+}

@@ -1,0 +1,244 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.data.task;
+
+/**
+ * Process.
+ *
+ * @author Duyen Tang
+ * @version $Id: Process.java Dec 26, 2017 11:20:50 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Process {
+  private String senderUname;
+  private String senderName;
+  
+  private long createdDate;
+  private String note;
+  
+  private String receiverUname;
+  private String receiverName;
+  private long viewDate;
+  private long completedDate;
+  private String status = Status.processing.name();
+
+  /**
+   * Create {@link Process} instance
+   */
+  public Process() {}
+
+  /**
+   * Create {@link Process} instance from given information
+   * 
+   * @param receiverUname the given receiver user name
+   * @param receiverName the given receiver full name
+   */
+  public Process(String receiverUname, String receiverName) {
+    this.receiverUname = receiverUname;
+    this.receiverName = receiverName;
+    this.createdDate = System.currentTimeMillis();
+  }
+  
+  /**
+   * Create {@link Process} from given informations
+   * 
+   * @param senderUname the given sender user name
+   * @param senderName the given sender name
+   * @param createdDate the given create date
+   * @param note the given note
+   * @param receiverUname the given receiver user name
+   * @param receiverName the given receiver name
+   */
+  public Process(String senderUname, String senderName, long createdDate, 
+      String note, String receiverUname, String receiverName) {
+    this.senderUname = senderUname;
+    this.senderName = senderName;
+    this.note = note;
+    this.receiverUname = receiverUname;
+    this.receiverName = receiverName;
+    this.createdDate = createdDate;
+  }
+
+  /**
+   * @return the senderUname
+   */
+  public String getSenderUname() {
+    return senderUname;
+  }
+
+  /**
+   * @param senderUname the senderUname to set
+   */
+  public void setSenderUname(String senderUname) {
+    this.senderUname = senderUname;
+  }
+
+  /**
+   * @return the senderName
+   */
+  public String getSenderName() {
+    return senderName;
+  }
+
+  /**
+   * @param senderName the senderName to set
+   */
+  public void setSenderName(String senderName) {
+    this.senderName = senderName;
+  }
+
+  /**
+   * @return the createdDate
+   */
+  public long getCreatedDate() {
+    return createdDate;
+  }
+
+  /**
+   * @param createdDate the createdDate to set
+   */
+  public void setCreatedDate(long createdDate) {
+    this.createdDate = createdDate;
+  }
+  
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+
+  /**
+   * @return the receiverUname
+   */
+  public String getReceiverUname() {
+    return receiverUname;
+  }
+
+  /**
+   * @param receiverUname the receiverUname to set
+   */
+  public void setReceiverUname(String receiverUname) {
+    this.receiverUname = receiverUname;
+  }
+
+  /**
+   * @return the receiverName
+   */
+  public String getReceiverName() {
+    return receiverName;
+  }
+
+  /**
+   * @param receiverName the receiverName to set
+   */
+  public void setReceiverName(String receiverName) {
+    this.receiverName = receiverName;
+  }
+
+  /**
+   * @return the viewDate
+   */
+  public long getViewDate() {
+    return viewDate;
+  }
+
+  /**
+   * @param viewDate the viewDate to set
+   */
+  public void setViewDate(long viewDate) {
+    this.viewDate = viewDate;
+  }
+
+  /**
+   * @return the completedDate
+   */
+  public long getCompletedDate() {
+    return completedDate;
+  }
+
+  /**
+   * @param completedDate the completedDate to set
+   */
+  public void setCompletedDate(long completedDate) {
+    this.completedDate = completedDate;
+  }
+
+  /**
+   * @return the status
+   */
+  public String getStatus() {
+    return status;
+  }
+
+  /**
+   * @param status the status to set
+   */
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
+  /**
+   * Status.
+   *
+   * @author Duyen Tang
+   * @version $Id: Process.java Dec 26, 2017 2:15:38 PM tttduyen $
+   *
+   * @since 1.0
+   */
+  public enum Status {
+    waiting,
+    //create,
+    processing,
+    returned,
+    retrieved,
+    completed;
+    
+    /**
+     * Check given value is valid or not
+     * 
+     * @param value the given value
+     * @return valid or not
+     */
+    public static boolean isValid(String value) {
+      try {
+        valueOf(value);
+        
+        return true;
+      } catch (Exception ex) {
+        return false;
+      }
+    }
+    
+    /**
+     * Check given status is a processing status or not
+     * 
+     * @param status the given status to check
+     * @return processing or not
+     */
+    public static boolean isProcessing(String status) {
+      return processing.name().equals(status) || waiting.name().equals(status);
+    }
+  }
+}

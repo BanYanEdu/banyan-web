@@ -1,0 +1,139 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.phase;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ActivityBO;
+import com.inet.calista.collatask.bo.project.PhaseBO;
+import com.inet.calista.collatask.bo.project.ProjectBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.model.project.Activity;
+import com.inet.calista.collatask.model.project.Activity.Action;
+import com.inet.calista.collatask.model.project.Phase;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * PhaseService.
+ *
+ * @author Duyen Tang
+ * @version $Id: PhaseService.java Apr 4, 2018 4:41:26 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class PhaseService extends CollabarationTaskService {
+	@Inject
+	protected PhaseBO phaseBo;
+	
+	@Inject
+	protected ActivityBO proActivityBo;
+	
+	@Inject
+	private ProjectBO projectBo;
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(SiteDataModel site, 
+			SubFirmProfile subFirm,
+			AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException 
+	{
+		String projectUuid = XParamUtils.getString(CollaTaskJsonConstants.PROJECT_UUID, params);
+		if (Strings.isNullOrEmpty(projectUuid)) {
+			putError(action, CollaTaskJsonConstants.PROJECT_UUID, ErrorCode.must_not_empty);
+			return FAILURE_RESULT;
+		}
+
+		// project must be existed
+		Project project = projectBo.findByUuid(getOrgCode(site, subFirm), projectUuid);
+		if (project == null) {
+			putError(action, CollaTaskJsonConstants.PROJECT_UUID, ErrorCode.not_existed);
+			return FAILURE_RESULT;
+		}
+		
+		return service(site, subFirm, project, action, params);
+	}
+	
+	/**
+	 * 
+	 * @param site
+	 * @param subFirm
+	 * @param project
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected abstract WebDataService service(SiteDataModel site, 
+			SubFirmProfile subFirm,
+			Project project,
+			AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException;
+	
+	/**
+	 * Load phase information
+	 * 
+	 * @param params
+	 *            the given parameter
+	 * @return the phase
+	 * @throws ValidationException
+	 *             if submission invalid
+	 */
+	protected Phase loadPhase(String projectUuid, Map<String, Object> params) throws ValidationException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+		}
+
+		// load phase from given UUID
+		Phase phase = phaseBo.loadByProjectUuid(projectUuid, uuid);
+
+		if (phase == null) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+		}
+
+		return phase;
+	}
+
+	/**
+	 * Add project activity
+	 * 
+	 * @param phase
+	 *            the given {@link Phase} information
+	 * @param action
+	 *            the given action
+	 */
+	protected void addProjectActivity(Action action, Phase phase, String note) {
+		proActivityBo.add(new Activity(phase.getProjectUuid(), getUsername(), getFullname(), System.currentTimeMillis(),
+				action.name(), ReferenceType.phase.name(), phase.getUuid(), phase.getName(), note));
+	}
+}

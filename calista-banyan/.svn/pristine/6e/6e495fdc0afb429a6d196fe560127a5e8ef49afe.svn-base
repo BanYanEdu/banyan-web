@@ -1,0 +1,104 @@
+package com.inet.calista.global.subfirmservice;
+
+import java.io.File;
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileUploadAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.MimeTypeUtil;
+
+/**
+ * 
+ * ExcelTplCreateService.
+ * 
+ * @author Hien Nguyen
+ * @version $Id: ExcelTplCreateService.java Feb 11, 2020 11:51:54 AM $
+ *
+ * @since 1.0
+ */
+@Named("glexceltmplcreate")
+@XPortalDataService(roles = { NoSQLConstant.ROLE_SUBADMIN }, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/create", 
+	inherit = true, 
+	transaction = true,
+	action = WebConstant.FILE_UPLOAD_ACTON,
+	result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ExcelTplCreateService extends ExcelTplAbstraction 
+{
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	@Override
+	protected GlbReportTemplate loadTemplate(String organId, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		GlbReportTemplate template = action.getModel(GlbReportTemplate.class);
+		template.setOrganId(organId);
+		
+		if (!StringUtils.hasLength(template.getName()))
+			putError(action, GlobalConstant.NAME, ErrorCode.MUST_NOT_EMPTY);
+		
+		if (!StringUtils.hasLength(template.getApplication()))
+			putError(action, "APPLICATION", ErrorCode.MUST_NOT_EMPTY);
+		
+		if (!StringUtils.hasLength(template.getModule()))
+			putError(action, "MODULE", ErrorCode.MUST_NOT_EMPTY);
+		
+		if (!StringUtils.hasLength(template.getType()))
+			putError(action, "TYPE", ErrorCode.MUST_NOT_EMPTY);
+		
+		return template;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.subfirmservice.ExcelTplAbstraction#service(java.lang.String, com.inet.calista.global.model.GlbReportTemplate, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(String organId, 
+			final GlbReportTemplate template, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		if (!templateBo.exists(organId, template))
+		{
+			final FileUploadAction uplAction = (FileUploadAction)action;
+		    if (CollectionUtils.isEmpty(uplAction.getFileUpload())) 
+		    {
+		    		final File file = uplAction.getFileUpload().get(0);
+				if (file != null && file.exists() && file.length() > 0)
+				{
+					template.setMimetype(uplAction.getFileType(0));
+					template.setExtension(MimeTypeUtil.getExtentionByMimeType(template.getMimetype()));
+					template.setContentUid(templateBo.getDocumentBO().saveFile(file, template.getMimetype()));
+					template.setUuid(StringUtils.EMPTY_STRING);
+					templateBo.add(template);
+				}
+		    }
+		}
+		
+		return new ObjectWebDataservice<>(template);
+	}
+}

@@ -1,0 +1,65 @@
+package com.inet.calista.crm.service.activity.event;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.activity.Event;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtran
+ * @version CreateService 2019 01-22 15:49
+ */
+@Named("crm_activity_event_updateservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Event role")
+@XPortalPageRequest(uri = "crm/activity/event/update", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class UpdateService extends EventService {
+  @Override
+  protected WebDataService service(SiteDataModel siteDataModel, SubFirmProfile firmProfile, AbstractBaseAction abstractBaseAction, Map<String, Object> map) throws WebOSBOException {
+    try{
+      final Event event = action.getModel(Event.class);
+      if(Strings.isNullOrEmpty(event.getUuid())) {
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      final Event exist = this.eventBo.loadById(event.getUuid(), firmProfile.getOrganiId());
+      if(null == exist) {
+        putError(action, CommonConstant.UUID, ErrorCode.not_existed);
+        return FAILURE_RESULT;
+      }
+      event.setCreatedBy(exist.getCreatedBy());
+      event.setCreatedDate(exist.getCreatedDate());
+      event.setOrgCode(firmProfile.getOrganiId());
+      resolveModifyModel(event);
+      //resoveEvent(event);
+      this.eventBo.update(event.getUuid(), event);
+      return new ObjectWebDataservice<>(event);
+
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during updating event", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

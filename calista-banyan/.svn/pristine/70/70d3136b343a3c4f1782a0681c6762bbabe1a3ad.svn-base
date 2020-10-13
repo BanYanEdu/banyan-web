@@ -1,0 +1,55 @@
+package com.inet.jobportal.service.sys.system_data;
+
+import com.inet.jobportal.bo.sys.SystemDataBO;
+import com.inet.jobportal.model.sys.SystemData;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SystemDataSearchDS.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SystemDataSearchDS.java Jan 21, 2019 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportalsystemdatasearch")
+@XPortalDataService(description="Job Portal - System Data Search Service")
+@XPortalPageRequest(uri="jobportal/sys/systemdata/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SystemDataSearchDS extends JobPortalAbsractService {
+    @Inject
+    private SystemDataBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String dataName = XParamUtils.getString("dataName", params,"");
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        if (!dataName.equals("")) { query.field("dataName").equal(dataName); }
+
+        SearchDTO<SystemData> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

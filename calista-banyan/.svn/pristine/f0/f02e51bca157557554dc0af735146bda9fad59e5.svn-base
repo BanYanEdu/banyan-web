@@ -1,0 +1,114 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.proj;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ProjectBo;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Member.Role;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.project.AdvanceSearchDto;
+import com.inet.calista.collatask.service.SearchService;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.mongodb.BasicDBObject;
+
+/**
+ * AdvanceSearchService.
+ *
+ * @author Duyen Tang
+ * @version $Id: AdvanceSearchService.java May 23, 2018 9:20:13 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_project_advancesearchservice")
+@XPortalDataService(roles = {Roles.PROJECT_VIEW}, description = "")
+@XPortalPageRequest(uri = "colla/projects/asearch",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class AdvanceSearchService extends SearchService<AdvanceSearchDto> {
+  @Inject
+  private ProjectBo projectBo;
+
+  @Override
+  protected Class<AdvanceSearchDto> getModelClass() {
+    return AdvanceSearchDto.class;
+  }
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    SearchCriteria<AdvanceSearchDto> criteria = getCriteria(site, subFirm, action, params);
+    
+    String statusStr = XParamUtils.getString(CollaTaskJsonConstants.STATUSES_STR, params);
+    if (!Strings.isNullOrEmpty(statusStr)) {
+      criteria.getCriteria().setStatuses(CommonUtils.toStringList(statusStr));
+    }
+    
+    String tagsStr = XParamUtils.getString(CollaTaskJsonConstants.TAGS_STR, params);
+    if (!Strings.isNullOrEmpty(tagsStr)) {
+      criteria.getCriteria().setTags(CommonUtils.toStringList(tagsStr));
+    }
+    
+    List<BasicDBObject> members = new ArrayList<>();
+    
+    // append condition
+    appendMembers(members, XParamUtils.getString(CollaTaskJsonConstants.MANAGERS, params), Role.manager);
+    appendMembers(members, XParamUtils.getString(CollaTaskJsonConstants.LEADERS, params), Role.leader);
+    appendMembers(members, XParamUtils.getString(CollaTaskJsonConstants.WORKERS, params), Role.worker);
+    appendMembers(members, XParamUtils.getString(CollaTaskJsonConstants.SUPPORTERS, params), Role.supporter);
+    appendMembers(members, XParamUtils.getString(CollaTaskJsonConstants.WATCHER, params), Role.watcher);
+    if (!members.isEmpty()) {
+      criteria.getCriteria().setMembers(members);
+    }
+    
+    return new ObjectWebDataservice<>(projectBo.advanceSearch(criteria));
+  }
+
+  /**
+   * Append members with given user names and role to list members
+   * 
+   * @param members the given list of members
+   * @param memberUnames the given list of new user names
+   * @param role the given role
+   */
+  private void appendMembers(List<BasicDBObject> members, String memberUnames, Role role) {
+    if (Strings.isNullOrEmpty(memberUnames)) {
+      return;
+    }
+    
+    String[] unames = CommonUtils.toStringArray(memberUnames);
+    for (String uname : unames) {
+      members.add(new BasicDBObject("uname", uname).append("role", role.name()));
+    }
+  }
+}

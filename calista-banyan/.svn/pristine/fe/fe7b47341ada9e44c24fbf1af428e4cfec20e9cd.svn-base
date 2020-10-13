@@ -1,0 +1,86 @@
+/*****************************************************************
+   Copyright 2020 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.bo;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbShelfMeta;
+import com.inet.xportal.document.data.RightObject;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+
+/**
+ * 
+ * GlbShelfMetaBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbShelfMetaBO.java Feb 7, 2020 9:31:46 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbShelfMetaBO")
+public class GlbShelfMetaBO extends GlbNoSqlBO<GlbShelfMeta> implements BeanInitiateInvoke 
+{
+	/**
+	 * 
+	 * @param businessFacade
+	 */
+	@Inject
+	protected GlbShelfMetaBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+		super(businessFacade, "glb_shelfmeta");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() 
+	{
+		
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<GlbShelfMeta> getClassConvetor() 
+	{
+		return GlbShelfMeta.class;
+	}
+	
+	private static Map<String, Class<?>> childrenMap;
+    static {
+        childrenMap = new HashMap<>();
+        childrenMap.put("rights", RightObject.class);
+    }
+    
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenMap;
+    }
+}

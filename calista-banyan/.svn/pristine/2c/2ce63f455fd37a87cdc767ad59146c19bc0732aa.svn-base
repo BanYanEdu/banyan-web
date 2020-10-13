@@ -1,0 +1,259 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.data.GlbAddress;
+import com.inet.calista.global.data.GlbContactSuggest;
+import com.inet.calista.global.model.GlbContact;
+import com.inet.xportal.common.profile.BaseAccountDTO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.CriteriaContainer;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: GLContactBO.java Nov 05, 2018 16:50 phongtt $
+ * @since 1.0
+ */
+@Named("GLContactBO")
+public class GlbContactBO extends GlbNoSqlBO<GlbContact> implements BeanInitiateInvoke {
+    static Map<String, Class<?>> childrenMap;
+
+    static {
+        childrenMap = new HashMap<>();
+        childrenMap.put("address", GlbAddress.class);
+    }
+
+    @Inject
+    public GlbContactBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBf) {
+        super(contentBf, "gl_contact");
+    }
+
+    @Override
+    public String add(final GlbContact model) throws WebOSBOException {
+        if (StringUtils.hasLength(model.getUserCode())) {
+            final GlbContact data = loadByUserCode(model.getUserCode());
+
+            if (data != null) {
+                return data.getUuid();
+            }
+        }
+
+        return super.add(model);
+    }
+
+
+    /**
+     * @param userCode
+     * @return
+     */
+    public GlbContact loadByUserCode(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(GlobalConstant.USER_CODE).equal(userCode);
+
+        GlbContact contactInfo = this.load(query);
+        if (contactInfo == null) {
+            contactInfo = new GlbContact();
+            syncUserLdap(contactInfo, userCode);
+        }
+        return contactInfo;
+    }
+
+    /**
+     * @param contactInfo
+     * @param userCode
+     */
+    private void syncUserLdap(GlbContact contactInfo, String userCode) {
+        try {
+            final BaseAccountDTO baseAccount = ConfigureLoader.INSTANCE.ini()
+                    .getHdlUserProfile()
+                    .loadAccountProfile(userCode);
+
+            if (baseAccount != null) {
+                String fName = StringUtils.hasLength(baseAccount.getFname()) ? baseAccount.getFname() : "";
+                String mName = StringUtils.hasLength(baseAccount.getMname()) ? baseAccount.getMname() : "";
+                String lName = StringUtils.hasLength(baseAccount.getLname()) ? baseAccount.getLname() : "";
+
+                contactInfo.setUserCode(userCode);
+                contactInfo.setFirstName(fName);
+                contactInfo.setMiddleName(mName);
+                contactInfo.setLastName(lName);
+                contactInfo.setFullName(contactInfo.fullNameBuilder());
+                contactInfo.setCreatedDate(System.currentTimeMillis());
+                contactInfo.setModifiedDate(System.currentTimeMillis());
+
+                contactInfo.setUuid(super.add(contactInfo));
+            }
+        } finally {
+        }
+    }
+
+    /**
+     * @param userCode
+     * @return
+     */
+    public GlbContact loadByUserBase(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(GlobalConstant.USER_CODE).equal(userCode);
+        query.retrievedFields(true, "userCode", "firstName", "middleName", "lastName", "fullName", "avatar");
+
+        GlbContact contactInfo = this.load(query);
+        if (contactInfo == null) {
+            contactInfo = new GlbContact();
+            syncUserLdap(contactInfo, userCode);
+        }
+        return contactInfo;
+    }
+
+
+    /**
+     * @param userCode
+     * @return
+     */
+    public GlbContact verifyUserCode(String userCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(GlobalConstant.USER_CODE).equal(userCode);
+        query.retrievedFields(true, "userCode", "primaryEmail", "firstName", "middleName", "lastName", "sex");
+
+        return this.load(query);
+    }
+
+    /**
+     * @param userCodes
+     * @param keyword
+     * @return
+     */
+    public SearchDTO<GlbContact> queryByUserCode(String userCodes, String keyword) {
+        List<String> users = new ArrayList<>();
+        if (StringUtils.hasLength(userCodes)) {
+            users = CollectionUtils.asList(userCodes.split(","));
+        }
+        return this.queryByUserCode(users, keyword);
+    }
+
+    /**
+     * @param users
+     * @param keyword
+     * @return
+     */
+    public SearchDTO<GlbContact> queryByUserCode(final List<String> users, String keyword) {
+        return this.queryByUserCode(users, keyword, 0, 0);
+    }
+
+    /**
+     * @param keyword
+     * @param limit
+     * @param offset
+     * @return
+     */
+    public SearchDTO<GlbContactSuggest> suggestion(String keyword, int limit, int offset) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("officePhone").like(keyword),
+                    query.criteria("mobilePhone").like(keyword),
+                    query.criteria("primaryEmail").like(keyword),
+                    query.criteria("fullName").like(keyword)
+            ));
+
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+
+        return this.query(query, GlbContactSuggest.class);
+    }
+
+    /**
+     * @param users
+     * @param keyword
+     * @param limit
+     * @param offset
+     * @return
+     */
+    public SearchDTO<GlbContact> queryByUserCode(final List<String> users, String keyword, int limit, int offset) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        final CriteriaContainer container = query.or();
+
+        if (!CollectionUtils.isEmpty(users)) {
+            container.add(query.criteria(GlobalConstant.USER_CODE).in(users));
+        } else {
+            container.add(query.criteria(GlobalConstant.USER_CODE).like(keyword));
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            container.add(query.criteria("officePhone").like(keyword));
+            container.add(query.criteria("mobilePhone").like(keyword));
+            container.add(query.criteria("primaryEmail").like(keyword));
+            container.add(query.criteria("fullName").like(keyword));
+        }
+
+        query.and(container);
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+
+        return this.query(query);
+    }
+
+    @Override
+    protected Class<GlbContact> getClassConvetor() {
+        return GlbContact.class;
+    }
+
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenMap;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("userCode");
+    }
+}

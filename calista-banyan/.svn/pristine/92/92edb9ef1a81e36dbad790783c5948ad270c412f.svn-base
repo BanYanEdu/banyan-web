@@ -1,0 +1,130 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.util;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import net.sf.json.JSONObject;
+
+/**
+ * JsonUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: JsonUtils.java Mar 30, 2018 2:40:49 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class JsonUtils {
+  
+  /**
+   * Get string data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the result
+   */
+  public static String getString(JSONObject object, String key, String defaultValue) {
+    try {
+      return object.getString(key);
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Get string data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static String getString(JSONObject object, String key) {
+    return getString(object, key, null);
+  }
+  
+  /**
+   * Get long data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the result
+   */
+  public static long getLong(JSONObject object, String key, long defaultValue) {
+    try {
+      return object.getLong(key);
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Convert list of data to list of JSONObject
+   * 
+   * @param array the list of data
+   * @return the result
+   */
+  public static List<JSONObject> toJsonList(List<?> array) {
+    List<JSONObject> results = new LinkedList<>();
+    if (!CollectionUtils.isEmpty(array)) {
+      array.forEach(item -> results.add(JSONObject.fromObject(item)));
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Get int data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @param defaultValue the given default value
+   * @return the result
+   */
+  public static int getInt(JSONObject object, String key, int defaultValue) {
+    try {
+      return object.getInt(key);
+    } catch (Exception ex) {
+      return defaultValue;
+    }
+  }
+  
+  /**
+   * Get int data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static int getInt(JSONObject object, String key) {
+    return getInt(object, key, 0);
+  }
+  
+  /**
+   * Get long data from object with given key
+   * 
+   * @param object the given {@link JSONObject}
+   * @param key the given key
+   * @return the result
+   */
+  public static long getLong(JSONObject object, String key) {
+    return getLong(object, key, 0);
+  }
+}

@@ -1,0 +1,23 @@
+package com.inet.calista.crm.service.activity.task;
+
+import com.inet.calista.collatask.service.task.ViewService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+
+/**
+ * ViewTaskService.
+ *
+ * @author thoangtran
+ * @version ViewTaskService 2018 05-11 16:15
+ */
+@Named("crm_activity_tasks_vieweservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Biz common")
+@XPortalPageRequest(uri = "crm/activity/tasks/view", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class ViewTaskService extends ViewService {
+}

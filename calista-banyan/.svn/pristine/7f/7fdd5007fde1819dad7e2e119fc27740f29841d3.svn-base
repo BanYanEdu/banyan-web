@@ -1,0 +1,142 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.customquery;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.CustomQueryBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Field;
+import com.inet.calista.collatask.model.CustomQuery;
+import com.inet.calista.collatask.model.CustomQuery.Scope;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+
+/**
+ * CustomQueryService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CustomQueryService.java Apr 10, 2018 10:30:07 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class CustomQueryService extends CollabarationTaskService {
+	@Inject
+	protected CustomQueryBO customQueryBo;
+
+	/**
+	 * Get list of {@link Field} in parameters
+	 * 
+	 * @param params
+	 *            the given parameter
+	 * @return the list of {@link Field}
+	 * @throws ValidationException
+	 *             if error occurs during validating data
+	 */
+	protected List<Field> getFields(Map<String, Object> params) throws ValidationException {
+		String fieldsStr = XParamUtils.getString(CollaTaskJsonConstants.FIELDS_STR, params);
+		if (Strings.isNullOrEmpty(fieldsStr)) {
+			throw new ValidationException(
+					createViolationDto(CollaTaskJsonConstants.FIELDS_STR, ErrorCode.must_not_empty));
+		}
+
+		JSONArray array = JSONArray.fromObject(fieldsStr);
+		if (array == null || array.isEmpty()) {
+			throw new ValidationException(
+					createViolationDto(CollaTaskJsonConstants.FIELDS_STR, ErrorCode.must_not_empty));
+		}
+
+		List<Field> fields = new LinkedList<>();
+		Field field = null;
+		for (int index = 0; index < array.size(); index++) {
+			field = Field.fromObject(array.getJSONObject(index));
+			if (Strings.isNullOrEmpty(field.getName())) {
+				throw new ValidationException(createViolationDto("name", ErrorCode.must_not_empty));
+			}
+
+			fields.add(field);
+		}
+
+		return fields;
+	}
+
+	/**
+	 * Load task information from UUID
+	 * 
+	 * @param params
+	 *            the given parameters
+	 * @return the result
+	 * @throws ValidationException
+	 *             if submission invalids
+	 */
+	protected CustomQuery loadCustomQuery(String orgCode, Map<String, Object> params) throws ValidationException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+		}
+
+		// load custom query from given UUID
+		CustomQuery customQuery = customQueryBo.findByUuid(orgCode, uuid);
+
+		if (customQuery == null) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+		}
+
+		return customQuery;
+	}
+
+	/**
+	 * Return the scope of custom query
+	 * 
+	 * @param action
+	 *            the given action
+	 * @param params
+	 *            the given parameters
+	 * @return the scope
+	 * @throws ValidationException
+	 *             if submission invalids
+	 */
+	protected String getScope(AbstractBaseAction action, Map<String, Object> params) throws ValidationException {
+		String scope = XParamUtils.getString(CollaTaskJsonConstants.SCOPE, params);
+		if (Strings.isNullOrEmpty(scope)) {
+			return Scope.personal.name();
+		}
+
+		// check scope
+		if (!Scope.isValid(scope)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.SCOPE, ErrorCode.invalid));
+		}
+
+		// check security when create company scope
+		if (Scope.company.name().equals(scope) && !SecurityUtil.matchedRoles(action, Roles.CUSTOM_QUERY)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.SCOPE, ErrorCode.forbidden));
+		}
+
+		return scope;
+	}
+}

@@ -1,0 +1,414 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.book.bo;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.inet.calista.erp.book.data.ERPPurchaseSummary;
+import com.inet.calista.erp.book.data.ERPSaleSummary;
+import com.inet.calista.erp.book.model.ERPDiaryBook;
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.GroupOperator;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.mongodb.BasicDBList;
+import com.mongodb.BasicDBObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPStockBookBO.java Apr 17, 2018 15:14 phongtt $
+ * @since 1.0
+ */
+@Named("ERPDiaryBookBO")
+public class ERPDiaryBookBO extends ERPBaseBO<ERPDiaryBook> implements BeanInitiateInvoke {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPDiaryBookBO.class);
+
+    @Inject
+    protected ERPDiaryBookBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_diary_book");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPDiaryBook> getClassConvetor() {
+        return ERPDiaryBook.class;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("outletId");
+        ensureIndex("module");
+        ensureIndex("voucherCode");
+        ensureIndex("voucherDate");
+
+        ensureIndex("prodCode");
+        ensureIndex("prodName");
+        ensureIndex("group");
+        ensureIndex("unit");
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBuilder(String organId, String outletId, String module, String voucherCode) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("module").equal(module);
+
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (StringUtils.hasLength(voucherCode)) {
+            query.field("voucherCode").equal(voucherCode);
+        }
+
+        return query;
+    }
+
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param module
+     * @param voucherCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public void diaryBookRemove(String organId, String outletId, String module, String voucherCode) throws WebOSBOException {
+        super.remove(queryBuilder(organId, outletId, module, voucherCode));
+    }
+
+    /**
+     * @param book
+     * @return
+     * @throws WebOSBOException
+     */
+    public String diaryBookAdd(final ERPDiaryBook book) throws WebOSBOException {
+        return super.add(book);
+    }
+
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPSaleSummary> saleSummary(String organId, String outletId,
+                                                 final List<String> modules,
+                                                 long from, long to, int groupType,
+                                                 int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (!CollectionUtils.isEmpty(modules))
+            query.field("module").in(modules);
+
+        if (StringUtils.hasLength(outletId))
+            query.field("outletId").equal(outletId);
+
+        if (from > 0)
+            query.field("voucherDate").greaterThanOrEq(from);
+        if (to > 0)
+            query.field("voucherDate").lessThanOrEq(to);
+
+        if (offset > 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (groupType) {
+            case 0: //group by prodCode
+                query.projection("prodCode", "prodName", "amount");
+                query.group(GroupOperator.FIRST, "prodCode", "prodName");
+                query.group(GroupOperator.SUM, false, "amount");
+                break;
+            case 1://group by salemans
+            case 2://group by customer
+            case 3://group by employee
+            case 4://group by day
+            case 5://group by month
+            case 6://group by year
+                Map<String, Object> group;
+                String jsonString = "";
+
+                final BasicDBList objects = new BasicDBList();
+                objects.add(new BasicDBObject("$match", query.getQueryObject()));
+
+                jsonString += "{";
+                jsonString += "_id: {";
+                jsonString += "voucherCode: '$voucherCode'";
+
+                if (groupType == 1) {
+                    jsonString += ",salesmanId: '$salesmanId'";
+                } else if (groupType == 2) {
+                    jsonString += ",customerId: '$customerId'";
+                } else if (groupType == 3) {
+                    jsonString += ",employeeId: '$employeeId'";
+                } else if (groupType == 4) {
+                    jsonString += ",year: '$year'";
+                    jsonString += ",month: '$month'";
+                    jsonString += ",day: '$day'";
+                } else if (groupType == 5) {
+                    jsonString += ",year: '$year'";
+                    jsonString += ",month: '$month'";
+                } else if (groupType == 6) {
+                    jsonString += ",year: '$year'";
+                }
+
+                jsonString += "}, ";
+                jsonString += "salesmanId: {$max: '$salesmanId'},";
+                jsonString += "salesmanName: {$max: '$salesmanName'},";
+                jsonString += "customerId: {$max: '$customerId'},";
+                jsonString += "customerName: {$max: '$customerName'},";
+                jsonString += "employeeId: {$max: '$employeeId'},";
+                jsonString += "employeeName: {$max: '$employeeName'},";
+                jsonString += "year: {$max: '$year'},";
+                jsonString += "month: {$max: '$month'},";
+                jsonString += "day: {$max: '$day'},";
+
+                jsonString += "totalAmountEx: {$max: '$totalAmountEx'},";
+                jsonString += "totalDiscAmountEx: {$max: '$totalDiscAmountEx'},";
+                jsonString += "totalVatAmountEx: {$max: '$totalVatAmountEx'},";
+                jsonString += "totalPaymentAmountEx: {$max: '$totalPaymentAmountEx'}";
+                jsonString += "}";
+
+                group = new Gson().fromJson(jsonString,
+                        new TypeToken<HashMap<String, Object>>() {
+                        }.getType());
+
+                objects.add(new BasicDBObject("$group", group));
+
+                jsonString = "{";
+                jsonString += "_id: {";
+
+                if (groupType == 1) {
+                    jsonString += "salemansId: '$_id.salemansId'";
+                } else if (groupType == 2) {
+                    jsonString += "customerId: '$_id.customerId'";
+                } else if (groupType == 3) {
+                    jsonString += "employeeId: '$_id.employeeId'";
+                } else if (groupType == 4) {
+                    jsonString += "year: '$_id.year'";
+                    jsonString += ",month: '$_id.month'";
+                    jsonString += ",day: '$_id.day'";
+                } else if (groupType == 5) {
+                    jsonString += "year: '$_id.year'";
+                    jsonString += ",month: '$_id.month'";
+                } else if (groupType == 6) {
+                    jsonString += "year: '$_id.year'";
+                }
+
+                jsonString += "}, ";
+                jsonString += "salesmanId: {$max: '$salesmanId'},";
+                jsonString += "salesmanName: {$max: '$salesmanName'},";
+                jsonString += "customerId: {$max: '$customerId'},";
+                jsonString += "customerName: {$max: '$customerName'},";
+                jsonString += "employeeId: {$max: '$employeeId'},";
+                jsonString += "employeeName: {$max: '$employeeName'},";
+                jsonString += "year: {$max: '$year'},";
+                jsonString += "month: {$max: '$month'},";
+                jsonString += "day: {$max: '$day'},";
+                jsonString += "totalAmountEx: {$sum: '$totalAmountEx'},";
+                jsonString += "totalDiscAmountEx: {$sum: '$totalDiscAmountEx'},";
+                jsonString += "totalVatAmountEx: {$sum: '$totalVatAmountEx'},";
+                jsonString += "totalPaymentAmountEx: {$sum: '$totalPaymentAmountEx'}";
+                jsonString += "}";
+
+                group = new Gson().fromJson(jsonString,
+                        new TypeToken<HashMap<String, Object>>() {
+                        }.getType());
+
+                objects.add(new BasicDBObject("$group", group));
+
+                query.pipeline(objects);
+                break;
+        }
+
+        logger.debug("Sale Summary Query {}", query);
+
+        return super.query(query, ERPSaleSummary.class);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPurchaseSummary> purchaseSummary(String organId, String outletId,
+                                                         final List<String> modules,
+                                                         long from, long to, int groupType,
+                                                         int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (!CollectionUtils.isEmpty(modules))
+            query.field("module").in(modules);
+
+        if (StringUtils.hasLength(outletId))
+            query.field("outletId").equal(outletId);
+
+        if (from > 0)
+            query.field("voucherDate").greaterThanOrEq(from);
+        if (to > 0)
+            query.field("voucherDate").lessThanOrEq(to);
+
+        if (offset > 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (groupType) {
+            case 0: //group by prodCode
+                query.projection("prodCode", "prodName", "amount");
+                query.group(GroupOperator.FIRST, "prodCode", "prodName");
+                query.group(GroupOperator.SUM, false, "amount");
+                break;
+            case 1://group by salemans
+            case 2://group by supplier
+            case 3://group by employee
+            case 4://group by day
+            case 5://group by month
+            case 6://group by year
+                Map<String, Object> group;
+                String jsonString = "";
+
+                final BasicDBList objects = new BasicDBList();
+                objects.add(new BasicDBObject("$match", query.getQueryObject()));
+
+                jsonString += "{";
+                jsonString += "_id: {";
+                jsonString += "voucherCode: '$voucherCode'";
+
+                if (groupType == 1) {
+                } else if (groupType == 2) {
+                    jsonString += ",supplierId: '$supplierId'";
+                } else if (groupType == 3) {
+                    jsonString += ",employeeId: '$employeeId'";
+                } else if (groupType == 4) {
+                    jsonString += ",year: '$year'";
+                    jsonString += ",month: '$month'";
+                    jsonString += ",day: '$day'";
+                } else if (groupType == 5) {
+                    jsonString += ",year: '$year'";
+                    jsonString += ",month: '$month'";
+                } else if (groupType == 6) {
+                    jsonString += ",year: '$year'";
+                }
+
+                jsonString += "}, ";
+                jsonString += "supplierId: {$max: '$supplierId'},";
+                jsonString += "supplierName: {$max: '$supplierName'},";
+                jsonString += "employeeId: {$max: '$employeeId'},";
+                jsonString += "employeeName: {$max: '$employeeName'},";
+                jsonString += "year: {$max: '$year'},";
+                jsonString += "month: {$max: '$month'},";
+                jsonString += "day: {$max: '$day'},";
+
+                jsonString += "totalAmountEx: {$max: '$totalAmountEx'},";
+                jsonString += "totalDiscAmountEx: {$max: '$totalDiscAmountEx'},";
+                jsonString += "totalVatAmountEx: {$max: '$totalVatAmountEx'},";
+                jsonString += "totalPaymentAmountEx: {$max: '$totalPaymentAmountEx'}";
+                jsonString += "}";
+
+                group = new Gson().fromJson(jsonString,
+                        new TypeToken<HashMap<String, Object>>() {
+                        }.getType());
+
+                objects.add(new BasicDBObject("$group", group));
+
+                jsonString = "{";
+                jsonString += "_id: {";
+
+                if (groupType == 1) {
+                } else if (groupType == 2) {
+                    jsonString += "supplierId: '$_id.supplierId'";
+                } else if (groupType == 3) {
+                    jsonString += "employeeId: '$_id.employeeId'";
+                } else if (groupType == 4) {
+                    jsonString += "year: '$_id.year'";
+                    jsonString += ",month: '$_id.month'";
+                    jsonString += ",day: '$_id.day'";
+                } else if (groupType == 5) {
+                    jsonString += "year: '$_id.year'";
+                    jsonString += ",month: '$_id.month'";
+                } else if (groupType == 6) {
+                    jsonString += "year: '$_id.year'";
+                }
+
+                jsonString += "}, ";
+                jsonString += "supplierId: {$max: '$supplierId'},";
+                jsonString += "supplierName: {$max: '$supplierName'},";
+                jsonString += "employeeId: {$max: '$employeeId'},";
+                jsonString += "employeeName: {$max: '$employeeName'},";
+                jsonString += "year: {$max: '$year'},";
+                jsonString += "month: {$max: '$month'},";
+                jsonString += "day: {$max: '$day'},";
+                jsonString += "totalAmountEx: {$sum: '$totalAmountEx'},";
+                jsonString += "totalDiscAmountEx: {$sum: '$totalDiscAmountEx'},";
+                jsonString += "totalVatAmountEx: {$sum: '$totalVatAmountEx'},";
+                jsonString += "totalPaymentAmountEx: {$sum: '$totalPaymentAmountEx'}";
+                jsonString += "}";
+
+                group = new Gson().fromJson(jsonString,
+                        new TypeToken<HashMap<String, Object>>() {
+                        }.getType());
+
+                objects.add(new BasicDBObject("$group", group));
+
+                query.pipeline(objects);
+                break;
+        }
+
+        logger.debug("Purchase Summary Query {}", query);
+
+        return super.query(query, ERPPurchaseSummary.class);
+    }
+}

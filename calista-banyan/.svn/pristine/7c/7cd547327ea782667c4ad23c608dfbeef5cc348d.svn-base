@@ -1,0 +1,102 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.property;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.calista.erp.masterdata.bo.ERPItemPropertyBO;
+import com.inet.calista.erp.masterdata.model.ERPItemProperty;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * PropertyUpdateService.
+ *
+ * @author Phong Tran
+ * @version $Id: PropertyUpdateService.java Dec 21, 2016 20:47 phongtt $
+ * @since 1.0
+ */
+@Named("commercepropertyupdate")
+@XPortalDataService(roles = {ECMConstant.ROLE_ADMIN}, description = ECMConstant.ROLE_ADMIN_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/property/update",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class PropertyUpdateService extends CommerceBaseAbstraction {
+    @Inject
+    private ERPItemPropertyBO propertyBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        String propertyId = XParamUtils.getString("propertyId", params);
+        final ERPItemProperty info = propertyBO.loadById(orgItem.getOrganId(), propertyId);
+        validated(action, info, "PROPERTY", "PROPERTY_NOT_FOUND", String.format("property %s is not found", propertyId));
+
+        final ERPItemProperty property = action.getModel(ERPItemProperty.class);
+        property.copyData(info);
+        validated(action, property.getCode(), "PROPERTY", "CODE_IS_MISSED", "code is required!");
+        validated(action, property.getName(), "PROPERTY", "NAME_IS_MISSED", "name is required!");
+
+        final ERPItemProperty existedCode = propertyBO.loadByCode(orgItem.getOrganId(), property.getCode());
+        if (existedCode != null && !existedCode.getUuid().equals(propertyId)) {
+            errors(action, "PROPERTY", "CODE_EXISTS", "code is exists!");
+        }
+
+        String valueStr = XParamUtils.getString("valueStr", params, StringUtils.EMPTY_STRING);
+        if (StringUtils.hasLength(valueStr)) {
+            property.getValueStr().clear();
+
+            final JSONObject json = JSONObject.fromObject("{items:" + valueStr + "}");
+            final Object items = json.get("items");
+            if (items instanceof JSONArray) {
+                for (int i = 0; i < ((JSONArray) items).size(); i++) {
+                    if (!property.getValueStr().contains(((JSONArray) items).getString(i))) {
+                        property.getValueStr().add(((JSONArray) items).getString(i));
+                    }
+                }
+            }
+        }
+
+        propertyBO.update(property.getUuid(), property);
+
+        return new ObjectWebDataservice<>(property);
+    }
+}

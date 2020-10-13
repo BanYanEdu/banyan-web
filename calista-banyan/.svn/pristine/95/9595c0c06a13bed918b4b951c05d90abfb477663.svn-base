@@ -1,0 +1,29 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * JobVisit
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobVisit.java Feb 6, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class JobVisit {
+    private String uuid;
+    private String jobpostId;
+    private String jobTitle;
+    private String organId;
+    private String employerName;
+    private String username;    // Candidate Cod / Name / ID
+    private String candidateName;
+    private String candidateProfileTitle;
+    private Long visitedDate;
+    private Long lastVisitedDate;
+    private Boolean asLast;
+}

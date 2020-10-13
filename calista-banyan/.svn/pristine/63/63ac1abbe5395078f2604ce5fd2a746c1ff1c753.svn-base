@@ -1,0 +1,93 @@
+package com.inet.calista.global.subfirmservice;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.global.bo.GlbReportTemplateBo;
+import com.inet.calista.global.bo.GlbObjectDocumentBo;
+import com.inet.calista.global.model.GlbReportTemplate;
+import com.inet.xportal.document.dataservice.DocumentUploadDataservice;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.StringUUID;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * AbstractObjectDocumentService.
+ *
+ * @author thoangtran
+ * @version AbstractObjectDocumentService 2019 07-02 15:08
+ */
+public abstract class AbstractObjectDocumentService  extends DocumentUploadDataservice {
+
+  @Inject
+  protected GlbObjectDocumentBo objectDocumentBo;
+
+  @Inject
+  protected GlbReportTemplateBo templateBo;
+
+  /**
+   *
+   * @param template
+   */
+  protected void validator(GlbReportTemplate template, boolean isUpdate){
+    if(Strings.isNullOrEmpty(template.getApplication())){
+      action.getViolation().add(new ViolationDTO("application", ErrorCode.MUST_NOT_EMPTY,1,""));
+      throw new WebOSBOException("Bad request!");
+    }
+    if(Strings.isNullOrEmpty(template.getModule())){
+      action.getViolation().add(new ViolationDTO("module", ErrorCode.MUST_NOT_EMPTY,1,""));
+      throw new WebOSBOException("Bad request!");
+    }
+    if(Strings.isNullOrEmpty(template.getType())){
+      action.getViolation().add(new ViolationDTO("type", ErrorCode.MUST_NOT_EMPTY,1,""));
+      throw new WebOSBOException("Bad request!");
+    }
+    if(Strings.isNullOrEmpty(template.getOrganId())){
+      action.getViolation().add(new ViolationDTO("organId", ErrorCode.MUST_NOT_EMPTY,1,""));
+      throw new WebOSBOException("Bad request!");
+    }
+    if(isUpdate) {
+      if(Strings.isNullOrEmpty(template.getUuid())){
+        action.getViolation().add(new ViolationDTO("uuid", ErrorCode.MUST_NOT_EMPTY,1,""));
+        throw new WebOSBOException("Bad request!");
+      }
+      if(!templateBo.existById(template.getUuid())) {
+        action.getViolation().add(new ViolationDTO("uuid", ErrorCode.NOT_EXISTS,1,""));
+        throw new WebOSBOException("Bad request!");
+      }
+    }
+  }
+
+  /**
+   * Get folder to save
+   *
+   * @param params the given parameter with key folder
+   * @return the given folder, it's will auto generation reference if not exist
+   */
+  protected String getFolder(Map<String, Object> params) {
+    String folder = XParamUtils.getString("folder", params);
+    if (!StringUtils.hasLength(folder)) {
+      folder = StringUUID.uniqueToken();
+    }
+    return folder;
+  }
+
+  /**
+   * Get reference
+   *
+   * @param params the given params from service
+   * @return the given reference, it's will auto generation reference if not exist
+   */
+  protected String getReference(Map<String, Object> params) {
+    String folder = XParamUtils.getString("reference", params);
+    if (!StringUtils.hasLength(folder)) {
+      folder = StringUUID.uniqueToken();
+    }
+    return folder;
+  }
+
+}

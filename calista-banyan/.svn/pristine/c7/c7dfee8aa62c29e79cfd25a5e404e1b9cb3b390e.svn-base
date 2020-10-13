@@ -1,0 +1,70 @@
+package com.inet.calista.crm.service.setting.dicts;
+
+import com.inet.calista.crm.bo.setting.DictionaryBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.setting.configuration.Dictionary;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.calista.crm.util.CommonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * CloneMasterService.
+ *
+ * @author thoangtran
+ * @version CloneMasterService 2018 04-10 13:50
+ */
+@Named("crm_setting_dict_master_cloneservice")
+@XPortalDataService(roles = { Roles.SETTING_DICT}, description = "Find dictionaries by given keys")
+@XPortalPageRequest(uri = "crm/setting/dicts/master/clone", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CloneMasterService extends CRMAbstractService {
+  @Inject
+  private DictionaryBo bo;
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile,
+                                   final  AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try {
+      final List<String> uuids = CommonUtils.toStringList(XParamUtils.getString(CommonConstant.IDS, params));
+      List<Dictionary> dicts;
+      if(uuids.size() > 0) {
+        dicts= bo.findByIds(uuids, CommonConstant.MASTER);
+      } else dicts = bo.findAll(CommonConstant.MASTER);
+
+      if(dicts.size() > 0) {
+        for (Dictionary dict :dicts) {
+          dict.setUuid(StringUtils.EMPTY_STRING);
+          dict.setOrgCode(firmProfile.getOrganiId());
+          if(!bo.isExisted(dict.getKey(), dict.getValue(), dict.getType(), firmProfile.getOrganiId()))
+            dict.setUuid(bo.add(dict));
+        }
+      }
+      return new ObjectWebDataservice<>(dicts);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during update dictionary", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

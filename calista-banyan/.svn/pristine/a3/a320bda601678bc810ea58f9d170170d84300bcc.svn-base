@@ -1,0 +1,87 @@
+package com.inet.calista.crm.service.activity.event;
+
+import com.inet.calista.crm.bo.activity.EventBo;
+import com.inet.calista.crm.bo.essentials.ContactBo;
+import com.inet.calista.crm.bo.essentials.EntityBo;
+import com.inet.calista.crm.model.common.Responsible;
+import com.inet.calista.crm.model.common.Communication;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.util.JsonUtils;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+
+import javax.inject.Inject;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * EventService.
+ *
+ * @author thoangtran
+ * @version EventService 2019 01-22 15:50
+ */
+
+public abstract class EventService extends CRMAbstractService {
+  @Inject
+  protected EventBo eventBo;
+
+  /**
+   *
+   * @param params
+   * @return
+   * @throws JSONException
+   */
+  protected Set<Communication> getCommunications(Map<String, Object> params) throws JSONException {
+    final  Set<Communication> communications = new HashSet<>();
+    if(params.containsKey("communicationsStr")){
+      JSONArray array = JsonUtils.toJsonArray(XParamUtils.getString("communicationsStr", params));
+      if(null != array) {
+        for(int i = 0 ; i < array.length(); i++){
+          communications.add(Communication.transform(array.getJSONObject(i)));
+        }
+      }
+    }
+    return communications;
+  }
+
+  /**
+   *
+   * @param params
+   * @return
+   * @throws JSONException
+   */
+  protected Responsible getResponsible(Map<String, Object> params)  throws JSONException{
+    if(params.containsKey("responsibleStr") && StringUtils.hasLength(XParamUtils.getString("responsibleStr"))) {
+      return Responsible.transform(JsonUtils.toJsonObject(XParamUtils.getString("responsibleStr")));
+    }
+    return null;
+  }
+
+/*
+  *//**
+   * Update event
+   * @param event
+   *//*
+  protected void resoveEvent(Event event){
+    if(StringUtils.hasLength(event.getContactId())){
+      Contact contact = contactBo.load(event.getContactId());
+      if(null != contact) {
+        event.setContactId(contact.getUuid());
+        event.setContactName(contact.getFullName());
+        if(Strings.isNullOrEmpty(event.getEntityId())) {
+          event.setEntityId(event.getEntityId());
+        }
+      }
+    }
+    if(StringUtils.hasLength(event.getEntityId())) {
+      final Entity entity = entityBo.load(event.getEntityId());
+      event.setEntityName(entity.getName());
+    }
+  }*/
+
+
+}

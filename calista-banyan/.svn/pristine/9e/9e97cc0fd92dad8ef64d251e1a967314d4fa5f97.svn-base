@@ -1,0 +1,120 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.conversation;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ProjectBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ConversationConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Member;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * CreateProjectConversationService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CreateProjectConversationService.java May 2, 2018 9:51:25 AM
+ *          tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_conversation_createprojectconversationservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON }, description = "")
+@XPortalPageRequest(uri = "colla/conversations/createprojectconv", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CreateProjectConversationService extends CreateConversationService {
+	@Inject
+	private ProjectBO projectBo;
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			putError(action, CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty);
+			return FAILURE_RESULT;
+		}
+
+		// load project from given UUID
+		Project project = projectBo.findByUuid(getOrgCode(site, subFirm), uuid);
+
+		if (project == null) {
+			putError(action, CollaTaskJsonConstants.UUID, ErrorCode.invalid);
+			return FAILURE_RESULT;
+		}
+
+		// send notification
+		sendConversation(site.getUuid(), action.getMultilangual(), project.getOrgCode(), project.getCreatorUname(),
+				project.getCreatorName(), project.getUuid(), project.getName(), getReceiver(project));
+		return null;
+	}
+
+	/**
+	 * Return the receiver
+	 * 
+	 * @param project
+	 *            the given {@link Project} information
+	 * @return the list of receivers
+	 */
+	private List<String> getReceiver(Project project) {
+		if (CollectionUtils.isEmpty(project.getMembers())) {
+			return new ArrayList<>();
+		}
+
+		return new LinkedList<>(project.getMembers().stream().map(Member::getUname).collect(Collectors.toSet()));
+	}
+
+	@Override
+	protected String getRefType() {
+		return ReferenceType.project.name();
+	}
+
+	@Override
+	protected String getConversationCategory() {
+		return ConversationConstants.COLLATASK_PROJECT_CONVERSATION_CATEGORY;
+	}
+
+	@Override
+	protected String getConversationType() {
+		return ConversationConstants.COLLATASK_PROJECT_CONVERSATION_TYPE;
+	}
+}

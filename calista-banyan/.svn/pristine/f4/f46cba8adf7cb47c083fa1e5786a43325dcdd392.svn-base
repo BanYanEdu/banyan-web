@@ -1,0 +1,56 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.data;
+
+import com.inet.calista.erp.inventory.data.ERPStockMovementItem;
+import org.apache.shiro.util.StringUtils;
+
+/**
+ * com.inet.platform.pos.data.
+ *
+ * @author Phong Tran
+ * @version $Id: POSSaleItem.java Jun 07, 2018 16:26 phongtt $
+ * @since 1.0
+ */
+public class POSStockMovementItem extends ERPStockMovementItem {
+
+    public POSStockMovementItem withUuid(String uuid) {
+        super.setUuid(uuid);
+        return this;
+    }
+
+    public POSStockMovementItem calc() {
+        super.calcData();
+        return this;
+    }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj != null && obj instanceof POSStockMovementItem) {
+            if (StringUtils.hasLength(this.getSku()) && this.getSku().equals(((POSStockMovementItem) obj).getSku())) {
+                return true;
+            } else {
+                return super.equals(obj);
+            }
+        }
+
+        return super.equals(obj);
+    }
+}

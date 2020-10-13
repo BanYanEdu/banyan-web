@@ -1,0 +1,23 @@
+package com.inet.calista.global.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * GlobalSearch.
+ *
+ * @author thoangtran
+ * @version GlobalSearch 2018 06-13 15:26
+ */
+@Getter
+@Setter
+public class GlobalSearch {
+  private String salutationType;
+  private String lastName;
+  private String firstName;
+  private String mobilePhone;
+  private String email;
+  private String type;
+  private String website;
+  private String industry;
+}

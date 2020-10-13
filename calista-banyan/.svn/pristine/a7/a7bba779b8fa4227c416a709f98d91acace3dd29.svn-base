@@ -1,0 +1,47 @@
+package com.inet.calista.crm.service;
+
+import com.inet.calista.crm.cache.CRMCacheManager;
+import com.inet.calista.crm.dto.SearchCriteria;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import java.util.Map;
+
+/**
+ * SearchService.
+ *
+ * @author thoangtd
+ * @version $$Id: SearchService 6/20/16 2:15 PM thoangtd $$
+ * @since 1.0
+ */
+public abstract class SearchService<T> extends CRMAbstractService {
+
+  /**
+   * Create search criteria instance
+   *
+   * @param action the given action
+   * @param params the given parameters
+   * @return the given criteria
+   */
+  protected SearchCriteria<T> getCriteria(SubFirmProfile firmProfile, AbstractBaseAction action, Map<String, Object> params) {
+    SearchCriteria<T> criteria = new SearchCriteria<>();
+    criteria.setPageSize(XParamUtils.getInteger("pageSize", params, CRMCacheManager.INSTANCE.getSysConfigCacheManager().getIntItem("item_per_page", firmProfile.getOrganiId(), 20)));
+    criteria.setPageNumber(XParamUtils.getInteger("pageNumber", params, 0));
+    criteria.setSortField(XParamUtils.getString("sortField", params));
+    criteria.setSortAsc(XParamUtils.getInteger("sortAsc", params, -1));
+    criteria.setCriteria(action.getModel(getModelClass()));
+    criteria.setType(XParamUtils.getString("type", params));
+
+    return criteria;
+  }
+
+  /**
+   * Return the model class
+   *
+   * @return the model class
+   */
+  protected abstract Class<T> getModelClass();
+}
+

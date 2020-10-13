@@ -1,0 +1,28 @@
+package com.inet.jobportal.bf;
+
+import com.inet.xportal.nosql.web.bo.AbstractPairValueBO;
+import com.inet.xportal.nosql.web.provider.CloudConfigAbstraction;
+import com.inet.xportal.web.context.ApplicationContext;
+import com.inet.xportal.web.context.ContentContext;
+
+import javax.enterprise.inject.Default;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+@ApplicationContext(context = "CloudJobPortalConfigBF")
+@Default
+@Named("CloudJobPortalConfigBF")
+@Singleton
+public class CloudJobPortalConfigBF extends CloudConfigAbstraction {
+    /**
+     *
+     * @return
+     */
+    @Inject
+    public CloudJobPortalConfigBF(@ContentContext(context="CloudPairValue") AbstractPairValueBO pairValueBO)
+    {
+        //super(pairValueBO,"cloud-app-template-config","cloud-app-template.properties");
+        super(pairValueBO,"cloud-jobportal-config","cloud-jobportal.properties");
+    }
+}

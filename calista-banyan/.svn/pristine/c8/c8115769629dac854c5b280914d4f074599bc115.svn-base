@@ -1,0 +1,66 @@
+package com.inet.calista.crm.model.essentials;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.model.common.Address;
+import com.inet.calista.crm.model.common.Source;
+import com.inet.calista.crm.model.setting.internal.LinkTo;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Set;
+
+/**
+ * Organization.
+ *
+ * @author thoangtran
+ * @version Organization 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class Entity extends NoSqlModel<Entity> {
+  public final static String COLLECTION = "erp_md_entity";
+  private String objectType = EntityType.organization.name();
+
+  private String name; // required
+  private String primaryPhone;
+
+  private String organId; // link to global contact
+  private String foreignName;
+  private String abbreviationName;
+  private String address; // dia chi cong ty
+  private String taxCode;
+  private String primaryEmail;
+  private String website;
+  private String fax;
+  private int foundedYear; // Năm thanh lap
+  private String legalRepName; // dai hien phap luat
+  private String legalRepCanonId; // link to contact
+  //
+  private String companySize;
+  private String industry; // LINH HOAT ĐỘNG
+  private Set<String> busAces; // NGHANH NGHE
+  private String memberOfId; // Parent Org
+
+  private String region; //
+
+  private String description;
+  private Address officeAddress;
+
+  private String type ; // refer entity type
+  private String status;
+ // private String region;
+  private LinkTo assignTo;
+
+  // optional
+  private boolean emailOptOut;
+  private String sICCode;
+  private String sLAName;
+  private String code; // auto generate
+  private String source = Source.crm.name(); // defined source
+
+
+  @Override
+  protected boolean equals(Entity other) {
+    return false;
+  }
+}

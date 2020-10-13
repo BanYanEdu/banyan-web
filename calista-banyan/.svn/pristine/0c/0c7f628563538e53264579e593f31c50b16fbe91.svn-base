@@ -1,0 +1,21 @@
+package com.inet.calista.crm.model.setting.configuration;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Currency.
+ *
+ * @author thoangtran
+ * @version Currency 2018 04-06 10:24
+ */
+@Getter
+@Setter
+public class Currency {
+  private String name;
+  private String code;
+  private String symbol;
+  private long rate;
+  private boolean active = true;
+
+}

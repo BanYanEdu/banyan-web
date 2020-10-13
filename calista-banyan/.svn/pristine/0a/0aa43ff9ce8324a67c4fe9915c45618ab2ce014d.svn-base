@@ -1,0 +1,76 @@
+package com.inet.calista.crm.service.setting.dicts;
+
+import com.google.common.collect.Lists;
+import com.inet.calista.crm.bo.setting.DictionaryBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.setting.configuration.Dictionary;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.calista.crm.util.CommonUtils;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * DeleteService.
+ *
+ * @author thoangtd
+ * @version $$Id: DeleteService 6/2/16 3:55 PM thoangtd $$
+ * @since 1.0
+ */
+@Named("crm_setting_dict_deleteservice")
+@XPortalDataService(roles = { Roles.SETTING_DICT}, description = "")
+@XPortalPageRequest(uri = "crm/setting/dicts/delete", transaction = true, inherit = true,  dispatch = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class DeleteService extends CRMAbstractService {
+  //~ class properties ===================================
+  @Inject
+  private DictionaryBo dictionaryBo;
+
+  //~ class members =======================================
+
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile,
+                                   final  AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try {
+      List<String> ids = CommonUtils.toStringList(
+        XParamUtils.getString(CommonConstant.IDS, params));
+      if (ids.isEmpty()) {
+        putError(action, CommonConstant.IDS, ErrorCode.invalid);
+        return FAILURE_RESULT;
+      }
+      // delete dictionary
+      for (String id: ids) {
+        final Dictionary dict = dictionaryBo.load(id);
+        if(dict.isBelongOrg(firmProfile.getOrganiId()) && Dictionary.Type.key.name().equals(dict.getType())){
+          dictionaryBo.removeByKey(dict.getKey(), firmProfile.getOrganiId());
+        } else {
+          dictionaryBo.remove(Lists.newArrayList(dict.getUuid()), firmProfile.getOrganiId());
+        }
+      }
+
+      return SUCCESS_RESULT;
+    } catch (Exception ex) {
+      CRMBusinessException iex =  new CRMBusinessException("Error occurs during deleting dictionary", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

@@ -1,0 +1,96 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.bo.GlbOrganizationBO;
+import com.inet.calista.global.data.GlbBank;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.subfirmservice.
+ *
+ * @author Phong Tran
+ * @version : OrganBankDeleteService.java Jun 12, 2019 15:48 phongtt $
+ * @since 1.0
+ */
+@Named("glorganbankdelete")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN},
+        description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/organ/bank/delete",
+        transaction = true,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class OrganBankDeleteService extends GlbAbstraction {
+    @Inject
+    private GlbOrganizationBO organBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site,
+                                     final SubFirmProfile profile,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        final GlbOrganization organ = organBO.loadByOrganId(getOrganId(site, profile));
+        if (organ == null) {
+            logger.error("Organ is missed !...");
+            putError(action, "ORGAN", "ORGAN_IS_MISSED");
+            throw new WebOSBOException("Bad request!");
+        }
+
+        String bankIds = XParamUtils.getString("bankIds", params, StringUtils.EMPTY_STRING);
+        final StringBuilder bankIdDelete = new StringBuilder();
+        if (!CollectionUtils.isEmpty(organ.getBanks()) && StringUtils.hasLength(bankIds)) {
+            bankIds = String.format(",%s,", bankIds);
+            for (int i = organ.getBanks().size() - 1; i >= 0; i--) {
+                final GlbBank bankIndex = organ.getBanks().get(i);
+                if (bankIndex != null && StringUtils.hasLength(bankIndex.getBankId())) {
+                    if (bankIds.contains(String.format(",%s,", bankIndex.getBankId()))) {
+                        bankIdDelete.append(bankIndex.getBankId()).append(",");
+                        organ.getBanks().remove(i);
+                    }
+                }
+            }
+        }
+
+        if (StringUtils.hasLength(bankIdDelete.toString())) {
+            organBO.update(organ.getUuid(), organ);
+        }
+
+
+        return new ObjectWebDataservice<>(bankIdDelete.toString());
+    }
+}

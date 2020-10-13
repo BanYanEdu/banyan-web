@@ -1,0 +1,635 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.masterdata.data.ERPPriceItem;
+import com.inet.calista.erp.masterdata.message.PriceForDayMessage;
+import com.inet.calista.erp.masterdata.model.ERPItem;
+import com.inet.calista.erp.masterdata.model.ERPPriceDaily;
+import com.inet.calista.erp.masterdata.model.ERPPriceList;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.erp.masterdata.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPPriceDailyBO.java Jan 04, 2019 16:41 phongtt $
+ * @since 1.0
+ */
+@Named("ERPPriceDailyBO")
+public class ERPPriceDailyBO extends MagicContentBO<ERPPriceDaily> implements BeanInitiateInvoke {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPPriceDailyBO.class);
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+    }
+
+    @Inject
+    private ERPPriceListBO priceListBO;
+    @Inject
+    private ERPItemBO productBO;
+
+    @Inject
+    protected ERPPriceDailyBO(@ContentContext(context = ERPConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "pos_price_daily");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPPriceDaily> getClassConvetor() {
+        return ERPPriceDaily.class;
+    }
+
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("type");
+        ensureIndex("prodCode");
+        ensureIndex("currencyId");
+
+        ensureIndex("date");
+        ensureIndex("keyData");
+        ensureIndex("type,keyData,date");
+        ensureIndex("organId,type,keyData,date");
+        ensureIndex("organId,type,prodCode");
+        ensureIndex("organId,type,prodCode,currencyId");
+        ensureIndex("organId,type,prodCode,currencyId,date");
+    }
+
+    @Override
+    public String add(final ERPPriceDaily priceDaily) throws WebOSBOException {
+        final ERPPriceDaily priceKey = loadByKey(priceDaily.getKeyData(), priceDaily.getType(), priceDaily.getDate());
+        if (priceKey != null) {
+            priceKey.setPrice(priceDaily.getPrice());
+            super.update(priceKey.getUuid(), priceKey);
+
+            return priceKey.getUuid();
+        }
+
+        return super.add(priceDaily);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> typeOfPriceList(String organId) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").exists();
+
+        return distinct("type", query);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     */
+    public void priceForDayMessage(String organId, String type) {
+        priceForDayMessage(organId, type, 0);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     */
+    public void priceForDayMessage(String organId, String type, long date) {
+        try {
+            if (date <= 0) {
+                final Calendar cal = Calendar.getInstance();
+                date = cal.getTimeInMillis();
+            }
+
+            final PriceForDayMessage message = new PriceForDayMessage();
+            message.setOrganId(organId);
+            message.setType(type);
+            message.setDate(date);
+            message.execute();
+        } catch (Throwable ex) {
+            logger.error("priceForDay message fail {}", ex);
+        }
+    }
+
+    /**
+     * @param priceDaily
+     * @return
+     */
+    private String keyBuilder(final ERPPriceDaily priceDaily) {
+        if (StringUtils.hasLength(priceDaily.getKeyData())) {
+            return priceDaily.getKeyData();
+        }
+
+        return keyBuilder(priceDaily.getOrganId(),
+                priceDaily.getProdCode(),
+                priceDaily.getCurrencyId());
+    }
+
+    /**
+     * @param organId
+     * @param prodCode
+     * @param currencyId
+     * @return
+     */
+    private String keyBuilder(String organId, String prodCode, String currencyId) {
+        String keyData = StringUtils.EMPTY_STRING;
+
+        keyData += organId;
+        keyData += prodCode;
+        keyData += currencyId;
+
+        return keyData;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param areaId
+     * @param prodCode
+     * @param currencyId
+     * @return
+     */
+    private String keyBuilder(String organId, String outletId, String areaId, String prodCode, String currencyId) {
+        String keyData = keyBuilder(organId, prodCode, currencyId);
+
+        if (StringUtils.hasLength(outletId)) {
+            keyData += outletId;
+        }
+
+        if (StringUtils.hasLength(areaId)) {
+            keyData += areaId;
+        }
+
+        return keyData;
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param from
+     * @param to
+     * @throws WebOSBOException
+     */
+    public void priceForDayRemove(String organId, String type, long from, long to) throws WebOSBOException {
+        priceForDayRemove(organId, type, StringUtils.EMPTY_STRING, from, to);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param keyData
+     * @param from
+     * @param to
+     * @throws WebOSBOException
+     */
+    public void priceForDayRemove(String organId, String type, String keyData, long from, long to) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+
+        query.field("date").greaterThanOrEq(from);
+        query.field("date").lessThanOrEq(to);
+
+        if (StringUtils.hasLength(keyData)) {
+            query.field("keyData").equal(keyData);
+        }
+        super.remove(query);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param outletId
+     * @param prodCode
+     * @param currencyId
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceDaily loadPriceForDay(String organId, String type, String outletId, String prodCode, String currencyId) throws WebOSBOException {
+        return loadPriceForDay(organId, type, outletId, StringUtils.EMPTY_STRING, prodCode, currencyId, 0);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param outletId
+     * @param areaId
+     * @param prodCode
+     * @param currencyId
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceDaily loadPriceForDay(String organId, String type, String outletId, String areaId, String prodCode, String currencyId) throws WebOSBOException {
+        return loadPriceForDay(organId, type, outletId, areaId, prodCode, currencyId, 0);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param outletId
+     * @param areaId
+     * @param prodCode
+     * @param currencyId
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceDaily loadPriceForDay(String organId, String type, String outletId, String areaId, String prodCode, String currencyId, long date) throws WebOSBOException {
+        final Calendar cal = Calendar.getInstance();
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        } else {
+            date = cal.getTimeInMillis();
+        }
+
+        long beginDate = DateUtils.beginDate(date);
+        long endDate = DateUtils.endDate(date);
+
+        if (!priceForDayCheck(organId, type, date)) {
+            logger.debug("price for day is building. Please waiting !...");
+
+            priceForDayBuilder(organId, type, date);
+        }
+
+        ERPPriceDaily priceDaily = null;
+        String keyData = StringUtils.EMPTY_STRING;
+        QueryImpl<JSONDB> query;
+
+        query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+
+        query.field("date").greaterThanOrEq(beginDate);
+        query.field("date").lessThanOrEq(date);
+
+        keyData = keyBuilder(organId, outletId, areaId, prodCode, currencyId);
+        query.field("keyData").equal(keyData);
+        query.order("-date");
+        query.limit(1);
+
+        SearchDTO<ERPPriceDaily> data = super.query(query);
+        if (data != null && data.getTotal() > 0) {
+            priceDaily = data.getItems().get(0);
+        }
+        //priceDaily = super.load(query);
+
+        if (priceDaily == null) {
+            query = new QueryImpl<>();
+            query.field("organId").equal(organId);
+            query.field("type").equal(type);
+            query.field("date").greaterThanOrEq(beginDate);
+            query.field("date").lessThanOrEq(date);
+
+            keyData = keyBuilder(organId, prodCode, currencyId);
+            query.field("keyData").equal(keyData);
+            query.order("-date");
+            query.limit(1);
+
+            data = super.query(query);
+            if (data != null && data.getTotal() > 0) {
+                priceDaily = data.getItems().get(0);
+            }
+            //priceDaily = super.load(query);
+        }
+
+
+        logger.debug("priceDaily {} is loaded.", JSONObject.fromObject(priceDaily));
+
+        return priceDaily;
+    }
+
+    /**
+     * @param keyData
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceDaily loadByKey(String keyData, String type, long date) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("type").equal(type);
+        query.field("keyData").equal(keyData);
+
+        query.field("date").equal(date);
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean priceForDayCheck(String organId, String type) throws WebOSBOException {
+        return priceForDayCheck(organId, type, 0);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean priceForDayCheck(String organId, String type, long date) throws WebOSBOException {
+        final Calendar cal = Calendar.getInstance();
+
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+
+        long beginDate = DateUtils.beginDate(date);
+
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+        query.field("date").greaterThanOrEq(beginDate);
+
+        return super.count(query) > 0;
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceDaily> priceForDay(String organId, String type) throws WebOSBOException {
+        return priceForDay(organId, type, 0);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceDaily> priceForDay(String organId, String type, long date) throws WebOSBOException {
+        return priceForDay(organId, type, StringUtils.EMPTY_STRING, StringUtils.EMPTY_STRING, date);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param prodCode
+     * @param currencyId
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceDaily> priceForDay(String organId, String type, String prodCode, String currencyId, long date) throws WebOSBOException {
+        final Calendar cal = Calendar.getInstance();
+
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+        long beginDate = DateUtils.beginDate(date);
+        long endDate = DateUtils.endDate(date);
+
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+        query.field("date").greaterThanOrEq(beginDate);
+        query.field("date").lessThanOrEq(endDate);
+
+        if (StringUtils.hasLength(prodCode)) {
+            query.field("prodCode").equal(prodCode);
+        }
+
+        if (StringUtils.hasLength(currencyId)) {
+            query.field("currencyId").equal(currencyId);
+        }
+
+        query.order("-date");
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @throws WebOSBOException
+     */
+    public void priceForDayBuilder(String organId, String type) throws WebOSBOException {
+        priceForDayBuilder(organId, type, 0);
+    }
+
+    /**
+     * @param organId
+     * @param date
+     * @throws WebOSBOException
+     */
+    public void priceForDayBuilder(String organId, String type, long date) throws WebOSBOException {
+        priceForDayBuilder(organId, type, StringUtils.EMPTY_STRING, date);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param prodCode
+     * @throws WebOSBOException
+     */
+    public void priceForDayBuilder(String organId, String type, String prodCode) throws WebOSBOException {
+        priceForDayBuilder(organId, type, prodCode, 0);
+    }
+
+    /**
+     * @param organId
+     * @param date
+     * @throws WebOSBOException
+     */
+    public void priceForDayBuilder(String organId, String type, String prodCode, long date) throws WebOSBOException {
+        final Calendar cal = Calendar.getInstance();
+
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+
+        final Calendar logTime = Calendar.getInstance();
+        logger.debug("price daily builder begin at {}", logTime.getTimeInMillis());
+
+        long beginDate = DateUtils.beginDate(date);
+        long endDate = DateUtils.endDate(date);
+
+        logger.debug("refresh price for day from {} --> to {}", beginDate, endDate);
+        priceForDayRemove(organId, type, beginDate, endDate);
+
+        final SearchDTO<ERPItem> products = productBO.queryByOrgan(organId);
+        if (products != null && products.getTotal() > 0) {
+            for (ERPItem product : products.getItems()) {
+                final ERPPriceItem priceItem = new ERPPriceItem();
+                priceItem.setProdCode(product.getCode());
+                priceItem.setProdName(product.getName());
+
+                priceItem.setCurrencyId(ERPConstant.CURRENCY);
+                priceItem.setPrice(product.getPrice());
+
+                priceDailyAdd(organId, type, beginDate, priceItem);
+            }
+        }
+
+        final ERPPriceList priceListDefault = priceListBO.priceListDefault(organId, type);
+
+        logger.debug("price default is {}", priceListDefault);
+        if (priceListDefault != null) {
+            for (ERPPriceItem priceItem : priceListDefault.getItems()) {
+                priceDailyAdd(organId, type, beginDate, priceItem);
+            }
+        }
+
+        final SearchDTO<ERPPriceList> prices = priceListBO.organPolicyInDay(organId, type, date);
+        if (prices != null && prices.getTotal() > 0) {
+            logger.debug("organ {} has {} price policy(s) ", organId, prices.getTotal());
+
+            for (ERPPriceList priceList : prices.getItems()) {
+                if (!CollectionUtils.isEmpty(priceList.getItems())) {
+                    String outletId = StringUtils.EMPTY_STRING;
+                    String areaId = StringUtils.EMPTY_STRING;
+                    if (priceList.getProperties() != null) {
+                        logger.debug("policy properties is {}", priceList.getProperties());
+
+                        if (priceList.getProperties().has("outletId")) {
+                            outletId = priceList.getProperties().getString("outletId");
+                        }
+
+                        if (priceList.getProperties().has("areaId")) {
+                            areaId = priceList.getProperties().getString("areaId");
+                        }
+                    }
+
+                    for (ERPPriceItem priceItem : priceList.getItems()) {
+                        String keyData = keyBuilder(organId, outletId, areaId,
+                                priceItem.getProdCode(),
+                                priceItem.getCurrencyId());
+
+                        if (priceList.isUseHours()) {
+                            logger.debug("policy hours {}: {}", priceList.getFromHours(), priceList.getToHours());
+
+                            if (priceList.getFromHours() > 0) {
+                                priceDailyAdd(organId, type, beginDate + priceList.getFromHours(), priceItem, keyData);
+                            }
+
+
+                            if (priceList.getToHours() > 0) {
+                                if (priceList.getFromHours() <= 0) {
+                                    priceForDayRemove(organId, type, keyData, beginDate, beginDate + priceList.getToHours());
+
+                                    priceDailyAdd(organId, type, beginDate, priceItem, keyData);
+                                } else {
+
+                                    priceDailyAdd(organId, type, beginDate + priceList.getToHours(), priceItem, keyData);
+
+                                    if (endDate > (beginDate + priceList.getToHours())) {
+                                        final QueryImpl<JSONDB> query = new QueryImpl<>();
+                                        query.field("type").equal(type);
+                                        query.field("keyData").equal(keyData);
+                                        query.field("date").greaterThanOrEq(beginDate);
+                                        query.field("date").lessThanOrEq(beginDate + priceList.getFromHours() - 1);
+
+                                        final ERPPriceDaily priceDaily = super.load(query);
+                                        if (priceDaily != null) {
+                                            priceDaily.setUuid(StringUtils.EMPTY_STRING);
+                                            priceDaily.setDate(beginDate + priceList.getToHours() + 1);
+
+                                            add(priceDaily);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            priceForDayRemove(organId, type, keyData, beginDate, endDate);
+
+                            priceDailyAdd(organId, type, beginDate, priceItem, keyData);
+                        }
+                    }
+                }
+
+            }
+        }
+
+        logger.debug("price daily builder end at {}", logTime.getTimeInMillis());
+    }
+
+    /**
+     * @param organId
+     * @param date
+     * @param priceItem
+     */
+    private void priceDailyAdd(String organId, String type, long date, final ERPPriceItem priceItem) {
+        priceDailyAdd(organId, type, date, priceItem, StringUtils.EMPTY_STRING);
+    }
+
+    /**
+     * @param organId
+     * @param date
+     * @param priceItem
+     */
+    private void priceDailyAdd(String organId, String type, long date, final ERPPriceItem priceItem, String keyData) {
+        final ERPPriceDaily priceDaily = new ERPPriceDaily();
+        priceDaily.setOrganId(organId);
+        priceDaily.setType(type);
+
+        priceDaily.setDate(date);
+
+        priceDaily.setProdCode(priceItem.getProdCode());
+        priceDaily.setCurrencyId(priceItem.getCurrencyId());
+        priceDaily.setPrice(priceItem.getPrice());
+
+        if (StringUtils.hasLength(keyData)) {
+            priceDaily.setKeyData(keyData);
+        } else {
+            priceDaily.setKeyData(keyBuilder(priceDaily));
+        }
+
+        logger.debug("priceDailyAdd {}", JSONObject.fromObject(priceDaily));
+
+        add(priceDaily);
+    }
+}

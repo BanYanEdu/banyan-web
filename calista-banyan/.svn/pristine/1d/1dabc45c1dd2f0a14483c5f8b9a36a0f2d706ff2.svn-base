@@ -1,0 +1,122 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.order;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.data.ECMProdOrder;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.ecommerce.subfrmservice.order.
+ *
+ * @author Phong Tran
+ * @version $Id: OrderItemUpdateService.java Sep 14, 2018 11:51 phongtt $
+ * @since 1.0
+ */
+@Named("commerceorderitemupdate")
+@XPortalDataService(roles = {ECMConstant.ROLE_ORDER}, description = ECMConstant.ROLE_ORDER_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/order/item/update",
+        inherit = true,
+        transaction = true,
+        expose = 2,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class OrderItemUpdateService extends ECMOrderAbstraction {
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.ecommerce.cmsservice.ProductContentBase#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.ecommerce.model.CommerceProduct, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = orgItem.getOrganId();
+        String outletId = StringUtils.EMPTY_STRING;
+        String infoCode = XParamUtils.getString("infoCode", params, StringUtils.EMPTY_STRING);
+
+        final ECMOrder info = invoiceLoad(organId, infoCode);
+        if (info == null) {
+            logger.error("invoice isn't create");
+            action.fieldError("ORDER", "INFO_NOT_FOUND");
+        }
+
+        String itemId = XParamUtils.getString("itemId", params, StringUtils.EMPTY_STRING);
+        if (!StringUtils.hasLength(itemId)) {
+            logger.error("item is required");
+            action.fieldError("ORDERITEM", "ITEMID_MISSED");
+        }
+
+        final ECMOrderItem item = action.getModel(ECMOrderItem.class).withUuid(itemId);
+        String prodCode = item.getProdCode();
+
+        int index = -1;
+        if (!CollectionUtils.isEmpty(info.getItems())) {
+            index = info.getItems().indexOf(item);
+            logger.debug("found at {}", index);
+
+            if (index >= 0) {
+                final ECMOrderItem itemIndex = info.getItems().get(index);
+                if (!StringUtils.hasLength(prodCode)) {
+                    prodCode = itemIndex.getProdCode();
+                }
+            }
+        }
+
+        if (index < 0) {
+            logger.error("item {} isn't found", itemId);
+            action.fieldError("ORDERITEM", "ITEMID_NOT_FOUND");
+        }
+
+        final ECMProdOrder prodData = orderBO.loadProdOrder(organId, prodCode);
+        item.setProdId(prodData.getProduct().getUuid());
+        item.setProdCode(prodData.getProduct().getCode());
+        item.setProdName(prodData.getProduct().getName());
+        item.setSku(prodData.getProduct().getSku());
+        item.setUnit(prodData.getProduct().getUnit());
+        item.getProdInfo().put("scanCode", prodData.getProduct().getCode());
+
+        itemCheck(item, action);
+        info.getItems().remove(index);
+
+        item.calc();
+        info.getItems().add(0, item);
+
+        info.calc();
+        orderBO.update(info.getUuid(), info);
+
+        return new ObjectWebDataservice<>(info);
+    }
+}

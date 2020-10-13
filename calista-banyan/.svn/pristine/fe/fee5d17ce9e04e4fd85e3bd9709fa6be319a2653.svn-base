@@ -1,0 +1,62 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.phase;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ListWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * FindByProjectUuidService.
+ *
+ * @author Duyen Tang
+ * @version $Id: FindByProjectUuidService.java Apr 4, 2018 5:18:07 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_project_phase_findbyprojectuuidservice")
+@XPortalDataService(roles = { Roles.PROJECT }, description = "")
+@XPortalPageRequest(uri = "colla/projects/phases/fbyprojuuid", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class FindByProjectUuidService extends PhaseService {
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.collatask.service.project.phase.PhaseService#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.calista.collatask.model.project.Project, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(SiteDataModel site, 
+			SubFirmProfile subFirm,
+			Project project,
+			AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException 
+	{
+		return new ListWebDataservice<>(phaseBo.findByProjectUuid(project.getUuid(), XParamUtils.getString(CollaTaskJsonConstants.STATUS, params)));
+	}
+
+}

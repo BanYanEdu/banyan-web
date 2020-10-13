@@ -1,0 +1,57 @@
+package com.inet.calista.crm.service.essentials.contact.search;
+
+import com.inet.calista.crm.bo.essentials.ContactBo;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.service.SearchService;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * QuickSearchService.
+ *
+ * @author thoangtran
+ * @version QuickSearchService 2018 04-14 11:46
+ */
+
+@Named("crm_essentials_contact_qsearcservice")
+@XPortalDataService(roles = { Roles.ESSENTIALS_CONTACT}, description = "Contact role")
+@XPortalPageRequest(uri = "crm/essentials/contact/search/quick", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class QuickSearchService extends SearchService<QSearchCriteria> {
+  @Inject
+  private ContactBo contactBo;
+
+  @Override
+  protected WebDataService service(final SiteDataModel siteDataModel,final  SubFirmProfile subFirmProfile,final  AbstractBaseAction action,final  Map<String, Object> map) throws WebOSBOException {
+    try{
+      return new ObjectWebDataservice<>(contactBo.search(getCriteria(subFirmProfile, action, map), subFirmProfile.getOrganiId()));
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during quick search contact information", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    }
+  }
+
+  @Override
+  protected Class<QSearchCriteria> getModelClass() {
+    return QSearchCriteria.class;
+  }
+
+
+}

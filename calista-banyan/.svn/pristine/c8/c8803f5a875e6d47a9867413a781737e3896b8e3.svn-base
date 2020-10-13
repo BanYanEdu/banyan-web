@@ -1,0 +1,98 @@
+package com.inet.calista.crm.bo.setting;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.dto.search.TemplateSearchCriteria;
+import com.inet.calista.crm.model.template.Template;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * TemplateBo.
+ *
+ * @author thoangtran
+ * @version TemplateBo 2019 01-29 15:11
+ */
+@Named("crm_setting_templatebo")
+@Slf4j
+public class TemplateBo extends CRMNoSqlBo<Template> implements BeanInitiateInvoke {
+
+  /**
+   * Constructor injection
+   * @param contentBf
+   */
+  @Inject
+  public TemplateBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_setting_template");
+  }
+
+  /**
+   * Save template
+   * @param template
+   * @param ownerId
+   * @return
+   */
+  public Template save(Template template, String ownerId) {
+    template.setOrgCode(ownerId);
+    template.setUuid(this.add(template));
+    return template;
+  }
+
+  /**
+   * Update template
+   * @param template
+   * @param ownerId
+   * @return
+   */
+  public Template update(Template template, String ownerId) {
+    final Template exist  = this.loadById(template.getUuid(), ownerId);
+    if(null != exist) {
+      template.setCreatedBy(exist.getCreatedBy());
+      template.setCreatedDate(exist.getCreatedDate());
+      this.update(template.getUuid(), template);
+    }
+    return template;
+  }
+
+  /**
+   * find by criteria
+   * @param criteria
+   * @return
+   */
+  public SearchDTO<Template> findBy(TemplateSearchCriteria criteria) {
+    final QueryImpl<JSONDB> query = getQueryOwner(criteria.getOwnerId());
+    query.field("providerID").equal(criteria.getProviderID());
+    query.field("module").equal(criteria.getModule());
+    if(criteria.isMine()){
+      query.field("authorBy").equal(criteria.getAuthor());
+    }
+    if(StringUtils.hasLength(criteria.getKeyword())) {
+      query.field("title").like(criteria.getKeyword());
+    }
+    query.retrievedFields(false, "content");
+    return this.query(query);
+  }
+  @Override
+  protected Class<Template> getClassConvetor() {
+    return Template.class;
+  }
+
+  @Override
+  public void init() {
+    createIndex();
+  }
+
+  private void createIndex() {
+    ensureIndex("orgCode");
+    ensureIndex("providerID,module");
+    ensureIndex("title");
+  }
+}

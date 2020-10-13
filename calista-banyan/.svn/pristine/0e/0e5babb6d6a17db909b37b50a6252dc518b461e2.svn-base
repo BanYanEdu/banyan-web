@@ -1,0 +1,202 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.data.GlbEmailParam;
+import com.inet.calista.global.model.GlbInvitation;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: GLInvitationBO.java Nov 19, 2018 11:46 phongtt $
+ * @since 1.0
+ */
+@Named("GlbInvitationBO")
+public class GlbInvitationBO extends GlbNoSqlBO<GlbInvitation> implements BeanInitiateInvoke {
+    final private static List<GlbEmailParam> parameters = new ArrayList<>();
+    public static String INVITE_CODE = "ORGAN-INVITATION";
+
+    static {
+        parameters.add(new GlbEmailParam("organName", "organName"));
+        parameters.add(new GlbEmailParam("sender", "sender"));
+        parameters.add(new GlbEmailParam("inviteCode", "inviteCode"));
+        parameters.add(new GlbEmailParam("receiver", "receiver"));
+        parameters.add(new GlbEmailParam("activeLink", "activeLink"));
+        parameters.add(new GlbEmailParam("secQryStr", "secQryStr"));
+    }
+
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    protected GlbInvitationBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_invitation");
+    }
+
+    /**
+     * @return
+     */
+    public SearchDTO<GlbEmailParam> emailParams() {
+        return new SearchDTO<>(parameters, parameters.size());
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     */
+    public GlbInvitation loadSentCode(String organId, String code) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("code").equal(code);
+        query.field("status").equal(-1);
+        return load(query);
+    }
+
+    /**
+     * @param sender
+     * @return
+     */
+    public SearchDTO<GlbInvitation> querySender(String organId, String sender) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("sender").equal(sender);
+
+        return query(query);
+    }
+
+    /**
+     * @param user
+     * @param organId
+     * @return
+     */
+    public GlbInvitation loadUserOrganId(String user, String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("username").equal(user);
+
+        return load(query);
+    }
+
+    /**
+     * @param organId
+     * @return
+     */
+    public SearchDTO<GlbInvitation> queryOrganId(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        return query(query);
+    }
+
+    /**
+     * @param organId
+     * @param uuid
+     * @return
+     */
+    public GlbInvitation loadUUID(String organId, String uuid) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid));
+
+        return load(query);
+    }
+
+    /**
+     * @param organId
+     * @param email
+     * @return
+     */
+    public GlbInvitation checkEmailInvite(String organId, String email) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("email").equal(email);
+
+        return load(query);
+    }
+
+    /**
+     * @param organId
+     * @param username
+     * @return
+     */
+    public GlbInvitation checkUserInvite(String organId, String username) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("username").equal(username);
+
+        return load(query);
+    }
+
+    /**
+     * @param organId
+     * @param phone
+     * @return
+     */
+    public GlbInvitation checkPhoneInvite(String organId, String phone) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("status").equal(-1);
+        query.field("phone").equal(phone);
+        return load(query);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlbInvitation> getClassConvetor() {
+        return GlbInvitation.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("organId");
+        ensureIndex("organId,uuid");
+        ensureIndex("organId,code");
+        ensureIndex("organId,username");
+        ensureIndex("organId,sender");
+        ensureIndex("organId,status,phone");
+        ensureIndex("organId,status,username");
+        ensureIndex("organId,status,email");
+    }
+}
+

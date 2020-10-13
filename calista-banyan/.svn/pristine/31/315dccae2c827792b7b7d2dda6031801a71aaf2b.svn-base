@@ -1,0 +1,109 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.masterdata.model.ERPUom;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPWareHouseBO.java Aug 03, 2018 13:58 phongtt $
+ * @since 1.0
+ */
+@Named("ERPUomBO")
+public class ERPUomBO extends ERPBaseBO<ERPUom> {
+    @Inject
+    protected ERPUomBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_md_uom");
+    }
+
+    @Override
+    protected Class<ERPUom> getClassConvetor() {
+        return ERPUom.class;
+    }
+
+    @Override
+    public String add(final ERPUom info) throws WebOSBOException {
+        return super.add(info, "name");
+    }
+
+    /**
+     * @param organId
+     * @param name
+     * @throws WebOSBOException
+     */
+    public void removeUnit(String organId, String name) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("name").equal(name);
+        super.remove(query);
+    }
+
+    /**
+     * @param organId
+     * @param name
+     * @throws WebOSBOException
+     */
+    public void addUnit(String organId, String name) throws WebOSBOException {
+        final ERPUom uom = new ERPUom();
+        uom.setOrganId(organId);
+        uom.setName(name);
+        add(uom);
+    }
+
+    /**
+     * @param organId
+     */
+    public void initData(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        final List<String> units = WebContext.INSTANCE.cache()
+                .getBean(ERPItemBO.class)
+                .distinct("unit", query);
+
+        if (!CollectionUtils.isEmpty(units)) {
+            for (String unit : units) {
+                addUnit(organId, unit);
+            }
+        }
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> list(String organId) throws WebOSBOException {
+        return super.distinct("name", new QueryImpl<>());
+    }
+}

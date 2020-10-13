@@ -1,0 +1,555 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.bo;
+
+import com.inet.calista.erp.common.bo.ERPItemBase;
+import com.inet.calista.erp.common.data.ERPBinaryModel;
+import com.inet.calista.erp.excel.ERPExcelUtil;
+import com.inet.calista.erp.masterdata.bo.ERPUomBO;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.data.POSItemBarcode;
+import com.inet.calista.pos.common.model.POSItem;
+import com.inet.xportal.jdbc.xls.JDBCRowReader;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: POSProductBO.java May 16, 2018 10:12 phongtt $
+ * @since 1.0
+ */
+@Named("POSItemBO")
+public class POSProductBO extends ERPItemBase<POSItem> implements BeanInitiateInvoke, JDBCRowReader {
+    protected static final Logger logger = LoggerFactory.getLogger(POSProductBO.class);
+
+    @Inject
+    protected POSProductBO(@ContentContext(context = POSConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<POSItem> getClassConvetor() {
+        return POSItem.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("code");
+        ensureIndex("name");
+        ensureIndex("group");
+        ensureIndex("price");
+
+        ensureIndex("organId,code");
+        ensureIndex("organId,name");
+        ensureIndex("organId,group");
+
+        ensureIndex("organId,code,name,group,status");
+
+        ensureIndex("?name");
+    }
+
+    @Override
+    public void update(String uuid, final POSItem info) throws WebOSBOException {
+        addProdUnit(info.getOrganId(), info.getUnit());
+        super.update(uuid, info);
+    }
+
+    @Override
+    public boolean rowProcess(final ResultSet row, int rowCount, final String[] cols,
+                              final Map<String, Object> obj) throws WebOSBOException {
+        try {
+            if (obj == null) {
+                logger.error("objData is null");
+                return false;
+            }
+
+            String organId = ERPExcelUtil.getOrganId(obj);
+            if (!StringUtils.hasLength(organId)) {
+                logger.error("organId missed!...");
+                return false;
+            }
+
+            List<POSItem> dataImport = new ArrayList<>();
+            if (obj.containsKey("dataImport")) {
+                dataImport = (List<POSItem>) obj.get("dataImport");
+            }
+
+            boolean isMapColumn = ERPExcelUtil.isMapColumn(obj);
+            logger.debug("found isMapColumn {}", isMapColumn);
+
+            ERPExcelUtil.changeColumn(obj, cols, row);
+
+            if (isMapColumn) {
+                logger.debug("import row {} beginning ........ ", rowCount);
+                String colName = "";
+                try {
+                    final POSItem data = new POSItem();
+                    data.setOrganId(organId);
+                    colName = "CODE";
+                    data.setCode(ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+                    colName = "NAME";
+                    data.setName(ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+                    colName = "UNIT";
+                    data.setUnit(ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+                    colName = "GROUP";
+                    data.setGroup(ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+                    colName = "PRICE";
+                    data.setPrice(ERPExcelUtil.getFloat(row, ERPExcelUtil.getColIndex(obj, cols, colName)));
+
+                    for (String prop : cols) {
+                        if (prop.contains("PROP.")) {
+                            try {
+                                String propKey = prop.substring(5);
+                                colName = prop;
+                                String propValue = ERPExcelUtil.getString(row, ERPExcelUtil.getColIndex(obj, cols, colName));
+                                data.getProperties().put(propKey, propValue);
+                            } catch (Exception ex) {
+                                logger.warn("prop setting fail ", ex);
+                            }
+                        }
+                    }
+
+                    if (!StringUtils.hasLength(data.getCode())) {
+                        data.setCode(counterGenerate(organId, StringUtils.EMPTY_STRING, StringUtils.EMPTY_STRING));
+                    }
+
+                    if (StringUtils.hasLength(data.getCode())) {
+                        final POSItem item = loadByCode(organId, data.getCode());
+                        if (item == null) {
+                            data.setUuid(add(data));
+                        } else {
+                            item.setName(data.getName());
+                            item.setUnit(data.getUnit());
+                            item.setGroup(data.getGroup());
+                            item.setPrice(data.getPrice());
+                            item.setProperties(data.getProperties());
+
+                            update(item.getUuid(), item);
+                        }
+
+                        dataImport.add(data);
+                    }
+                } catch (Throwable ex) {
+                    logger.debug("import row {} & col {} fail.", rowCount, colName);
+                    //Break import file when fail at rowCurrent.
+                    return false;
+                }
+            }
+
+            obj.put("dataImport", dataImport);
+        } catch (Exception ex) {
+            logger.warn("import row {} fail!", rowCount);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * @param item
+     * @param code
+     * @return
+     */
+    public POSItemBarcode loadBarcode(final POSItem item, String code) {
+        POSItemBarcode barcode = null;
+        if (item != null) {
+            barcode = new POSItemBarcode();
+            barcode.setProdId(item.getUuid());
+            barcode.setProdCode(item.getCode());
+            barcode.setReorderMax(item.getReorderMax());
+            barcode.setReorderMin(item.getReorderMin());
+            barcode.setProperties(item.getProperties());
+
+            if (StringUtils.hasLength(item.getSku())) {
+                barcode.setSku(item.getSku());
+            } else {
+                barcode.setSku(item.getCode());
+            }
+        }
+
+        return barcode;
+    }
+
+    /**
+     * @return
+     */
+    public String getCounter() {
+        return POSConstant.COUNTER_PRODUCT;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param defaultCode
+     * @return
+     */
+    public String counterGenerate(String organId, String outletId, String defaultCode) {
+        return super.counterGenerate(organId, outletId, getCounter(), defaultCode);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> products(String organId, String outletId, String group, String keyword) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(outletId))
+            query.field("outlets").equal(outletId);
+
+        if (StringUtils.hasLength(group)) {
+            query.field("group").equal(group);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("name").like(keyword),
+                    query.criteria("code").like(keyword)
+            ));
+        }
+
+        return super.distinct("code", (QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> query(String organId, String outletId) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(outletId))
+            query.field("outlets").equal(outletId);
+
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param prodCode
+     * @return
+     * @throws WebOSBOException
+     */
+    public String prodAvatar(String organId, String prodCode) throws WebOSBOException {
+        final POSItem product = loadByCode(organId, prodCode);
+        if (product != null) {
+            if (!CollectionUtils.isEmpty(product.getImages()) && StringUtils.hasLength(product.getAvatar())) {
+                final ERPBinaryModel image = new ERPBinaryModel();
+                image.setCode(product.getAvatar());
+
+                final int imgIndex = product.getImages().indexOf(image);
+
+                logger.debug("found avatar {} image at {}", product.getAvatar(), imgIndex);
+
+                if (imgIndex >= 0) {
+                    return product.getImages().get(imgIndex).getGridfsUUID();
+                }
+            }
+        }
+
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param organId
+     * @param unit
+     * @throws WebOSBOException
+     */
+    public void addProdUnit(String organId, String unit) throws WebOSBOException {
+        WebContext.INSTANCE.cache()
+                .getBean(ERPUomBO.class)
+                .addUnit(organId, unit);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> prodUnits(String organId) throws WebOSBOException {
+        return WebContext.INSTANCE.cache()
+                .getBean(ERPUomBO.class)
+                .list(organId);
+    }
+
+    /**
+     * @param organId
+     * @param oldGName
+     * @param newGName
+     * @throws WebOSBOException
+     */
+    public void changeGroup(String organId, String oldGName, String newGName) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId)
+                .field("group").equal(oldGName);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("group", newGName);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+
+    /**
+     * @param organId
+     * @param group
+     * @param category
+     * @param status
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> query(String organId, String group, String category,
+                                    String status, String keyword,
+                                    int offset, int limit) throws WebOSBOException {
+        return query(organId, group, category, status, keyword, offset, limit, -1);
+    }
+
+    /**
+     * @param organId
+     * @param group
+     * @param category
+     * @param status
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @param orderBy
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> query(String organId, String group, String category,
+                                    String status, String keyword,
+                                    int offset, int limit, int orderBy) throws WebOSBOException {
+
+        final Query<JSONDB> query = new QueryImpl<>();
+
+        if (StringUtils.hasLength(group))
+            query.field("group").equal(group);
+
+        if (StringUtils.hasLength(category))
+            query.field("category").equal(category);
+
+        if (StringUtils.hasLength(organId))
+            query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(status)) {
+            if (status.split(",").length > 1)
+                query.field("status").in(CollectionUtils.asList(status.split(",")));
+            else
+                query.field("status").equal(status);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+        }
+
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit >= 0)
+            query.limit(limit);
+
+        if (orderBy > 0) {
+            if (orderBy == 1) {
+                query.order("code");
+            }
+        }
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> groups(String organId) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<>();
+
+        if (StringUtils.hasLength(organId))
+            query.field("organId").equal(organId);
+
+        return super.distinct("group", (QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> queryByOrgan(String organId) throws WebOSBOException {
+        return queryByOrgan(organId, null, StringUtils.EMPTY_STRING, -1, 0, 0);
+    }
+
+    /**
+     * @param organId
+     * @param groups
+     * @param keyword
+     * @param orderBy
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> queryByOrgan(String organId, List<String> groups,
+                                           String keyword, int orderBy,
+                                           int offset, int limit) throws WebOSBOException {
+        return queryByOutlet(organId, StringUtils.EMPTY_STRING, groups, keyword, orderBy, offset, limit);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param groups
+     * @param keyword
+     * @param orderBy
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> queryByOutlet(String organId, String outletId, List<String> groups,
+                                            String keyword, int orderBy,
+                                            int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        query.field("status").equal("USED");
+
+        query.and(query.or(
+                query.criteria("saleOnPos").doesNotExist(),
+                query.criteria("saleOnPos").equal(true)
+        ));
+
+        if (!CollectionUtils.isEmpty(groups)) {
+            query.field("group").in(groups);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+
+            //query.fulltext(keyword, true);
+        }
+
+        if (StringUtils.hasLength(outletId)) {
+            query.and(query.or(
+                    query.criteria("outlets").doesNotExist(),
+                    query.criteria("outlets").equal(outletId)
+            ));
+        }
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (orderBy) {
+            case 0:
+                query.order("name");
+                break;
+            case 1:
+                query.order("-name");
+                break;
+            case 2:
+                query.order("price");
+                break;
+            case 3:
+                query.order("-price");
+                break;
+            default:
+                query.order("name");
+                break;
+        }
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSItem> productOutlet(String organId, String outletId) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(outletId)) {
+            query.and(query.or(
+                    query.criteria("outlets").doesNotExist(),
+                    query.criteria("outlets").equal(outletId)
+            ));
+        }
+
+        return super.query(query);
+    }
+}

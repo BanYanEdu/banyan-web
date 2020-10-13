@@ -1,0 +1,93 @@
+package com.inet.jobportal.service.candidate.job_visit;
+
+import com.inet.jobportal.bo.candidate.CandidateProfileBO;
+import com.inet.jobportal.bo.candidate.JobVisitBO;
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.candidate.CandidateProfile;
+import com.inet.jobportal.model.candidate.JobVisit;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * JobVisitHandlingDS.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobVisitHandlingDS.java Feb 6, 2019 11:50:38 AM nguyen_dv $
+ * @since 1.0
+ */
+@Named("jobportaljobvisithandling")
+//@XPortalDataService(roles = {NoSQLConstant.ROLE_ADMIN}, description = "Dosage Create service")
+@XPortalDataService(description = "Job Visit Handling service")
+@XPortalPageRequest(uri = "jobportal/candidate/jobvisit/handling",
+        inherit = true,
+//        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobVisitHandlingDS extends JobPortalAbsractService {
+    @Inject
+    private JobPostBO jobPostBO;
+    @Inject
+    private JobVisitBO jobVisitBO;
+    @Inject
+    private CandidateProfileBO candidateProfileBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String jobpostId = XParamUtils.getString("jobpostId", params,"");
+        String username = XParamUtils.getString("username", params,"");
+        Long visitDate = XParamUtils.getLong("visitDate", params);
+
+        jobPostBO.countVisitor(jobpostId, username);
+        JobPost jobPost;
+        Query<JSONDB> queryJobPost = new QueryImpl<JSONDB>();
+        queryJobPost.field("uuid").equal(jobpostId);
+        jobPost = jobPostBO.search(queryJobPost).getItems().get(0);
+
+        // User not logged in
+        if (username.equals("")) { return new ObjectWebDataservice<>(jobpostId); }
+
+        Query<JSONDB> queryCandidateProfile = new QueryImpl<JSONDB>();
+        queryCandidateProfile.field("username").equal(username);
+        CandidateProfile candidateProfile;
+        candidateProfile = candidateProfileBO.search(queryCandidateProfile).getItems().get(0);
+
+        JobVisit jobVisit = new JobVisit();
+        Query<JSONDB> queryJobVisit = new QueryImpl<JSONDB>();
+        queryJobVisit.field("jobpostId").equal(jobpostId);
+        queryJobVisit.field("username").equal(username);
+        if (jobVisitBO.search(queryJobVisit).getTotal()>0) {
+            jobVisit = jobVisitBO.search(queryJobVisit).getItems().get(0);
+            jobVisit.setVisitedDate(visitDate);
+
+            jobVisitBO.update(jobVisit.getUuid(), jobVisit);
+        } else {
+            jobVisit.setVisitedDate(visitDate);
+            jobVisit.setJobpostId(jobpostId);
+            jobVisit.setUsername(username);
+            jobVisit.setCandidateName(candidateProfile.getNameFull());
+//            jobVisit.setCandidateJobTitle(candidateProfile.getDesiredJobTitle());
+            jobVisit.setOrganId(jobPost.getOrganId());
+
+            jobVisitBO.add(jobVisit);
+        }
+
+        return new ObjectWebDataservice<>(jobpostId);
+    }
+
+}

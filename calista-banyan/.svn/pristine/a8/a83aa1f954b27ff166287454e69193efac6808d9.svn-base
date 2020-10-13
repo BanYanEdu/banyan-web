@@ -1,0 +1,140 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMGroupBO;
+import com.inet.calista.ecommerce.bo.ECMItemBO;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.cms.web.bo.CMSAnalyticsBO;
+import com.inet.xportal.cms.web.bo.CMSItemBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ShopProdSpecialService.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopProdSpecialService.java Dec 02, 2017 09:16 phongtt $
+ * @since 1.0
+ */
+@Named("shopproductspecial")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/product/special",
+        inherit = true,
+        expose = 2,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShopProdSpecialService extends CommerceBaseAbstraction {
+    @Inject
+    private ECMItemBO productBO;
+
+    @Inject
+    private ECMGroupBO groupBO;
+
+    @Inject
+    private CMSAnalyticsBO analyticsBO;
+
+    @Inject
+    private CMSItemBO itemBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String prodId = XParamUtils.getString("prodId", params, StringUtils.EMPTY_STRING);
+        String prods = XParamUtils.getString("prods", params, StringUtils.EMPTY_STRING);
+
+        boolean featured = XParamUtils.getBoolean("featured", params, false);
+        boolean related = XParamUtils.getBoolean("related", params, false);
+        boolean topSell = XParamUtils.getBoolean("topSell", params, false);
+        boolean topView = XParamUtils.getBoolean("topView", params, false);
+        boolean promotion = XParamUtils.getBoolean("promotion", params, false);
+        boolean saleoff = XParamUtils.getBoolean("saleoff", params, false);
+        boolean viewed = XParamUtils.getBoolean("viewed", params, false);
+        boolean banner = XParamUtils.getBoolean("banner", params, false);
+        boolean newer = XParamUtils.getBoolean("newer", params, false);
+
+
+        String keyword = XParamUtils.getString("keyword", params, StringUtils.EMPTY_STRING);
+        int orderBy = XParamUtils.getInteger("orderBy", params, 0);
+
+        int offset = 0;
+        int limit = 10;
+
+        if (featured) {
+            limit = 12;
+        }
+
+        if (topView) {
+            Map<String, Integer> maps = new HashMap<>();
+            try {
+                maps = analyticsBO.queryPopular(action.getSiteID(),
+                        getCMSPrefix(cmsfirm),
+                        itemBO.getConfigure().getMostly());
+            } catch (Throwable ex) {
+                logger.error("popular error ", ex);
+            }
+
+            logger.debug("popular maps {}", maps);
+
+            final List<ECMItem> products = new ArrayList<>();
+            for (String uuid : maps.keySet()) {
+                final ECMItem prodPopular = productBO.loadById(orgItem.getOrganId(), uuid);
+                if (prodPopular != null) {
+                    products.add(prodPopular);
+                }
+            }
+
+            return new ObjectWebDataservice<>(new SearchDTO<>(products, products.size()));
+        }
+
+        if (viewed) {
+            return new ObjectWebDataservice<>(productBO.queryByCode(orgItem.getOrganId(), prods));
+        }
+
+
+        final List<String> groupNames = groupBO.groupNames(orgItem.getOrganId(), "");
+        return new ObjectWebDataservice<>(productBO.queryByOrgan(
+                orgItem.getOrganId(), groupNames, keyword, orderBy,
+                offset, limit));
+    }
+}

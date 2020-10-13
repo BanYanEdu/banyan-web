@@ -1,0 +1,76 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.util;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.data.task.Modification;
+import com.inet.calista.collatask.data.task.Modification.Action;
+
+/**
+ * FieldModificationUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: FieldModificationUtils.java Feb 27, 2018 9:47:48 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class FieldModificationUtils {
+  
+  /**
+   * Return {@link Modification} on two {@link String} field
+   * 
+   * @param field the given field
+   * @param oldV the given old value
+   * @param newV the given new value
+   * @return the {@link Modification}
+   */
+  public static Modification modify(String field, String oldV, String newV) {
+    if ((Strings.isNullOrEmpty(oldV) && Strings.isNullOrEmpty(newV)) 
+        || (oldV != null && oldV.equals(newV))) {
+      // no modification on given field
+      return null;
+    }
+    
+    if (Strings.isNullOrEmpty(oldV)) {
+      // adding modification
+      return new Modification(field, oldV, newV, Action.add);
+    }
+    
+    if (Strings.isNullOrEmpty(newV)) {
+      // deleting modification
+      return new Modification(field, oldV, newV, Action.delete);
+    }
+    
+    return new Modification(field, oldV, newV, Action.modify);
+  }
+  
+  /**
+   * Return {@link Modification} on two {@link Integer} field
+   * 
+   * @param field the given field
+   * @param oldV the given old value
+   * @param newV the given new value
+   * @return the {@link Modification}
+   */
+  public static Modification modify(String field, long oldV, long newV) {
+    if (oldV == newV) {
+      // no modification on given field
+      return null;
+    }
+    
+    return new Modification(field, String.valueOf(oldV), String.valueOf(newV), Action.modify);
+  }
+}

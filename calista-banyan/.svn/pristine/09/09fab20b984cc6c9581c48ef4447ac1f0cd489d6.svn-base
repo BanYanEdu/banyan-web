@@ -1,0 +1,75 @@
+package com.inet.jobportal.service.employer.job_app;
+
+import com.inet.jobportal.bo.candidate.JobAppBO;
+import com.inet.jobportal.model.candidate.JobApp;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * EmployerJobAppSearchDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobAppSearchDS.java March 26, 2019 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportalemployerjobappsearch")
+@XPortalDataService(roles = {"jobportal_employer_common"}, description = "Employer Common Task")
+@XPortalPageRequest(uri="jobportal/employer/jobapp/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobAppSearchDS extends JobPortalAbsractService {
+    @Inject
+    private JobAppBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+//        System.out.println("Employer Search...");
+
+        String organId = firmProfile.getOrganiId();
+
+        String username = XParamUtils.getString("username", params,"");
+        String jobpostId = XParamUtils.getString("jobpostId", params,"");
+        String uuid = XParamUtils.getString("uuid", params,"");
+        Boolean inactive = XParamUtils.getBoolean("inactive", params);
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        if (!username.equals("")) { query.field("username").equal(username); }
+        if (!organId.equals("")) { query.field("organId").equal(organId); }
+        if (!jobpostId.equals("")) { query.field("jobpostId").equal(jobpostId); }
+        if (!uuid.equals("")) {
+            query.field("uuid").equal(uuid);
+//             viewed by employer
+//            System.out.println("Viewed by Employer");
+//            System.out.println(uuid);
+            bo.viewByEmployer(uuid, System.currentTimeMillis());
+        }
+        if (inactive != null) { query.field("inactive").equal(inactive); }
+
+        query.order("-appliedDate");
+
+        SearchDTO<JobApp> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+
+}

@@ -1,0 +1,107 @@
+package com.inet.calista.crm.service.essentials.search;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
+import com.inet.base.util.UuidUtils;
+import com.inet.calista.crm.bo.essentials.ContactBo;
+import com.inet.calista.crm.bo.essentials.EntityBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.mongodb.MapReduceCommand;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
+
+/**
+ * GlobalSearchService.
+ *
+ * @author thoangtran
+ * @version GlobalSearchService 2018 06-13 11:58
+ */
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
+
+@Named("crm_essentials_global_qsearcservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Contact role")
+@XPortalPageRequest(uri = "crm/essentials/global/search/quick", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class GlobalSearchService extends CRMAbstractService {
+  @Inject
+  private ContactBo contactBo;
+  @Inject
+  private EntityBo organizationBo;
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile profile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    log.debug("Begin search with params: {}", params);
+    final String outputCollection = "search_" + UuidUtils.getUuid();
+    try{
+      final String term = XParamUtils.getString("term", params);
+      if(Strings.isNullOrEmpty(term)){
+        putError(action, "term", ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      // generate output collection name
+
+      // query in contact
+      final QueryImpl<JSONDB> query = new QueryImpl<>();
+      query.field("orgCode").equal(profile.getOrganiId());
+      query.or(query.criteria("fullName").like(term), query.criteria(CommonConstant.MOBILE_PHONE).equal(term), query.criteria(CommonConstant.PRIMARY_EMAIL).equal(term));
+      // run map reduce on report collection
+      log.debug("Search in contact collections : {}", query.getQueryObject().toJson());
+      contactBo.mapreduce(query, Maps.newHashMap(),
+          Document.class,
+          loadFile(this.getClass().getResourceAsStream("contact-map.js")),
+          loadFile(this.getClass().getResourceAsStream("contact-reduce.js")),
+          loadFile(this.getClass().getResourceAsStream("contact-finalize.js")),
+          MapReduceCommand.OutputType.MERGE, outputCollection);
+
+      // search in entity and return result
+      final QueryImpl<JSONDB> queryInOrgan = new QueryImpl<>();
+      queryInOrgan.field("orgCode").equal(profile.getOrganiId());
+      queryInOrgan.or(
+          queryInOrgan.criteria("name").like(term),
+          queryInOrgan.criteria(CommonConstant.PRIMARY_PHONE).equal(term),
+          queryInOrgan.criteria(CommonConstant.PRIMARY_EMAIL).equal(term));
+      log.debug("Search in entity collections: {}", queryInOrgan.getQueryObject().toJson());
+      return new ObjectWebDataservice<>(organizationBo.mapreduce(queryInOrgan, Maps.newHashMap(),
+          Document.class,
+          loadFile(this.getClass().getResourceAsStream("entity-map.js")),
+          loadFile(this.getClass().getResourceAsStream("entity-reduce.js")),
+          loadFile(this.getClass().getResourceAsStream("entity-finalize.js")),
+          MapReduceCommand.OutputType.MERGE, outputCollection));
+
+    }catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during global quick search information", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    } finally {
+      // remove temp collection
+      contactBo.removeTmpCollection(outputCollection);
+    }
+  }
+
+  public static String loadFile(InputStream stream) throws IOException {
+    return new String(ByteStreams.toByteArray(stream), "utf-8");
+  }
+}

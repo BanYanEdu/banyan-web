@@ -1,0 +1,12 @@
+package com.inet.calista.global.model.common;
+
+/**
+ * BusinessRegistration.
+ *
+ * @author thoangtran
+ * @version BusinessRegistration 2018 07-30 11:52
+ */
+public class BusinessRegistration {
+  private String code; // so giay phep
+
+}

@@ -1,0 +1,84 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.project.proj;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.collatask.bo.project.ProjectBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.model.LogTime;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * AddLogTimeService.
+ *
+ * @author Duyen Tang
+ * @version $Id: AddLogTimeService.java Apr 4, 2018 10:35:06 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_project_addlogtimeservice")
+@XPortalDataService(roles = { Roles.PROJECT }, description = "")
+@XPortalPageRequest(uri = "colla/projects/addlogtime", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class AddLogTimeService extends ProjectService {
+	@Inject
+	private ProjectBO projectBo;
+
+	@Override
+	protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+			Map<String, Object> params) throws WebOSBOException {
+		try {
+			// get log time information
+			LogTime logTime = action.getModel(LogTime.class);
+			if (logTime.getTime() <= 0) {
+				putError(action, "time", ErrorCode.must_greater_than_zero);
+				return FAILURE_RESULT;
+			}
+
+			logTime.setAuthName(getUsername());
+			logTime.setAuthUname(getFullname());
+
+			Project project = loadProject(getOrgCode(site, subFirm), params);
+
+			if (project == null || !canEdit(getUsername(), project)) {
+				putError(action, CollaTaskJsonConstants.CONSTRAINT, ErrorCode.forbidden);
+				return FAILURE_RESULT;
+			}
+
+			projectBo.addLogTime(project.getUuid(), logTime);
+
+			return SUCCESS_RESULT;
+		} catch (ValidationException ex) {
+			action.getViolation().add(ex.getError());
+			return FAILURE_RESULT;
+		}
+	}
+
+}

@@ -1,0 +1,173 @@
+package com.inet.jobportal.service.candidate.jobpost;
+
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * JobPostPublicSearchDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPostPublicSearchDS.java Jan 2, 2019 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportaljobpostpublicsearch")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description="Job Post Search service")
+@XPortalPageRequest(uri="jobportal/candidate/jobpost/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobPostPublicSearchDS extends JobPortalAbsractService {
+    @Inject
+    private JobPostBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String jobCode = XParamUtils.getString("jobCode", params,"");
+        String organId = XParamUtils.getString("organId", params,"");
+        String uuid = XParamUtils.getString("uuid", params,"");
+        Boolean inactive = XParamUtils.getBoolean("inactive", params);
+        Long expiryDate = XParamUtils.getLong("expiryDate", params, 0L );
+
+        String keyword = XParamUtils.getString("keyword", params,"");
+        String job_cat_01 = XParamUtils.getString("job_cat_01", params,"");
+        String job_cat_02 = XParamUtils.getString("job_cat_02", params,"");
+        String job_cat_03 = XParamUtils.getString("job_cat_03", params,"");
+        String location_01 = XParamUtils.getString("location_01", params,"");
+        String location_02 = XParamUtils.getString("location_02", params,"");
+        String location_03 = XParamUtils.getString("location_03", params,"");
+        String jobLevelCode = XParamUtils.getString("jobLevelCode", params,"");
+        String salaryLevelCode = XParamUtils.getString("salaryLevelCode", params,"");
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("searchable").equal(true);
+        if (!jobCode.equals("")) { query.field("code").equal(jobCode); }
+        if (!organId.equals("")) { query.field("organId").equal(organId); }
+        if (!uuid.equals("")) { query.field("uuid").equal(uuid); }
+        if (inactive != null) { query.field("inactive").equal(inactive); }
+        if (expiryDate != 0) { query.field("expiryDate").greaterThanOrEq(expiryDate); }
+        if (!jobLevelCode.equals("")) { query.field("jobLevelCode").equal(jobLevelCode); }
+
+        // keyword
+        if (!keyword.equals("")) {
+            query.and(
+                    query.or(
+                            query.criteria("jobTitle").containsIgnoreCase(keyword),
+                            query.criteria("employerName").containsIgnoreCase(keyword),
+                            query.criteria("tags").containsIgnoreCase(keyword)
+                    )
+            );
+        }
+
+        // job categories
+        Integer jobCatCount = 0;
+        if (!job_cat_01.equals("")) { jobCatCount = 1; }
+        if (!job_cat_02.equals("")) { jobCatCount = 2; }
+        if (!job_cat_03.equals("")) { jobCatCount = 3; }
+
+        if (jobCatCount == 1) {
+            query.field("jobCategories").contains(job_cat_01);
+        }
+        if (jobCatCount == 2) {
+            query.and(
+                    query.or(
+                            query.criteria("jobCategories").contains(job_cat_01),
+                            query.criteria("jobCategories").contains(job_cat_02)
+                    )
+            );
+        }
+        if (jobCatCount == 3) {
+            query.and(
+                    query.or(
+                            query.criteria("jobCategories").contains(job_cat_01),
+                            query.criteria("jobCategories").contains(job_cat_02),
+                            query.criteria("jobCategories").contains(job_cat_03)
+                    )
+            );
+        }
+
+        // locations
+        Integer cityCount = 0;
+        if (!location_01.equals("")) { cityCount = 1; }
+        if (!location_02.equals("")) { cityCount = 2; }
+        if (!location_03.equals("")) { cityCount = 3; }
+
+        if (cityCount == 1) {
+            query.field("locations.cityCode").equal(location_01);
+        }
+        if (cityCount == 2) {
+            query.and(
+                    query.or(
+                            query.criteria("locations.cityCode").equal(location_01),
+                            query.criteria("locations.cityCode").equal(location_02)
+                    )
+            );
+        }
+        if (cityCount == 3) {
+            query.and(
+                    query.or(
+                            query.criteria("locations.cityCode").equal(location_01),
+                            query.criteria("locations.cityCode").equal(location_02),
+                            query.criteria("locations.cityCode").equal(location_03)
+                    )
+            );
+        }
+
+        // Salary Levels
+        if (!salaryLevelCode.equals("")) {
+            Double salaryAmount = 0D;
+            Double exchangeRate = 23500D;
+            switch (salaryLevelCode) {
+                case "E_SALARY_LEVEL_010": salaryAmount = 3000000D; break;
+                case "E_SALARY_LEVEL_020": salaryAmount = 5000000D; break;
+                case "E_SALARY_LEVEL_030": salaryAmount = 10000000D; break;
+                case "E_SALARY_LEVEL_040": salaryAmount = 15000000D; break;
+                case "E_SALARY_LEVEL_050": salaryAmount = 20000000D; break;
+                case "E_SALARY_LEVEL_060": salaryAmount = 30000000D; break;
+                case "E_SALARY_LEVEL_070": salaryAmount = 50000000D; break;
+                case "E_SALARY_LEVEL_080": salaryAmount = 75000000D; break;
+                case "E_SALARY_LEVEL_090": salaryAmount = 100000000D; break;
+            }
+            query.and(
+                    query.or(
+                            query.criteria("salaryTermCode").equal("E_SALARY_TERM_NEGOTIABLE"),
+                            query.and(
+                                    query.criteria("salaryTermCode").equal("E_SALARY_TERM_VND"),
+                                    query.criteria("salaryAmountTo").greaterThanOrEq(salaryAmount)
+                                    ),
+                            query.and(
+                                    query.criteria("salaryTermCode").equal("E_SALARY_TERM_USD"),
+                                    query.criteria("salaryAmountTo").greaterThanOrEq(salaryAmount/exchangeRate)
+                            )
+                    )
+            );
+        }
+
+        //Sorting
+        query.order("-modifiedDate");
+
+        SearchDTO<JobPost> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

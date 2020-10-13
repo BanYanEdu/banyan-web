@@ -1,0 +1,23 @@
+package com.inet.calista.crm.service.common.essentials;
+
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.essentials.contact.search.QuickSearchService;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+
+/**
+ * SearchContactService.
+ *
+ * @author thoangtran
+ * @version SearchContactService 2018 04-18 14:20
+ */
+@Named("crm_comm_contacts_qsearcgservice")
+@XPortalDataService(roles = { Roles.BIZ_COMMON}, description = "Biz common")
+@XPortalPageRequest(uri = "crm/comm/contacts/quick", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class SearchContactService extends QuickSearchService {
+}

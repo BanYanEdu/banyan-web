@@ -1,0 +1,232 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbCity;
+import com.inet.calista.global.model.GlbDistrict;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 
+ * GlobalDistrictBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalDistrictBO.java May 20, 2019 2:20:45 PM $
+ *
+ * @since 1.0
+ */
+@Named("GlbDistrictBO")
+public class GlbDistrictBO extends GlbNoSqlBO<GlbDistrict> implements BeanInitiateInvoke {
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    protected GlbDistrictBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "gl_district");
+    }
+
+    /**
+     * @param cityID
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbDistrict> queryByCode(String countryID,
+                                              String cityID,
+                                              List<String> codes) throws WebOSBOException
+    {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+        		.field("countryID").equal(countryID)
+        		.field("cityID").equal(cityID)
+        		.field("code").in(codes);
+        return query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * 
+     * @param countryID
+     * @param cityID
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbDistrict> search(String countryID,
+                                         String cityID,
+                                         String keyword,
+                                         int offset, int limit) throws WebOSBOException
+    {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+        		.field("countryID").equal(countryID)
+        		.field("cityID").equal(cityID);
+
+        if (StringUtils.hasLength(keyword)) 
+        {
+            query.and(query.or(query.criteria("code").like(keyword),
+                    			  query.criteria("name").like(keyword)));
+        }
+        
+        return super.search((QueryImpl<JSONDB>) query, offset, limit);
+    }
+
+    /**
+     * 
+     * @param countryID
+     * @param cityID
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<GlbDistrict> query(String countryID, String cityID) throws WebOSBOException {
+    		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+    				.field("countryID").equal(countryID)
+    				.field("cityID").equal(cityID);
+    		return query((QueryImpl<JSONDB>) query);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(GlbDistrict item) throws WebOSBOException {
+    		GlbDistrict info = loadByCode(item.getCountryID(), item.getCityID(), item.getCode());
+    		if (info != null)
+    			return info.getUuid();
+        return super.add(item);
+    }
+
+    /**
+     * 
+     * @param countryID
+     * @param cityID
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public GlbDistrict loadByCode(String countryID, String cityID, String code) throws WebOSBOException {
+    		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+    				.field("countryID").equal(countryID)
+    				.field("cityID").equal(cityID)
+    				.field("code").equal(code);
+    		return load((QueryImpl<JSONDB>) query);
+    }
+    
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        // index data
+        ensureIndex("countryID,cityID");
+        ensureIndex("countryID,cityID,code");
+        ensureIndex("countryID,cityID,name");
+
+        if (count() > 0)
+            return;
+
+        initDistrict();
+    }
+
+    /**
+     *
+     */
+    public void initDistrict() {
+        super.remove(new QueryImpl<>());
+
+        logger.debug("init district data from global-district.json file");
+        String json = ResourceUtil.getResourceAsString("global-district.json");
+        if (StringUtils.hasLength(json)) {
+            JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+            if (arrJson.size() > 0) {
+                final Map<String, GlbCity> map = new HashMap<>();
+                for (int idx = 0; idx < arrJson.size(); idx++) {
+                    JSONObject jsonItem = (JSONObject) arrJson.get(idx);
+                    GlbDistrict item = JSONUtil.json2Bean(GlbDistrict.class, jsonItem);
+
+                    String country = StringUtils.EMPTY_STRING;
+                    if (jsonItem.has("country")) {
+                        country = jsonItem.getString("country");
+                    }
+                    String city = StringUtils.EMPTY_STRING;
+                    if (jsonItem.has("city")) {
+                        city = jsonItem.getString("city");
+                    }
+
+                    if (StringUtils.hasLength(country) && StringUtils.hasLength(city)) {
+                        GlbCity cityItem = map.get(country + city);
+                        if (cityItem == null) {
+                            cityItem = WebContext.INSTANCE.cache()
+                                    .getBean(GlbCityBO.class)
+                                    .loadByCode(country, city);
+                        }
+
+                        if (cityItem != null) {
+                            map.put(country + city, cityItem);
+
+                            if (StringUtils.hasLength(item.getCode())
+                                    && StringUtils.hasLength(item.getName())) {
+                                try {
+                                    item.setCountryID(country);
+                                    item.setCityID(city);
+
+                                    item.setUuid(add(item));
+
+                                    logger.debug("add district {} success.", JSONObject.fromObject(item));
+                                } catch (Exception e) {
+                                    logger.error("init district {} - {} fail.", item.getCode(), item.getName());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<GlbDistrict> getClassConvetor() {
+        return GlbDistrict.class;
+    }
+}

@@ -1,0 +1,26 @@
+package com.inet.calista.crm.dto;
+
+import com.inet.calista.crm.model.setting.internal.Employee;
+import com.inet.calista.crm.model.setting.internal.Group;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * EmployeeDto.
+ *
+ * @author thoangtran
+ * @version EmployeeDto 2018 04-12 15:02
+ */
+@Getter
+@Setter
+public class EmployeeDto {
+  public EmployeeDto(Employee employee) {
+    this.employee = employee;
+  }
+
+  private Employee employee;
+  private List<Group> groups = new ArrayList<>();
+}

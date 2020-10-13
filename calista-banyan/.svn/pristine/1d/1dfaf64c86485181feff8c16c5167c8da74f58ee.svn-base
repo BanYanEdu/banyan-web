@@ -1,0 +1,100 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.bo.GlbEmailFirmBO;
+import com.inet.calista.global.model.GlbEmailFirm;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.subfirmservice.
+ *
+ * @author Phong Tran
+ * @version : TemplateUpdateService.java Jun 20, 2019 09:59 phongtt $
+ * @since 1.0
+ */
+@Named("glfirmemailupdate")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/firm/email/update",
+        transaction = true,
+        xssLevel = -1,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class EmailUpdateService extends EmailAbstraction {
+
+    @Inject
+    private GlbEmailFirmBO templateBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site,
+                                     final SubFirmProfile profile,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String templateId = XParamUtils.getString("templateId", params, StringUtils.EMPTY_STRING);
+        final GlbEmailFirm template = templateBO.loadTemplateId(getOrganId(site, profile), templateId);
+        logger.debug("found template {} with id {}", template, templateId);
+        if (template == null) {
+            putError(action, "TEMPLATE", "TEMPLATE_IS_NULL");
+            throw new WebOSBOException("Bad request!");
+        }
+
+        final GlbEmailFirm newTemp = action.getModel(GlbEmailFirm.class);
+        newTemp.setUuid(templateId);
+        newTemp.setOrganId(getOrganId(site, profile));
+        newTemp.setApplication(template.getApplication());
+        newTemp.setEmailCode(template.getEmailCode());
+        newTemp.setLanguage(template.getLanguage());
+        newTemp.setSrvVariable(template.getSrvVariable());
+
+        if (!verifyTemplate(newTemp, action.getViolation())) {
+            throw new WebOSBOException("Bad request!");
+        } else {
+            final GlbEmailFirm exists = templateBO.loadTemplate(
+                    newTemp.getApplication(),
+                    newTemp.getOrganId(),
+                    newTemp.getEmailCode(),
+                    newTemp.getLanguage());
+
+            if (exists != null && !newTemp.getUuid().equals(exists.getUuid())) {
+                putError(action, "TEMPLATE", "TEMPLATE_EXISTS");
+                throw new WebOSBOException("Bad request!");
+            }
+        }
+
+        templateBO.update(newTemp.getUuid(), newTemp);
+
+        return new ObjectWebDataservice<>(newTemp);
+    }
+}

@@ -1,0 +1,71 @@
+package com.inet.calista.crm.service.setting.dicts;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.setting.DictionaryBo;
+import com.inet.calista.crm.model.setting.configuration.Dictionary;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtd
+ * @version $$Id: CreateService 6/2/16 3:37 PM thoangtd $$
+ * @since 1.0
+ */
+public class SaveDictService extends CRMAbstractService {
+  private static final Logger LOG = LoggerFactory.getLogger(SaveDictService.class);
+  //~ class properties ==================================
+  @Inject
+  private DictionaryBo dictionaryBo;
+
+  //~ class members =====================================
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile,
+                                   final  AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try {
+      // get dictionary information
+      Dictionary dict = action.getModel(Dictionary.class);
+      dict.setOrgCode(firmProfile.getOrganiId());
+      if (Strings.isNullOrEmpty(dict.getKey()) ) {
+        // invalid key information
+        putError(action, "key", ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+
+      if (Strings.isNullOrEmpty(dict.getValue())) {
+        // invalid value information
+        putError(action, "value", ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      if(dictionaryBo.isExisted(dict.getKey(), dict.getValue(), dict.getType(),firmProfile.getOrganiId())) {
+        putError(action, "dict", ErrorCode.existed);
+        return FAILURE_RESULT;
+      }
+
+      // saveOrUpdate dictionary information
+      dict.setUuid(dictionaryBo.add(dict));
+      return new ObjectWebDataservice<>(dict);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during saving dictionary information", ex);
+
+      // log error
+      LOG.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

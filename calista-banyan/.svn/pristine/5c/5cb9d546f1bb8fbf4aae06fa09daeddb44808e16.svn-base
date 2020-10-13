@@ -1,0 +1,236 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.inet.calista.global.model.GlbEmailFirm;
+import com.inet.xportal.cloud.CloudCfgConstant;
+import com.inet.xportal.cloud.bo.ActivityNotifyBO;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.thesis.queueservice.MailQueueMessageBO;
+import com.inet.xportal.thesis.queueservice.SMSQueueMessageBO;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.model.NotifyTemplate;
+import com.inet.xportal.web.util.TemplateUtil;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version : GlbNotifyBO.java Jun 05, 2019 09:04 phongtt $
+ * @since 1.0
+ */
+@Named("GlbNotifyBO")
+public class GlbNotifyBO {
+	protected static final Logger logger = LoggerFactory.getLogger(GlbNotifyBO.class);
+
+	/**
+	 * 
+	 * @param organId
+	 * @param code
+	 * @param language
+	 * @param sender
+	 * @param fullname
+	 * @param recipients
+	 * @param variables
+	 */
+	public void sendPush(String organId, String code, String language, String sender, String fullname,
+			final List<String> recipients, final Map<String, Object> variables) {
+		sendPush(organId, code, language, sender, fullname, recipients, variables, null, null);
+	}
+
+	/**
+	 * @param variables
+	 * @param category
+	 * @param language
+	 * @param application
+	 * @param sender
+	 * @param receivers
+	 */
+	public void sendPush(String organId, String code, String language, String sender, String fullname,
+			final List<String> recipients, final Map<String, Object> variables, final Map<String, String> urls,
+			final Map<String, String> params) {
+		// read template
+		NotifyTemplate template = ConfigureLoader.INSTANCE.ini().getServiceContext()
+				.template(NoSQLConstant.UNIFIED_PUSH_PROVIDER, organId, language, code);
+
+		if (template != null) {
+			sendPush(sender, fullname, template.getMessage(), recipients, variables, urls, params);
+		}
+	}
+
+	/**
+	 * 
+	 * @param sender
+	 * @param fullname
+	 * @param message
+	 * @param recipients
+	 * @param variables
+	 * @param urls
+	 * @param params
+	 */
+	public void sendPush(String sender, String fullname, String message, final List<String> recipients,
+			final Map<String, Object> variables, final Map<String, String> urls, final Map<String, String> params) {
+		sendPush(StringUtils.EMPTY_STRING, sender, fullname, message, recipients, variables, urls, params);
+	}
+
+	/**
+	 * 
+	 * @param activityID
+	 * @param sender
+	 * @param fullname
+	 * @param message
+	 * @param recipients
+	 * @param variables
+	 * @param urls
+	 * @param params
+	 */
+	public void sendPush(String activityID, String sender, String fullname, String message,
+			final List<String> recipients, final Map<String, Object> variables, final Map<String, String> urls,
+			final Map<String, String> params) {
+		if (!CollectionUtils.isEmpty(variables))
+			message = TemplateUtil.velocityVariables(message, variables);
+
+		// update message to social
+		if (params != null && params.containsKey(CloudCfgConstant.SOCIAL_SUBJECT)
+				&& !StringUtils.hasLength(params.get(CloudCfgConstant.SOCIAL_SUBJECT))) {
+			params.put(CloudCfgConstant.SOCIAL_SUBJECT, message);
+		}
+
+		// update notification table
+		WebContext.INSTANCE.cache().getBean(ActivityNotifyBO.class)
+		.notifyUpdate(
+				WebContext.INSTANCE.cache().getSiteID(), 
+				activityID,
+				WebContext.INSTANCE.cache().getApplication(),
+				sender, 
+				fullname,
+				message, 
+				recipients, 
+				urls, params);
+	}
+
+	/**
+	 * 
+	 * @param activityID
+	 * @param sender
+	 * @param fullname
+	 * @param message
+	 * @param recipients
+	 * @param variables
+	 * @param urls
+	 * @param params
+	 */
+	public void socialPush(String activityID, String sender, String fullname, String message,
+			final List<String> recipients, final Map<String, Object> variables, final Map<String, String> urls,
+			final Map<String, String> params) {
+		// mark this message as social push
+		params.put(CloudCfgConstant.SOCIAL_SUBJECT, StringUtils.EMPTY_STRING);
+
+		// send to social wall
+		sendPush(activityID, sender, fullname, message, recipients, variables, urls, params);
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param category
+	 * @param language
+	 * @param sender
+	 * @param emails
+	 * @param variables
+	 */
+	public void sendMail(String organId, 
+			String category,
+			String language, 
+			String sender,
+			String[] emails,
+			final Map<String, Object> variables) 
+	{
+		sendMail(organId, category, language, sender, emails, variables, null);
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param category
+	 * @param language
+	 * @param sender
+	 * @param emails
+	 * @param variables
+	 * @param files
+	 */
+	public void sendMail(String organId, 
+			String category, 
+			String language, 
+			String sender,
+			String[] emails,
+			final Map<String, Object> variables, 
+			final Map<String, File> files) 
+	{
+		final GlbEmailFirm emailFirm = WebContext.INSTANCE.cache()
+				.getBean(GlbEmailFirmBO.class)
+				.loadTemplate(WebContext.INSTANCE.cache().getApplication(), organId, category, language);
+
+		logger.debug("Email template {} from {} .", emailFirm, organId);
+		if (emailFirm != null && StringUtils.hasLength(emailFirm.getEmailContent())) 
+		{
+			try {
+				WebContext.INSTANCE.cache()
+				.getBean(MailQueueMessageBO.class)
+				.queue(TemplateUtil.velocityVariables(emailFirm.getEmailContent(), variables),
+						emailFirm.getEmailSubject(), files, sender, emails);
+
+			} catch (Exception ex) {
+				logger.warn("Email queue fail.", ex);
+			}
+		}
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param code
+	 * @param language
+	 * @param phones
+	 * @param variables
+	 */
+	public void sendSms(String organId, 
+			String code, 
+			String language, 
+			String phones,
+			final Map<String, String> variables) 
+	{
+		if (StringUtils.hasLength(phones)) 
+		{
+			WebContext.INSTANCE.cache().getBean(SMSQueueMessageBO.class).queue(organId, code, language, phones,variables);
+		}
+	}
+}

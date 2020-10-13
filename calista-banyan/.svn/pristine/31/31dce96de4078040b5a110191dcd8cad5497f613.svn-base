@@ -1,0 +1,19 @@
+package com.inet.calista.global.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * LocationCriteria.
+ *
+ * @author thoangtran
+ * @version LocationCriteria 2018 08-13 09:56
+ */
+@Getter
+@Setter
+@ToString
+public class LocationCriteria {
+  private String parentId;
+  private String keyword;
+}

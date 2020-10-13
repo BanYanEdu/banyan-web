@@ -1,0 +1,48 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common;
+
+import com.inet.calista.erp.ERPConstant;
+
+/**
+ * POSConstant.
+ *
+ * @author Phong Tran
+ * @version $Id: POSConstant.java Dec 18, 2016 10:04 phongtt $
+ * @since 1.0
+ */
+public interface POSConstant {
+    public static final String DB_CONTEXT = ERPConstant.DB_CONTEXT;//"POSNoSqlContext";
+    public static final String POS_APPLICATION = "POS_APPLICATION";
+
+    public static final String ROLE_COMMUNITY_DESCRIPTION = "pos.community.service";
+    public static final String ROLE_USER = "$pos_user";
+    public static final String ROLE_USER_DESCRIPTION = "pos.user.service";
+    public static final String ROLE_ADMIN = "$pos_admin";
+    public static final String ROLE_ADMIN_DESCRIPTION = "pos.admin.service";
+    public static final String ROLE_CASHIER = "$pos_cashier";
+    public static final String ROLE_CASHIER_DESCRIPTION = "pos.cashier.service";
+    public static final String ROLE_PRODUCT = "$pos_product";
+    public static final String ROLE_PRODUCT_DESCRIPTION = "pos.product.service";
+
+    public static final String COUNTER_SHIFT = "SHIFT";
+    public static final String COUNTER_SHIFT_PREFIX = "SFT";
+    public static final String COUNTER_PRODUCT = "PRODUCT";
+    public static final String COUNTER_PRODUCT_PREFIX = "PROD";
+}

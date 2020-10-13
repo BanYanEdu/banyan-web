@@ -1,0 +1,75 @@
+package com.inet.calista.global.model.contact;
+
+import com.inet.calista.global.model.NoSqlModel;
+import com.inet.calista.global.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.StringUtils;
+
+/**
+ * ContactInfo.
+ *
+ * @author thoangtran
+ * @version ContactInfo 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class ContactInfo extends NoSqlModel<ContactInfo> {
+    // collection name
+    public static final String COLLECTION_NAME = "gl_contact";
+
+    // class properties =======================================
+    private long createdDate;
+    private String createdBy;
+    private String modifiedBy;
+    private long modifiedDate;
+    private String salutationType; // Mr , Ms , Mrs , Dr , Prof
+    private String sex;
+    private String firstName;
+    private String lastName; // require
+    private String middleName;
+    private String fullName; // for search
+    private String primaryEmail;
+    private String officePhone;
+    private String mobilePhone;
+    private String homePhone;
+    private long dateOfBirth;
+    private String dateOfBirthIso;
+    private String taxCode;
+    private String skype;
+    private String facebook;
+    private String title; // refer to dictionary
+    private String department;
+    private String status;
+    private String avatar;
+
+    private Address address;
+    private String description;
+    private boolean deleted = false;
+
+    private String ownerId;
+    private String userCode; // private information not load
+
+
+    // class member ============================================
+    public String getFullName() {
+        String fullName = "";
+
+        if (StringUtils.hasLength(getFirstName())) {
+            fullName += getFirstName() + " ";
+        }
+        if (StringUtils.hasLength(getMiddleName())) {
+            fullName += getMiddleName() + " ";
+        }
+        if (StringUtils.hasLength(getLastName())) {
+            fullName += getLastName();
+        }
+
+        return fullName;
+    }
+
+    @Override
+    protected boolean equals(ContactInfo other) {
+        return false;
+    }
+}

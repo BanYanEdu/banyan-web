@@ -1,0 +1,88 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.task;
+
+/**
+ * QuickLookUpDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: QuickLookUpDto.java Mar 26, 2018 4:09:33 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class QuickLookUpDto {
+  private String key;
+  private long dateFrom;
+  private long dateTo;
+  private String projectUuid;
+
+  /**
+   * @return the key
+   */
+  public String getKey() {
+    return key;
+  }
+
+  /**
+   * @param key the key to set
+   */
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  /**
+   * @return the dateFrom
+   */
+  public long getDateFrom() {
+    return dateFrom;
+  }
+
+  /**
+   * @param dateFrom the dateFrom to set
+   */
+  public void setDateFrom(long dateFrom) {
+    this.dateFrom = dateFrom;
+  }
+
+  /**
+   * @return the dateTo
+   */
+  public long getDateTo() {
+    return dateTo;
+  }
+
+  /**
+   * @param dateTo the dateTo to set
+   */
+  public void setDateTo(long dateTo) {
+    this.dateTo = dateTo;
+  }
+
+  /**
+   * @return the projectUuid
+   */
+  public String getProjectUuid() {
+    return projectUuid;
+  }
+
+  /**
+   * @param projectUuid the projectUuid to set
+   */
+  public void setProjectUuid(String projectUuid) {
+    this.projectUuid = projectUuid;
+  }
+  
+}

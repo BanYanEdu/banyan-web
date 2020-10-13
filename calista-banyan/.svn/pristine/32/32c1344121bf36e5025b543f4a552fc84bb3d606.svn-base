@@ -1,0 +1,122 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.analytics.message;
+
+import com.inet.calista.erp.message.ERPBaseMessage;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * com.inet.calista.erp.analytics.message.
+ *
+ * @author Phong Tran
+ * @version $Id: SalesAnalyticsMessage.java Jan 02, 2019 16:53 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class SalesAnalyticsMessage extends ERPBaseMessage {
+    private String country;
+    private String city;
+    private String sex;
+    private long age;
+
+    //organId, outletId exists class ERPBaseMessage
+    //private String organId;
+    //private String outletId;
+    private String userCode; //sales person
+    private String supplierId;
+    private String customerId;
+
+    //Master - Detail --> using enum SalesAnalyticsMessage.SaleGroup
+    private String saleGroup;
+    //Retail, WhoseSale --> using enum SalesAnalyticsMessage.saleType
+    private String saleType;
+    //Sale: Retail, Commerce, Invoice, v.v...
+    private String voucherModule;
+    private String voucherCode;
+    private String voucherType;
+
+    private String currencyId;
+
+    private String itemId;
+    private String itemCode;
+    private String itemSku;
+
+    //Properties
+    private String itemCategory;
+    private String itemBrand;
+    private String itemColor;
+    private String itemSize;
+    private String itemMaterial;
+    private String itemMadeIn;
+    private String itemType;
+
+    //return
+    private String itemReturn;
+
+    private float qty = 0F;
+    private float price = 0F;
+    //qty * price
+    private float revenue = 0F;
+
+    private float cogs = 0F;
+    //qty * cogs
+    private float investment = 0F; //investment
+
+    private String vatCode;
+    private float vat = 0F;
+
+    private String taxCode;
+    private float tax = 0F;
+
+    private String shipCode;
+    private float ship = 0F;
+
+    private String discountCode;
+    private float discount = 0F;
+
+    private String promotionCode;
+    private float promotion = 0F;
+
+    private String commissionCode;
+    private float commission = 0F;
+
+    //costAmount = commission + discount + vat + tax + promotion + ship
+    //revenue - (investment + cost)
+    private float profit = 0F;
+
+    public void calc() {
+        setRevenue(getQty() * getPrice());
+        setInvestment(getQty() * getCogs());
+
+        float costAmount = getCommission() + getDiscount() + getVat() + getTax() + getPromotion() + getShip();
+        setProfit(getRevenue() - (getInvestment() + costAmount));
+    }
+
+    public enum SaleType {
+        Retail,
+        WhoseSale
+    }
+
+    public enum SaleGroup {
+        Master,
+        Detail
+    }
+}

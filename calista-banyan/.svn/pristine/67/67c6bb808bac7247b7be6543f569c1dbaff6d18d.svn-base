@@ -1,0 +1,64 @@
+package com.inet.calista.global.service.organization.profile;
+
+import com.inet.calista.common.CalConstant;
+import com.inet.calista.global.bo.contact.OrganizationInfoBo;
+import com.inet.calista.global.model.contact.OrganizationInfo;
+import com.inet.calista.global.service.organization.UpdateService;
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * UpdateService.
+ *
+ * @author thoangtran
+ * @version UpdateService 2018 04-14 11:38
+ */
+@Named("glorganprofileupdate")
+@XPortalDataService(roles = {CalConstant.ROLE_SUB_ADMIN}, description = "User role")
+@XPortalPageRequest(uri = "gl/organ/profile/update", transaction = true, inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class UpdateProfileService extends UpdateService {
+    @Inject
+    private OrganizationInfoBo organizationInfoBo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile profile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String organId = XParamUtils.getString("organId", params, StringUtils.EMPTY_STRING);
+        OrganizationInfo info = organizationInfoBo.loadByOrganId(getOrganId(site, profile));
+
+        if (info == null) {
+            info = new OrganizationInfo();
+
+            final FirmInformation firm = MngmFactoryManager.INSTANCE.service().organization(site, getOrganId(site, profile));
+            if (null != firm) {
+                //SyncData from lotus
+                info.setOrganId(firm.getOrganId());
+                info.setName(firm.getOrgName());
+                info.setUuid(organizationInfoBo.add(info));
+            }
+        } else {
+            if (organId.equals(info.getOrganId())) {
+                params.put("uuid", info.getUuid());
+                return super.service(site, profile, action, params);
+            }
+        }
+
+        return new ObjectWebDataservice<>(info);
+    }
+}

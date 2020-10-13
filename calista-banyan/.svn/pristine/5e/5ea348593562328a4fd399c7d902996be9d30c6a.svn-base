@@ -1,0 +1,124 @@
+/*****************************************************************
+   Copyright 2015 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.shelfservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.global.bo.GlbShelfBoxBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbShelfBox;
+import com.inet.xportal.module.web.util.FirmServiceUtil;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * ShelfBoxAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ShelfBoxAbstraction.java Feb 7, 2020 9:25:43 AM $
+ *
+ * @since 1.0
+ */
+public abstract class ShelfBoxAbstraction extends GlbAbstraction  
+{
+	@Inject
+	protected GlbShelfBoxBO shelfBO;
+
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected GlbShelfBox initShelf(String organId, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		GlbShelfBox tmpl = action.getModel(GlbShelfBox.class);
+		tmpl.setOrganId(organId);
+		return tmpl;
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected GlbShelfBox loadShelf(String organId, 
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String shelfID = XParamUtils.getString("shelfID", params);
+		if (!StringUtils.hasLength(shelfID)) 
+		{
+			return initShelf(organId, action, params);
+		}
+
+		GlbShelfBox tmpl = shelfBO.loadByID(organId, shelfID);
+		if (tmpl == null)
+		{
+			logger.error("Shelf {} is not found.", shelfID);
+			action.getViolation().add(new ViolationDTO("SHELF_ID", "SHELF_ID", 1, "SHELF_NOT_FOUND"));
+			throw new WebOSBOException("Bad request!");
+		}
+		
+		return tmpl;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(final SiteDataModel site, 
+			final SubFirmProfile subfirm,
+			final AbstractBaseAction action, 
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		String organId = FirmServiceUtil.getOrganId(site, subfirm);
+		
+		return service(organId, loadShelf(organId, action, params), action, params);
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param tmpl
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected abstract WebDataService service(String organId,
+			final GlbShelfBox tmpl,
+			final AbstractBaseAction action, 
+			final Map<String, Object> params) throws WebOSBOException;
+}

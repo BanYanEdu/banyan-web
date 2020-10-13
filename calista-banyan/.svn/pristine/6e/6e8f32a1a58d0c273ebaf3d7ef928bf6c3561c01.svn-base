@@ -1,0 +1,64 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.service.inventory.report;
+
+import com.inet.calista.erp.book.bo.ERPStockBookBO;
+import com.inet.calista.erp.excel.service.ExcelExportAbstraction;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.inventory.report.
+ *
+ * @author Phong Tran
+ * @version $Id: POSRptInvBalanceExcel.java Sep 20, 2018 10:43 phongtt $
+ * @since 1.0
+ */
+@Named("posrptinvbalanceexcel")
+public class POSRptInvBalanceExcel extends ExcelExportAbstraction {
+    @Inject
+    private ERPStockBookBO bookBO;
+
+    @Override
+    protected Object invoke(final SiteDataModel siteData,
+                            final FirmInformation firmInfo,
+                            final Map<String, Object> params,
+                            final Map<String, Object> reports) {
+
+        long from = XParamUtils.getLong("from", params, 0L);
+        long to = XParamUtils.getLong("to", params, 0L);
+
+        String outletIds = XParamUtils.getString("outlet", params, StringUtils.EMPTY_STRING);
+        String storageIds = XParamUtils.getString("storage", params, StringUtils.EMPTY_STRING);
+        String productIds = XParamUtils.getString("product", params, StringUtils.EMPTY_STRING);
+
+        reports.put("rptData", bookBO.rptBalance(
+                getOrganId(siteData, firmInfo), outletIds,
+                storageIds, productIds,
+                from, to));
+
+        return reports;
+    }
+}

@@ -1,0 +1,1408 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo.task;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.CollaborationTaskBO;
+import com.inet.calista.collatask.bo.FollowUpBO;
+import com.inet.calista.collatask.bo.LogTimeBO;
+import com.inet.calista.collatask.bo.project.ProjectBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.DashboardConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.data.task.History;
+import com.inet.calista.collatask.data.task.Modification;
+import com.inet.calista.collatask.data.task.Modification.Action;
+import com.inet.calista.collatask.data.task.Process;
+import com.inet.calista.collatask.dto.DashboardBlock;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.Situation;
+import com.inet.calista.collatask.dto.task.AdvanceLookUpDto;
+import com.inet.calista.collatask.dto.task.FollowedTaskDto;
+import com.inet.calista.collatask.dto.task.HandleDto;
+import com.inet.calista.collatask.dto.task.QuickLookUpDto;
+import com.inet.calista.collatask.dto.task.QuickSearchDto;
+import com.inet.calista.collatask.dto.task.QuickSearchDto.SearchType;
+import com.inet.calista.collatask.model.FollowUp;
+import com.inet.calista.collatask.model.LogTime;
+import com.inet.calista.collatask.model.project.Phase;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.service.task.SearchOrderByFollowUpService;
+import com.inet.calista.collatask.service.task.TaskService;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.collatask.util.JsonUtils;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.Update;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import com.mongodb.DBObject;
+import com.mongodb.util.JSON;
+
+import net.sf.json.JSONObject;
+
+/**
+ * TaskBO.
+ *
+ * @author Duyen Tang
+ * @author hiennguyen
+ * 		   Update indexes and businesses
+ * 	
+ * @version $Id: TaskBo.java Jan 24, 2018 4:09:37 PM tttduyen $
+ * 
+ * @since 1.0
+ */
+@Named("collatask_taskbo")
+public class TaskBO extends CollaborationTaskBO<Task> implements BeanInitiateInvoke 
+{
+	private static final Logger LOG = LoggerFactory.getLogger(TaskBO.class);
+	
+	@Inject
+	private FollowUpBO followUpBo;
+	
+	@Inject
+	private LogTimeBO logTimeBo;
+	
+	@Inject
+	private ProjectBO projectBo;
+
+	/**
+	 * Create {@link TaskBO} instance
+	 * 
+	 * @param contentBf
+	 *            the given {@link MagicContentBF} instance
+	 */
+	@Inject
+	protected TaskBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+		super(contentBf, "collatask_task");
+	}
+
+	/**
+	 * @return the projectBo
+	 */
+	public ProjectBO getProjectBo() {
+		return projectBo;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+	 */
+	@Override
+	public String add(Task task) throws WebOSBOException {
+		String uuid = super.add(task);
+
+		// parent with child
+		if (!Strings.isNullOrEmpty(task.getParentUuid())) 
+			updateHasChild(task.getOrgCode(), task.getParentUuid(), true);
+		
+		return uuid;
+	}
+
+	/**
+	 * Remove task with given UUID and parent UUID
+	 * 
+	 * @param orgCode
+	 * 		  Organization of this task	
+	 * @param taskUuid
+	 *        Task UUID
+	 * @param parentUuid
+	 *        Parent UUID of task
+	 */
+	public void remove(String orgCode, String taskUuid, String parentUuid) 
+	{
+		Query<JSONDB> query = new QueryImpl<JSONDB>()
+			.field("orgCode").equal(orgCode)
+			.field(BaseDBStore.ID_KEY).notEqual(CommonUtils.toObjectId(taskUuid));
+		// 1. remove only task of his/her company
+		super.remove((QueryImpl<JSONDB>)query);
+		
+		// 2. then update task's parent
+		if (!Strings.isNullOrEmpty(parentUuid)) 
+		{
+			// any task was linked with this parent
+			query = new QueryImpl<JSONDB>()
+				.field("orgCode").equal(orgCode)
+				.field("parentUuid").equal(parentUuid);
+
+			if (count((QueryImpl<JSONDB>)query) == 0) {
+				updateHasChild(orgCode, parentUuid, false);
+			}
+		}
+	}
+
+	/**
+	 * Update has child field for task
+	 * 
+	 * @param uuid
+	 *            the given task UUID
+	 * @param hasChild
+	 *            the given has child value
+	 */
+	public void updateHasChild(String orgCode, String taskUuid, boolean hasChild) 
+	{
+		Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("orgCode").equal(orgCode)
+				.field(BaseDBStore.ID_KEY).notEqual(CommonUtils.toObjectId(taskUuid));
+
+		Update<JSONDB> update = new UpdateImpl<JSONDB>().set("hasChild", hasChild);
+
+		update((UpdateImpl<JSONDB>)update, (QueryImpl<JSONDB>)query);
+	}
+
+	/**
+	 * Add {@link LogTime} to task
+	 *
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param exeName
+	 *         Given executor name
+	 * @param uuid
+	 *        Given {@link Task} UUID
+	 * @param progress
+	 *        Given progress
+	 * @param logTime
+	 *         Given {@link LogTime}
+	 * @throws ValidationException
+	 *         When validate data
+	 */
+	public Task updateProgress(String orgCode, String exeUname, String exeName, String uuid, int progress, LogTime logTime) throws ValidationException {
+		// load progress, status and list of processes of task
+		return updateProgress(findByUuid(orgCode, uuid), exeUname, exeName, progress, logTime);
+	}
+	
+	/**
+	 * Add {@link LogTime} to task
+	 * @param task
+	 * 		  Given task object
+	 * 
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param exeName
+	 *        Given executor name
+	 * @param progress
+	 *        Given progress
+	 * @param logTime
+	 *        Given {@link LogTime}
+	 * @throws ValidationException
+	 *        When validate data
+	 */
+	public Task updateProgress(Task task, String exeUname, String exeName, int progress, LogTime logTime) throws ValidationException 
+	{
+		if (task == null || !TaskService.canProcess(task)) 
+		{
+			LOG.warn("Invalid task with uuid [{}] or the user with user name [{}] "
+					+ "don't have permission to update on task [{}]", exeUname, task.getUuid());
+
+			throw new ValidationException(CollabarationTaskService.createViolationDto(CollaTaskJsonConstants.CONSTRAINT,ErrorCode.forbidden));
+		}
+
+		if (task.getProgress() == progress && logTime.getTime() == 0) 
+		{
+			throw new ValidationException(CollabarationTaskService.createViolationDto(CollaTaskJsonConstants.SUBMISSION, ErrorCode.invalid));
+		}
+
+		// create update content
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+
+		if (task.getProgress() != progress) 
+		{
+			// update progress
+			update.set("progress", progress);
+
+			// create list to contain modification
+			List<Modification> modifications = new ArrayList<>();
+			modifications.add(new Modification("progress", task.getProgress(), progress, Modification.Action.modify));
+
+			if (progress == 100) 
+			{
+				long completedDate = System.currentTimeMillis();
+				// process for only one user can process on task
+				for (Process process : task.getProcesses()) {
+					if (Process.Status.processing.name().equals(process.getStatus())) {
+						process.setStatus(Process.Status.completed.name());
+						process.setCompletedDate(completedDate);
+					}
+				}
+
+				// add modification on status and completed date
+				modifications.add(new Modification("status", task.getStatus(), Status.completed.name(), Action.modify));
+				modifications.add(new Modification("completedDate", null, completedDate, Action.add));
+
+				// update process, status, history
+				update.set("processes", JsonUtils.toJsonList(task.getProcesses()))
+						.set("status", Status.completed.name()).set("completedDate", completedDate)
+						.set("assignee.status", Process.Status.completed.name())
+						.set("assignee.completedDate", completedDate)
+						.add("histories", JSONObject.fromObject(new History(exeUname, exeName, modifications)));
+
+				// remove follow up for all user on task
+				followUpBo.removeBy(task.getOrgCode(), null, task.getUuid());
+			}
+		}
+
+		// update log time
+		if (logTime.getTime() > 0) 
+		{
+			// increase spent time for task
+			update.inc("spentTime", logTime.getTime());
+
+			if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+				// increase spent time for project
+				projectBo.increaseSpentTime(task.getProjectUuid(), logTime.getTime());
+			}
+
+			// add log time
+			logTime.setRef(task.getUuid(), ReferenceType.task.name());
+			logTimeBo.add(logTime);
+		}
+
+		// update progress information
+		update(task.getUuid(), update);
+
+		return task;
+	}
+
+	/**
+	 * Completed task for given executor.
+	 * 
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param uuid
+	 *        Given {@link Task} UUID
+	 
+	 */
+	public void completeTask(String orgCode, String exeUname, String uuid) {
+		// load status and list of processes of task
+		completeTask(findByUuid(orgCode, uuid), exeUname);
+	}
+	
+	/**
+	 * Completed task for given executor.
+	 * 
+	 * @param task
+	 * 		  Given task object
+	 * 
+	 * @param exeUname
+	 *        Given executor user name
+	 */
+	public void completeTask(Task task, String exeUname) 
+	{
+		if (task != null)
+		{
+			long completedDate = System.currentTimeMillis();
+			for (Process process : task.getProcesses()) {
+				if (exeUname.equals(process.getReceiverUname())
+						&& (Process.Status.processing.name().equals(process.getStatus()))) {
+					process.setStatus(Process.Status.completed.name());
+					process.setCompletedDate(completedDate);
+				}
+			}
+	
+			// create update instance
+			UpdateImpl<JSONDB> update = new UpdateImpl<>();
+			update.set("processes", JsonUtils.toJsonList(task.getProcesses()));
+			update.set("assignee.status", Process.Status.completed.name());
+			update.set("assignee.completedDate", completedDate);
+	
+			// completed task
+			update.set("status", Status.completed.name())
+				  .set("completedDate", completedDate)
+				  .set("progress", 100)
+				  .add("histories",
+							new History(exeUname, task.getAssignee().getReceiverName(),
+									new Modification("status", task.getStatus(), Status.completed.name(), Action.modify)),
+							true);
+	
+			// remove follow up for given user on task
+			followUpBo.removeBy(task.getOrgCode(), exeUname, task.getUuid());
+	
+			// update data
+			update(task.getUuid(), update);
+		}
+	}
+
+	/**
+	 * Swap process status on task
+	 *
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param uuid
+	 *        Given {@link Task} UUID
+	 * @param status
+	 *        new status
+	 * @throws ValidationException
+	 *        if error occurs during executing
+	 */
+	public void swapProcessStatus(String orgCode, String exeUname, String uuid, String status) throws ValidationException {
+		swapProcessStatus(findByUuid(orgCode, uuid), exeUname, status);
+	}
+	
+	/**
+	 * 
+	 * @param task
+	 * 		  Given task object
+	 * 
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param status
+	 *        new status
+	 * @throws ValidationException
+	 *        if error occurs during executing
+	 */
+	public void swapProcessStatus(Task task, String exeUname, String status) throws ValidationException 
+	{
+		if (task == null || !TaskService.canProcess(task) || task.getAssignee().getStatus().equals(status)
+				|| (Process.Status.waiting.name().equals(status) && task.getProgress() > 0)) {
+			LOG.warn("Invalid task with uuid [{}] or the user with user name [{}] "
+					+ "don't have permission to update on task [{}]", exeUname, task.getUuid());
+
+			throw new ValidationException(CollabarationTaskService.createViolationDto(CollaTaskJsonConstants.CONSTRAINT,ErrorCode.forbidden));
+		}
+
+		// change status of task
+		if (!Task.Status.processing.name().equals(task.getStatus()) || task.getProgress() <= 0) {
+			task.setStatus(Process.Status.waiting.name().equals(status) ? Task.Status.waiting.name()
+					: Task.Status.processing.name());
+		}
+
+		task.getAssignee().setStatus(status);
+		task.getProcesses().forEach(item -> {
+			if (item.getReceiverUname().equals(exeUname) && Process.Status.isProcessing(item.getStatus())) {
+				item.setStatus(status);
+			}
+		});
+
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("status", task.getStatus()).set("processes", JsonUtils.toJsonList(task.getProcesses()))
+			  .set("assignee", JSONObject.fromObject(task.getAssignee()));
+
+		// update information
+		update(task.getUuid(), update);
+	}
+
+	/**
+	 * Update phase name for task
+	 * 
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param phaseUuid
+	 *        Given phase UUID
+	 * @param phaseName
+	 *        Given phase name
+	 */
+	public void updatePhaseName(String orgCode, String phaseUuid, String phaseName) 
+	{
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("phaseName", phaseName);
+
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("orgCode").equal(orgCode)
+			 .field("phaseUuid").equal(phaseUuid);
+
+		update(update, query);
+	}
+
+	/**
+	 * Remove phase out of task
+	 * 
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param phaseUuid
+	 *        Given phase UUID
+	 */
+	public void removePhase(String orgCode, String phaseUuid) 
+	{
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("phaseName", StringUtils.EMPTY_STRING)
+			  .set("phaseUuid", StringUtils.EMPTY_STRING);
+
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("orgCode").equal(orgCode)
+			 .field("phaseUuid").equal(phaseUuid);
+
+		update(update, query);
+	}
+
+	/**
+	 * Handle task when deleting project
+	 * 
+	 * @param orgCode
+	 * 		  Organization code
+	 * @param projectUuid
+	 *        Given project UUID
+	 * @param deleteTask
+	 *        Flag to know to delete task or not
+	 */
+	public void handleDeleteProject(String orgCode, String projectUuid, boolean deleteTask) 
+	{
+		if (!deleteTask) 
+		{
+			UpdateImpl<JSONDB> update = new UpdateImpl<>();
+			update.set("phaseName", "");
+			update.set("phaseUuid", "");
+			update.set("projectUuid", "");
+
+			QueryImpl<JSONDB> query = new QueryImpl<>();
+			query.field("projectUuid").equal(projectUuid)
+				 .field("orgCode").equal(orgCode);
+
+			update(update, query);
+		} else {
+			// TODO delete task when deleting project
+		}
+	}
+
+	/**
+	 * Handle task
+	 * 
+	 * @param handleDto
+	 *            the handle information
+	 * @return the {@link Task} after handling
+	 * @throws ValidationException
+	 *             the validation exception
+	 */
+	public Task handle(HandleDto handleDto) throws ValidationException {
+		// get executor information
+		Executor executor = handleDto.getExecutor();
+
+		// find task by given condition
+		Task task = findProcessOn(executor.getOrgCode(), 
+				handleDto.getUuid(),
+				executor.getUname(),
+				handleDto.getRefUuid(), 
+				handleDto.getRefType(), true, "projectUuid", "status", "processes", "creatorUname", "watchers");
+
+		if (task == null) 
+		{
+			LOG.error(
+					"There is no task (or don't have permission to process task) with task UUID [{}] or reference information [{} - {}]",
+					handleDto.getUuid(), handleDto.getRefUuid(), handleDto.getRefType());
+
+			throw new ValidationException(CollabarationTaskService.createViolationDto(CollaTaskJsonConstants.CONSTRAINT,
+					ErrorCode.forbidden));
+		}
+
+		long currentTime = System.currentTimeMillis();
+
+		// create list to contain all modification on task
+		List<Modification> modifications = new ArrayList<>();
+		// create update content
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+
+		// update progress
+		if (task.getProgress() != handleDto.getProgress())
+		{
+			// update progress
+			update.set("progress", handleDto.getProgress());
+
+			modifications.add(new Modification("progress", task.getProgress(), handleDto.getProgress(), Modification.Action.modify));
+
+			if (handleDto.getProgress() == 100) 
+			{
+				// process for only one user can process on task
+				for (Process process : task.getProcesses()) {
+					if (Process.Status.processing.name().equals(process.getStatus())) {
+						process.setStatus(Process.Status.completed.name());
+						process.setCompletedDate(currentTime);
+					}
+				}
+
+				// add modification on status and completed date
+				modifications.add(new Modification("status", task.getStatus(), Status.completed.name(), Action.modify));
+				modifications.add(new Modification("completedDate", null, currentTime, Action.add));
+
+				// update process, status, history
+				update.set("processes", JsonUtils.toJsonList(task.getProcesses()))
+						.set("status", Status.completed.name()).set("completedDate", currentTime)
+						.set("assignee.status", Process.Status.completed.name())
+						.set("assignee.completedDate", currentTime);
+
+				// remove follow up for all user on task
+				followUpBo.removeBy(executor.getOrgCode(), null, task.getUuid());
+			}
+		}
+
+		// transfer task to other user
+		if (handleDto.getProgress() < 100 && handleDto.getAssignee() != null) {
+			// complete sender process
+			task.getProcesses().forEach(process -> {
+				if (executor.getUname().equals(process.getReceiverUname()) && process.getCompletedDate() == 0) {
+					process.setCompletedDate(currentTime);
+					process.setStatus(Process.Status.completed.name());
+				}
+			});
+
+			// create assignee process
+			Process assignee = new Process(executor.getUname(), executor.getName(), currentTime,
+					handleDto.getAssignee().getNote(), handleDto.getAssignee().getReceiverUname(),
+					handleDto.getAssignee().getReceiverName());
+			task.setAssignee(assignee);
+			task.addProcess(assignee);
+			task.setDeadline(handleDto.getDeadline());
+
+			// add to modification
+			modifications
+					.add(new Modification("assignee", executor.getName(), assignee.getReceiverName(), Action.transfer));
+			if (!Strings.isNullOrEmpty(assignee.getNote())) {
+				modifications.add(new Modification("", "", assignee.getNote(), Action.add));
+			}
+
+			// update process on document
+			update.set("processes", JsonUtils.toJsonList(task.getProcesses()))
+					.set("assignee", JSONObject.fromObject(task.getAssignee()))
+					.set("deadline", handleDto.getDeadline());
+
+			if (handleDto.isNeedWatch()) {
+				// add watcher
+				if (CollectionUtils.isEmpty(task.getWatchers()) || !task.getWatchers().contains(executor)) {
+					// update watchers
+					update.add("watchers", JSONObject.fromObject(executor));
+					task.addWatcher(executor);
+
+					// add to modification
+					modifications.add(new Modification("watchers", null, executor.getName(), Action.add));
+				}
+			}
+
+			if (handleDto.getWatchOnDate() >= 0) 
+			{
+				// add follow up for assigner
+				followUpBo.addOrUpdate(new FollowUp(executor.getOrgCode(), executor.getUname(), handleDto.getWatchOnDate(), task.getUuid(), ReferenceType.task.name()));
+			} 
+			else 
+			{
+				// remove follow up for process type
+				followUpBo.removeBy(executor.getOrgCode(), executor.getUname(), handleDto.getUuid());
+			}
+		}
+
+		if (!modifications.isEmpty()) {
+			// update history to task
+			update.add("histories", JSONObject.fromObject(new History(executor.getUname(), executor.getName(), modifications)));
+		}
+
+		// update log time
+		if (handleDto.getTime() > 0) {
+			// increase spent time for task
+			update.inc("spentTime", handleDto.getTime());
+
+			if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+				// increase spent time for project
+				projectBo.increaseSpentTime(task.getProjectUuid(), handleDto.getTime());
+			}
+
+			// add log time
+			LogTime logTime = new LogTime(executor.getUname(), executor.getName(), handleDto.getTime(),
+					handleDto.getNote());
+			logTime.setRef(handleDto.getUuid(), ReferenceType.task.name());
+			logTimeBo.add(logTime);
+		}
+
+		// update task information
+		update(task.getUuid(), update);
+
+		return task;
+	}
+
+	/**
+	 * Compute progress of phase in given project with identifier
+	 * 
+	 * * @param orgCode
+	 * 		  Organization code
+	 * 
+	 * @param projectUuid
+	 *        Given project UUID
+	 *        
+	 */
+	public List<Phase> computePhaseProgress(String orgCode, String projectUuid) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("projectUuid").equal(projectUuid)
+			 .field("orgCode").equal(orgCode)
+			 .field("phaseUuid").exists();
+
+		query.groupEx((DBObject)JSON.parse("{" + "_id: '$phaseUuid', " + "totalProgress: {$sum: '$progress'}, " + "count: {$sum: 1}" + "}"))
+			 .projection((DBObject)JSON.parse("{" + "uuid: '$_id', " + "progress: {$divide: ['$totalProgress', '$count']}}" + "}"));
+
+		SearchDTO<Phase> result = query(query, Phase.class);
+		return result != null ? result.getItems() : null;
+	}
+
+	/**
+	 * View {@link Task} by permission
+	 * 
+	 * @param orgCode
+	 * 		  Given organization code
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param uuid
+	 *        Given {@link Task} UUID
+	 * @return the {@link Task}
+	 */
+	public Task view(String orgCode, String exeUname, String uuid) {
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field(BaseDBStore.ID_KEY).equal(CommonUtils.toObjectId(uuid))
+			 .field("orgCode").equal(orgCode);
+
+		query.pipeline("$lookup",
+				JSON.parse("{" + "from: 'collatask_project'," + "let: {taskProjectUuid: '$projectUuid'},"
+						+ "pipeline: [" + "{$match: {$expr: {$eq: ['$uuid', '$$taskProjectUuid']}}},"
+						+ "{$unwind: '$members'}," + "{$match: {$expr: {$and:[" + "{$eq: ['$members.uname', '"
+						+ exeUname + "']}," + "{$in: ['$members.role', ['manager', 'leader']]}" + "]}}}" + "],"
+						+ "as: 'projects'" + "}"))
+				.pipeline("$addFields",
+						JSON.parse("{" + "hasProcesses: {" + "$filter: {" + "input: '$processes'," + "as: 'process',"
+								+ "cond: {$eq: ['$$process.receiverUname', '" + exeUname + "']}" + "}" + "}" + "}"))
+				.match((DBObject) JSON.parse("{" + "$expr:{ $or: [" + "{$eq: ['$creatorUname', '" + exeUname + "']},"
+						+ "{$eq: ['$watcher.uname', '" + exeUname + "']}," + "{$gt: [{$size: '$hasProcesses'}, 0]},"
+						+ "{$gt: [{$size: '$projects'}, 0]}" + "]}" + "}"));
+
+		return load(query);
+	}
+
+	/**
+	 * Quick search {@link Task} from given condition
+	 * 
+	 * @param searchCriteria
+	 *            the given condition
+	 * @return the search result
+	 */
+	public SearchDTO<Task> quickSearch(SearchCriteria<QuickSearchDto> searchCriteria) {
+		return query(createQuickSearchQuery(searchCriteria));
+	}
+
+	/**
+	 * Create quick search query from given criteria
+	 * 
+	 * @param searchCriteria
+	 *            the given {@link SearchCriteria}
+	 * @return the query
+	 */
+	private QueryImpl<JSONDB> createQuickSearchQuery(SearchCriteria<QuickSearchDto> searchCriteria) 
+	{
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+		QuickSearchDto dto = searchCriteria.getCriteria();
+		if (!Strings.isNullOrEmpty(dto.getKey())) {
+			query.or(query.criteria("name").like(dto.getKey()), query.criteria("desc").like(dto.getKey()),
+					query.criteria("assignerName").like(dto.getKey()));
+		}
+
+		// search on project
+		searchEqual(query, "projectUuid", dto.getProjectUuid());
+
+		// search on status
+		if (!Strings.isNullOrEmpty(dto.getStatus())) {
+			query.field("status").equal(dto.getStatus());
+		} else if (!CollectionUtils.isEmpty(dto.getStatuses())) {
+			query.field("status").in(dto.getStatuses());
+		}
+
+		if (Strings.isNullOrEmpty(dto.getSearchType())) 
+		{
+			query.or(query.criteria("creatorUname").equal(searchCriteria.getUsername()),
+					query.criteria("coordinators.uname").equal(searchCriteria.getUsername()),
+					query.criteria("watchers.uname").equal(searchCriteria.getUsername()),
+					query.criteria("processes.receiverUname").equal(searchCriteria.getUsername()));
+		}
+		else if (SearchType.author.name().equals(dto.getSearchType())) 
+		{
+			// search task for creator
+			query.field("creatorUname").equal(searchCriteria.getUsername());
+
+		} 
+		else if (SearchType.watch.name().equals(dto.getSearchType())) 
+		{
+			// search task for watcher
+			query.field("watchers.uname").equal(searchCriteria.getUsername());
+
+		} else if (SearchType.coordinator.name().equals(dto.getSearchType())) {
+			// search task for coordinator
+			query.field("coordinators.uname").equal(searchCriteria.getUsername());
+		} else { // search task for main processing
+			// search task for assignee
+			query.field("assignee.receiverUname").equal(searchCriteria.getUsername());
+
+			if (!Strings.isNullOrEmpty(dto.getSituation())) {
+				switch (dto.getSituation()) {
+				case Situation.NONE_READ:
+					query.field("assignee.viewDate").equal(0);
+					break;
+
+				case Situation.LATE_IN_DAY:
+					query.field("assignee.deadline")
+							.greaterThanOrEq(DateUtils.startTimeInMillisOf(System.currentTimeMillis()));
+					query.field("assignee.deadline")
+							.lessThanOrEq(DateUtils.endTimeInMillisOf(System.currentTimeMillis()));
+					break;
+
+				case Situation.LATED:
+					query.field("assignee.deadline").greaterThan(0);
+					query.field("assignee.deadline")
+							.lessThan(DateUtils.startTimeInMillisOf(System.currentTimeMillis()));
+					break;
+				}
+			}
+
+			// search on status of process
+			if (SearchType.waiting.name().equals(dto.getSearchType())) {
+				query.field("assignee.status").equal(Process.Status.waiting.name());
+			} else {
+				query.field("assignee.status").equal(Process.Status.processing.name());
+			}
+		}
+
+		query.order("-assignee.createdDate");
+
+		return query;
+	}
+
+	/**
+	 * Query dashboard on followed task
+	 * 
+	 * @param orgCode
+	 *            the given organization code
+	 * @param exeUname
+	 *            the given executor name
+	 * @param blockTypes
+	 *            the given list of block type
+	 * @return the result
+	 */
+	public Map<String, Object> dashboardFollowedTask(String orgCode, String exeUname, String... blockTypes) 
+	{
+		Map<String, Object> result = new HashMap<>();
+
+		SearchCriteria<String> criteria = new SearchCriteria<>();
+		criteria.setUsername(exeUname);
+		criteria.setOrgCode(orgCode);
+
+		for (String blockType : blockTypes) {
+			result.put(blockType, dashboardFollowedTask(criteria, blockType));
+		}
+
+		return result;
+	}
+
+	/**
+	 * Query dashboard on followed task
+	 * 
+	 * @param searchCriteria
+	 *            the given criteria
+	 * @param blockType
+	 *            the given block type
+	 * @return the result
+	 */
+	public Object dashboardFollowedTask(SearchCriteria<String> searchCriteria, String blockType) 
+	{
+		switch (blockType) {
+		case DashboardConstants.TASK_WAIT:
+			return countPipeline(createFollowedTaskQuery(searchCriteria, SearchType.waiting.name(), true));
+
+		case DashboardConstants.TASK_PROCESS:
+			return countPipeline(createFollowedTaskQuery(searchCriteria, SearchType.processing.name(), true));
+
+		case DashboardConstants.TASK_WAIT_PROCESS:
+			return countPipeline(createFollowedTaskQuery(searchCriteria, SearchType.waiting_processing.name(), true));
+
+		case DashboardConstants.TASK_COORDINATOR:
+			return countPipeline(createFollowedTaskQuery(searchCriteria, SearchType.coordinator.name(), true));
+
+		case DashboardConstants.TASK_WATCH:
+			return countPipeline(createFollowedTaskQuery(searchCriteria, SearchType.watch.name(), true));
+
+		}
+
+		return null;
+	}
+
+	/**
+	 * Search followed task by user
+	 * 
+	 * @param searchCriteria
+	 *            the given search criteria
+	 * @param searchType
+	 *            the given search type
+	 * @return the result
+	 */
+	public SearchDTO<FollowedTaskDto> searchFollowedTask(SearchCriteria<String> searchCriteria, String searchType) {
+		QueryImpl<JSONDB> query = createFollowedTaskQuery(searchCriteria, searchType, false);
+
+		return query(query, FollowedTaskDto.class);
+	}
+
+	/**
+	 * Create followed task query from given condition
+	 * 
+	 * @param searchCriteria
+	 *            the given condition
+	 * @param searchType
+	 *            the search type
+	 * @param count
+	 *            count or not
+	 * @return the query
+	 */
+	private QueryImpl<JSONDB> createFollowedTaskQuery(SearchCriteria<String> searchCriteria, String searchType,
+			boolean count) {
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+		String key = searchCriteria.getCriteria();
+		if (!Strings.isNullOrEmpty(key)) {
+			query.or(query.criteria("name").like(key), query.criteria("desc").like(key),
+					query.criteria("assignerName").like(key));
+		}
+
+		// search on processing task
+		query.field("status").in(Task.Status.getProcessingStatus());
+
+		query.pipeline("$lookup", JSON.parse("{" + "from: 'collatask_follow_up', " + "localField: 'uuid', "
+				+ "foreignField: 'refUuid', " + "as: 'followUp' " + "}")).unwind("followUp");
+
+		// filter on conditions
+		DBObject matchObject = (DBObject) JSON
+				.parse(("{" + "'followUp.refType': 'task', " + "'followUp.authorUname': '<exeUname>'" + "}")
+						.replaceAll("<exeUname>", searchCriteria.getUsername()));
+
+		// search on status of process
+		if (SearchType.waiting_processing.name().equals(searchType)) {
+			// put assigner condition
+			matchObject.put("assignee.receiverUname", searchCriteria.getUsername());
+
+			// put status condition
+			matchObject.put("assignee.status", new Document("$in",
+					Arrays.asList(Process.Status.waiting.name(), Process.Status.processing.name())));
+		} else if (SearchType.waiting.name().equals(searchType) || SearchType.processing.name().equals(searchType)) {
+			// put assigner condition
+			matchObject.put("assignee.receiverUname", searchCriteria.getUsername());
+
+			// put status condition
+			matchObject.put("assignee.status",
+					SearchType.waiting.name().equals(searchType) ? Process.Status.waiting.name()
+							: Process.Status.processing.name());
+		} else if (SearchType.watch.name().equals(searchType)) {
+			matchObject.put("watchers.uname", searchCriteria.getUsername());
+		} else if (SearchType.coordinator.name().equals(searchType)) {
+			matchObject.put("coordinators.uname", searchCriteria.getUsername());
+		}
+
+		// match on condition
+		query.match(matchObject);
+
+		// don't retrieve these field
+		// query.retrievedFields(false, "histories", "watchers");
+		query.projection((DBObject) JSON.parse("{'histories':0, 'processes':0, 'coordinators':0, 'watchers':0}"));
+
+		return query;
+	}
+
+	/**
+	 * Search followed task by user
+	 * 
+	 * @param searchCriteria
+	 *            the given search criteria
+	 * @param searchType
+	 *            the given search type
+	 * @return the result
+	 */
+	public SearchDTO<FollowedTaskDto> searchOrderByFollowUp(SearchCriteria<String> searchCriteria, String searchType) {
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+
+		// search on processing task
+		query.field("status").notEqual(Task.Status.destroy.name());
+
+		// search on processing task
+		query.field("status").in(Task.Status.getProcessingStatus());
+
+		// search on status of process
+		if (SearchOrderByFollowUpService.SEARCH_TYPE_PROCESS.equals(searchType)) {
+			query.field("assignee.receiverUname").equal(searchCriteria.getUsername());
+
+		} else if (SearchOrderByFollowUpService.SEARCH_TYPE_COORD_WATCH.equals(searchType)) {
+			query.or(query.criteria("coordinators.uname").equal(searchCriteria.getUsername()),
+					query.criteria("watchers.uname").equal(searchCriteria.getUsername()));
+		}
+
+		query.pipeline("$lookup",
+				JSON.parse("{" + "from: 'collatask_follow_up', " + "localField: 'uuid', " + "foreignField: 'refUuid', "
+						+ "as: 'followUp' " + "}"))
+				.pipeline("$unwind",
+						JSON.parse("{" + "path: '$followUp', " + "preserveNullAndEmptyArrays: true " + "}"));
+
+		// filter on conditions
+		DBObject matchObject = (DBObject) JSON
+				.parse(("{" + "$or: [" + "{followUp: {$exists: false}}, " + "{'followUp.authorUname': '<exeUname>'}"
+						+ "]" + "}").replaceAll("<exeUname>", searchCriteria.getUsername()));
+
+		// match on condition
+		query.match(matchObject);
+
+		// don't retrieve these field
+		query.projection((DBObject) JSON.parse("{'histories':0, 'processes':0, 'coordinators':0, 'watchers':0}"));
+
+		query.pipeline("$sort", JSON.parse("{" + "'followUp.date' : 1," + "assignedDate : -1" + "}"));
+
+		return query(query, FollowedTaskDto.class);
+	}
+
+	/**
+	 * Query dashboard information for given user with user's name
+	 * 
+	 * @param orgCode
+	 *            the given organization code
+	 * @param exeUname
+	 *            the given user's name of executor
+	 * @param blockTypes
+	 *            the array of block type
+	 * @return the dashboard information
+	 */
+	public Map<String, Object> dashboard(String orgCode, String exeUname, String... blockTypes) 
+	{
+		Map<String, Object> result = new HashMap<>();
+
+		SearchCriteria<QuickSearchDto> criteria = new SearchCriteria<>();
+		criteria.setUsername(exeUname);
+		criteria.setOrgCode(orgCode);
+
+		for (String blockType : blockTypes) {
+			result.put(blockType, dashboard(criteria, blockType));
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get dashboard information
+	 * 
+	 * @param criteria
+	 *            the given criteria
+	 * @param blockType
+	 *            the given block type
+	 * @return the dashboard result
+	 */
+	private Object dashboard(SearchCriteria<QuickSearchDto> criteria, String blockType) {
+		QuickSearchDto dto = new QuickSearchDto();
+		criteria.setCriteria(dto);
+
+		DashboardBlock block = new DashboardBlock();
+		switch (blockType) {
+		case DashboardConstants.TASK_WAIT:
+			dto.setSearchType(SearchType.waiting.name());
+
+			// count total
+			block.setTotal(count(createQuickSearchQuery(criteria)));
+
+			// none read document
+			dto.setSituation(Situation.NONE_READ);
+			block.setNoneRead(count(createQuickSearchQuery(criteria)));
+
+			// documents are lated in day
+			dto.setSituation(Situation.LATE_IN_DAY);
+			block.setLateInDay(count(createQuickSearchQuery(criteria)));
+
+			// documents were lated
+			dto.setSituation(Situation.LATED);
+			block.setLated(count(createQuickSearchQuery(criteria)));
+
+			return block;
+
+		case DashboardConstants.TASK_PROCESS:
+			dto.setSearchType(SearchType.processing.name());
+
+			// count total
+			block.setTotal(count(createQuickSearchQuery(criteria)));
+
+			// none read document
+			dto.setSituation(Situation.NONE_READ);
+			block.setNoneRead(count(createQuickSearchQuery(criteria)));
+
+			// documents are lated in day
+			dto.setSituation(Situation.LATE_IN_DAY);
+			block.setLateInDay(count(createQuickSearchQuery(criteria)));
+
+			// documents were lated
+			dto.setSituation(Situation.LATED);
+			block.setLated(count(createQuickSearchQuery(criteria)));
+
+			return block;
+
+		case DashboardConstants.TASK_COORDINATOR:
+			dto.setSearchType(SearchType.coordinator.name());
+			// dto.setStatus(Status.processing.name());
+			dto.setStatuses(Arrays.asList(Status.waiting.name(), Status.processing.name()));
+
+			return count(createQuickSearchQuery(criteria));
+
+		case DashboardConstants.TASK_WATCH:
+			dto.setSearchType(SearchType.watch.name());
+			// dto.setStatus(Status.processing.name());
+			dto.setStatuses(Arrays.asList(Status.waiting.name(), Status.processing.name()));
+
+			return count(createQuickSearchQuery(criteria));
+
+		}
+
+		return null;
+	}
+
+	/**
+	 * Count total of result with given data types
+	 * 
+	 * @param orgCode
+	 *            the given organization code
+	 * @param exeUname
+	 *            the given executor user name
+	 * @param types
+	 *            the given data types
+	 * @return the result
+	 */
+	public Map<String, Long> countTotal(String orgCode, String exeUname, List<String> types) {
+		Map<String, Long> result = new HashMap<>();
+
+		SearchCriteria<QuickSearchDto> criteria = new SearchCriteria<>();
+		criteria.setUsername(exeUname);
+		criteria.setOrgCode(orgCode);
+
+		for (String type : types) {
+			result.put(type, countTotal(criteria, type));
+		}
+
+		return result;
+	}
+
+	/**
+	 * Count total result match criteria and type
+	 * 
+	 * @param criteria
+	 *            the given criteria
+	 * @param type
+	 *            the given type
+	 * @return the result
+	 */
+	private long countTotal(SearchCriteria<QuickSearchDto> criteria, String type) {
+		QuickSearchDto dto = new QuickSearchDto();
+		criteria.setCriteria(dto);
+
+		switch (type) {
+		case DashboardConstants.TASK_WAIT:
+			dto.setSearchType(SearchType.waiting.name());
+
+			// count total
+			return count(createQuickSearchQuery(criteria));
+
+		case DashboardConstants.TASK_PROCESS:
+			dto.setSearchType(SearchType.processing.name());
+
+			// count total
+			return count(createQuickSearchQuery(criteria));
+
+		case DashboardConstants.TASK_COORDINATOR:
+			dto.setSearchType(SearchType.coordinator.name());
+
+			// count total
+			return count(createQuickSearchQuery(criteria));
+
+		case DashboardConstants.TASK_WATCH:
+			dto.setSearchType(SearchType.watch.name());
+			dto.setStatuses(Arrays.asList(Status.waiting.name(), Status.processing.name()));
+
+			return count(createQuickSearchQuery(criteria));
+
+		case DashboardConstants.TASK_CREATOR:
+			dto.setSearchType(SearchType.author.name());
+			dto.setStatuses(Arrays.asList(Status.waiting.name(), Status.processing.name()));
+
+			return count(createQuickSearchQuery(criteria));
+
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Quick look up {@link Task}
+	 * 
+	 * @param searchCriteria
+	 *            the given search criteria
+	 * @return the result
+	 */
+	public SearchDTO<Task> quickLookUp(SearchCriteria<QuickLookUpDto> searchCriteria) {
+		// create query
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+
+		QuickLookUpDto dto = searchCriteria.getCriteria();
+
+		// search on key
+		if (!Strings.isNullOrEmpty(dto.getKey())) {
+			query.or(query.criteria("name").like(dto.getKey()), query.criteria("desc").like(dto.getKey()),
+					query.criteria("assignee.receiverName").like(dto.getKey()));
+		}
+
+		// search on start date from
+		searchBetweenDate(query, "startDate", dto.getDateFrom(), dto.getDateTo());
+
+		// search on project
+		searchEqual(query, "projectUuid", dto.getProjectUuid());
+
+		// search user who can will task
+		query.or(query.criteria("creatorUname").equal(searchCriteria.getUsername()),
+				query.criteria("watchers").equal(searchCriteria.getUsername()),
+				query.criteria("coordinators").equal(searchCriteria.getUsername()),
+				query.criteria("processes").equal(searchCriteria.getUsername()));
+
+		// order by start date
+		query.order("assignedDate");
+
+		return query(query);
+	}
+
+	/**
+	 * Advance look up {@link Task}
+	 * 
+	 * @param searchCriteria
+	 *            the given search criteria
+	 * @return the result
+	 */
+	public SearchDTO<Task> advanceLookUp(SearchCriteria<AdvanceLookUpDto> searchCriteria) {
+		// create query
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+
+		AdvanceLookUpDto dto = searchCriteria.getCriteria();
+
+		// search on name
+		searchLike(query, "name", dto.getName());
+
+		// search on description
+		searchLike(query, "desc", dto.getDesc());
+
+		// search on priority
+		searchIn(query, "priority", CommonUtils.toLongList(dto.getPriorities()));
+
+		// search on assignee user name
+		searchEqual(query, "assignee.receiverUname", dto.getAssigneeUname());
+
+		// search on coordinator
+		searchEqual(query, "coordinators.uname", dto.getCoordinatorUname());
+
+		// search on watcher
+		searchEqual(query, "watchers.uname", dto.getWatcherUname());
+
+		// search on coordinator or watcher
+		if (!Strings.isNullOrEmpty(dto.getCoordWatchUname())) {
+			query.or(query.criteria("coordinators.uname").equal(dto.getCoordWatchUname()),
+					query.criteria("watchers.uname").equal(dto.getCoordWatchUname()));
+		}
+
+		// search on creator
+		searchEqual(query, "creatorUname", dto.getCreatorUname());
+
+		// search on start date
+		searchBetweenDate(query, "startDate", dto.getStartDateFrom(), dto.getStartDateTo());
+
+		// search on deadline
+		searchBetweenDate(query, "deadline", dto.getDeadlineFrom(), dto.getDeadlineTo());
+
+		// search on status
+		searchIn(query, "status", CommonUtils.toStringList(dto.getStatuses()));
+
+		// search on complete date
+		searchBetweenDate(query, "completedDate", dto.getCompleteDateFrom(), dto.getCompleteDateFrom());
+
+		// search on project
+		searchEqual(query, "projectUuid", dto.getProjectUuid());
+
+		// check if not search on login user
+		if (!searchCriteria.getUsername().equals(dto.getAssigneeUname())
+				&& !searchCriteria.getUsername().equals(dto.getCreatorUname())
+				&& !searchCriteria.getUsername().equals(dto.getWatcherUname())
+				&& !searchCriteria.getUsername().equals(dto.getCoordinatorUname())
+				&& !searchCriteria.getUsername().equals(dto.getCoordWatchUname())) {
+			query.pipeline("$lookup",
+					JSON.parse("{" + "from: 'collatask_project'," + "let: {taskProjectUuid: '$projectUuid'},"
+							+ "pipeline: [" + "{$match: {$expr: {$eq: ['$uuid', '$$taskProjectUuid']}}},"
+							+ "{$unwind: '$members'}," + "{$match: {$expr: {$and:[" + "{$eq: ['$members.uname', '"
+							+ searchCriteria.getUsername() + "']}," + "{$in: ['$members.role', ['manager', 'leader']]}"
+							+ "]}}}" + "]," + "as: 'projects'" + "}"))
+					.pipeline("$addFields",
+							JSON.parse("{" + "hasProcesses: {" + "$filter: {" + "input: '$processes',"
+									+ "as: 'process'," + "cond: {$eq: ['$$process.receiverUname', '"
+									+ searchCriteria.getUsername() + "']}" + "}" + "}" + "}"))
+					.match((DBObject) JSON.parse("{" + "$expr:{ $or: [" + "{$eq: ['$creatorUname', '"
+							+ searchCriteria.getUsername() + "']}," + "{$eq: ['$watcher.uname', '"
+							+ searchCriteria.getUsername() + "']}," + "{$gt: [{$size: '$hasProcesses'}, 0]},"
+							+ "{$gt: [{$size: '$projects'}, 0]}" + "]}" + "}"));
+
+			// projection data
+			query.projection((DBObject) JSON.parse("{'histories':0, 'processes':0, 'coordinators':0, 'watchers':0}"));
+		}
+
+		// order by start date
+		query.order("assignedDate");
+
+		return query(query);
+	}
+
+	/**
+	 * Find processing task for user from given condition
+	 * 
+	 * @param orgCode
+	 *        Given organization code
+	 * @param uuid
+	 *        Given UUID
+	 * @param exeUname
+	 *        Given executor user name
+	 * @param refUuid
+	 *        Given reference code
+	 * @param refType
+	 *        Given reference type
+	 * @param include
+	 *        Include or exclude fields
+	 * @param fields
+	 *        fields
+	 * @return Task result
+	 */
+	private Task findProcessOn(String orgCode, 
+			String uuid,
+			String exeUname,
+			String refUuid,
+			String refType,
+			boolean include, String... fields) 
+	{
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+
+		// filter on processor
+		query.field("assignee.receiverUname").equal(exeUname)
+			 .field("assignee.status").in(Arrays.asList(Process.Status.waiting.name(), Process.Status.processing.name()))
+			 .field("orgCode").equal(orgCode);
+
+		// search on identifier
+		if (!Strings.isNullOrEmpty(uuid)) {
+			query.field(BaseDBStore.ID_KEY).equal(CommonUtils.toObjectId(uuid));
+		}
+
+		// search on reference
+		if (!Strings.isNullOrEmpty(refType) && !Strings.isNullOrEmpty(refType)) {
+			query.field("refUuid").equal(refUuid)
+				 .field("refType").equal(refType);
+		}
+
+		// projection data
+		query.retrievedFields(include, fields);
+
+		return load(query);
+	}
+
+	/**
+	 * Find {@link Task} by parent UUID
+	 * 
+	 * @param orgCode
+	 *        Given organization code
+	 * @param parentUuid
+	 *        Given parent UUID
+	 * @return the list of task
+	 */
+	public List<Task> findByParentUuid(String orgCode, String parentUuid) {
+		QueryImpl<JSONDB> query = new QueryImpl<>();
+		query.field("parentUuid").equal(parentUuid)
+		 	 .field("orgCode").equal(orgCode)
+		 	 .retrievedFields(false, "processes", "coordinators", "watchers", "histories");
+
+		SearchDTO<Task> result = query(query);
+		
+		return result != null ? result.getItems() : null;
+	}
+
+	// THIS WAY MAKE JAVA REDUCE MEMORY AS WELL AS PERFORMANCE BETTER !
+	private static final Map<String, Class<?>> map = new HashMap<>();
+	static {
+		map.put("processes", Process.class);
+		map.put("attContentUuids", String.class);
+		map.put("histories", History.class);
+		map.put("assignee", Process.class);
+		map.put("watchers", Executor.class);
+		map.put("coordinators", Executor.class);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+	 */
+	@Override
+	protected Map<String, Class<?>> childrenConvertMap() {
+		return map;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<Task> getClassConvetor() {
+		return Task.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() 
+	{
+		ensureIndex("orgCode,assignee.receiverUname,assignee.status");
+		ensureIndex("orgCode,assignee.receiverUname,assignee.status,_id");
+		ensureIndex("orgCode,assignee.receiverUname,assignee.status,refUuid,refType");
+		ensureIndex("orgCode,assignee.receiverUname,assignee.status,_id,refUuid,refType");
+		ensureIndex("orgCode,assignee.receiverUname,assignee.status,status,coordinators.uname,-assignee.createdDate");
+		
+		// ensure all indexes (due to mongodb is composite index supported !)
+		ensureIndex("orgCode,_id");
+		ensureIndex("orgCode,parentUuid");
+		ensureIndex("orgCode,phaseUuid");
+		ensureIndex("orgCode,projectUuid");
+		ensureIndex("orgCode,projectUuid,phaseUuid");
+	}
+
+}

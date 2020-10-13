@@ -1,0 +1,384 @@
+/*****************************************************************
+ Copyright 2013 by Duyen Tang (tttduyen@inetcloud.vn)
+
+ Licensed under the iNet Solutions Corp.,;
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.inetcloud.vn/licenses
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ *****************************************************************/
+package com.inet.calista.common.utils;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
+import com.inet.xportal.module.web.util.FirmServiceUtil;
+import com.inet.xportal.nosql.web.model.FileInfoModel;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.owasp.TrippleDesManager;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import java.io.File;
+import java.util.*;
+
+/**
+ * IdeskCommonUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: IdeskCommonUtils.java 2013-06-25 10:48:17z tttduyen $
+ * @since 1.0
+ */
+@Slf4j
+public class CommonUtils {
+	public static final String ARRAY_SEPARATOR = ";";
+	public static final char EMPTY_CHAR = ' ';
+
+	/**
+	 * @param params
+	 * @return
+	 */
+	public static String queryStringSecured(final Map<String, String> params) 
+	{
+		final StringBuilder queryStr = new StringBuilder(StringUtils.EMPTY_STRING);
+		String quote = StringUtils.EMPTY_STRING;
+		for (String key : params.keySet()) 
+		{
+			queryStr.append(quote).append(String.format("%s=%s", key, params.get(key)));
+			quote = "&";
+		}
+
+		String valText = queryStr.toString();
+		if (StringUtils.hasLength(valText))
+		{
+			try {
+				return TrippleDesManager.INSTANCE.secure().encrypt(null, valText);
+			} catch (Throwable ex) {
+				// Ignore exception
+			}
+		}
+
+		return valText;
+	}
+
+	/**
+	 * @param siteData
+	 * @param subFirm
+	 * @return
+	 */
+	public static String getOrganId(final SiteDataModel siteData, final SubFirmProfile subFirm) {
+		return FirmServiceUtil.getOrganId(siteData, subFirm);
+	}
+
+	/**
+	 * @param siteData
+	 * @param subFirm
+	 * @return
+	 */
+	public static String getPrefix(final SiteDataModel siteData, final SubFirmProfile subFirm) {
+		return FirmServiceUtil.getFirmPrefix(siteData, subFirm);
+	}
+
+	/**
+	 * @param folder
+	 * @param filename
+	 * @param fieldname
+	 * @param mimetype
+	 * @param fileData
+	 * @param fileInfo
+	 */
+	public static void fileInfoBuilder(String folder,
+			String filename, 
+			String fieldname, 
+			String mimetype,
+			final File fileData, 
+			final FileInfoModel fileInfo) 
+	{
+		if (fileInfo != null && fileData != null) 
+		{
+			fileInfo.setCreated(System.currentTimeMillis());
+			fileInfo.setMimetype(mimetype);
+			fileInfo.setFile(filename);
+			if (StringUtils.hasLength(fieldname))
+				fileInfo.setFieldname(fieldname);
+			fileInfo.setSize((int) fileData.length());
+			fileInfo.setFolder(folder);
+		}
+	}
+
+	/**
+	 * Return the {@link List} of {@link String} from given {@link String}
+	 *
+	 * @param value
+	 *            the given {@link String} value
+	 * @return the result
+	 */
+	public static List<String> toStringList(String value) {
+		return Arrays.asList(toStringArray(value));
+	}
+
+	public static Set<String> toStringSet(String value) {
+		return Sets.newHashSet(toStringArray(value));
+	}
+
+	/**
+	 * Return the array of {@link String} from given {@link String}
+	 *
+	 * @param value
+	 *            the given {@link String} value
+	 * @return the result
+	 */
+	public static String[] toStringArray(String value) {
+		if (Strings.isNullOrEmpty(value))
+		{
+			return new String[] {};
+		}
+
+		return value.split(ARRAY_SEPARATOR);
+	}
+
+	/**
+	 * Return the {@link List} of {@link Long} value from given {@link String} value
+	 *
+	 * @param value
+	 *            the given value
+	 * @return the {@link List} of {@link Long} value
+	 */
+	public static List<Long> toLongArray(String value) 
+	{
+		if (Strings.isNullOrEmpty(value)) {
+			return new ArrayList<>();
+		}
+
+		String[] arrays = value.split(ARRAY_SEPARATOR);
+		List<Long> results = new ArrayList<>(arrays.length);
+
+		for (String v : arrays) {
+			long l = toLong(v);
+			if (!results.contains(l)) {
+				results.add(l);
+			}
+		}
+
+		return results;
+	}
+
+	/**
+	 * Return the {@link Set} of {@link Long} value from given {@link String} value
+	 *
+	 * @param value
+	 *            the given value
+	 * @return the {@link Set} of {@link Long} value
+	 */
+	public static Set<Long> toLongSet(String value)
+	{
+		if (Strings.isNullOrEmpty(value)) {
+			return new HashSet<>();
+		}
+
+		String[] arrays = value.split(ARRAY_SEPARATOR);
+		Set<Long> results = new HashSet<>(arrays.length);
+
+		for (String v : arrays) {
+			long l = toLong(v);
+			if (!results.contains(l)) {
+				results.add(l);
+			}
+		}
+
+		return results;
+	}
+
+	/**
+	 * Append all {@link String} value in {@link Collection} to one {@link String}
+	 * value
+	 *
+	 * @param values
+	 *            the given {@link Collection} of {@link String}
+	 * @return the result
+	 */
+	public static String toString(Collection<String> values)
+	{
+		if (values == null || values.isEmpty()) {
+			return "";
+		}
+
+		String result = "";
+		for (String value : values) {
+			result = result.concat(value).concat(ARRAY_SEPARATOR);
+		}
+
+		return result.substring(0, result.length() - 1);
+	}
+
+	/**
+	 * @param values
+	 * @return
+	 */
+	public static String toStingArray(Collection<String> values) 
+	{
+		if (values == null || values.isEmpty()) {
+			return "";
+		}
+		final StringJoiner sj = new StringJoiner(",", "[", "]");
+		values.forEach(it -> sj.add(String.format("'%s'", it)));
+		return sj.toString();
+	}
+
+	/**
+	 * Append all {@link String} value in {@link Collection} to one {@link String}
+	 * value
+	 *
+	 * @param values
+	 *            the given {@link Collection} of {@link String}
+	 * @return the result
+	 */
+	public static String toString(String... values) {
+		if (values == null || values.length == 0) {
+			return "";
+		}
+
+		String result = "";
+		for (String value : values) {
+			result = result.concat(value).concat(ARRAY_SEPARATOR);
+		}
+
+		return result.substring(0, result.length() - 1);
+	}
+
+	/**
+	 * Append all {@link String} value in {@link Collection} to one {@link String}
+	 * value separate by empty
+	 *
+	 * @param values
+	 *            values the given {@link Collection} of {@link String}
+	 * @return he result
+	 */
+	public static String toStringOnExcel(Collection<String> values) {
+		return toStringOnExcel(values, "");
+	}
+
+	/**
+	 * Append all {@link String} value in {@link Collection} to one {@link String}
+	 * value
+	 *
+	 * @param values
+	 *            values the given {@link Collection} of {@link String}
+	 * @param separator
+	 *            the given separator
+	 * @return he result
+	 */
+	public static String toStringOnExcel(Collection<String> values, String separator) {
+		if (values == null || values.isEmpty()) {
+			return "";
+		}
+
+		String result = "";
+		String splitChar = Strings.isNullOrEmpty(separator) ? ARRAY_SEPARATOR : separator;
+		for (String value : values) {
+			if (!Strings.isNullOrEmpty(value)) {
+				result = result.concat(value).concat(splitChar);
+			}
+		}
+
+		return Strings.isNullOrEmpty(result) ? result : result.substring(0, result.length() - 1);
+	}
+
+	/**
+	 * Convert from {@link String} value to {@link Long} value
+	 *
+	 * @param value
+	 *            the given {@link String} value
+	 * @return the {@link Long} value
+	 */
+	public static long toLong(String value) {
+		try {
+			return Long.valueOf(value);
+		} catch (Exception ex) {
+			log.warn("Could not convert from [" + value + "] to long value", ex);
+			return 0L;
+		}
+	}
+
+	/**
+	 * Return list of {@link ObjectId} from value
+	 *
+	 * @param values
+	 *            the given value
+	 * @return the result
+	 */
+	public static List<ObjectId> toObjectIdList(List<String> values) {
+		if (values.size() == 0) {
+			return new ArrayList<>();
+		}
+
+		List<ObjectId> objectIds = new ArrayList<>();
+		for (String v : values) {
+			objectIds.add(new ObjectId(v));
+		}
+
+		return objectIds;
+	}
+
+	/**
+	 * Get all first character of given {@link String} with max size
+	 *
+	 * @param value
+	 *            the given string
+	 * @param maxSize
+	 *            the given max size
+	 * @return the result
+	 */
+	public static String getAllFirstChar(String value, int maxSize) {
+		if (Strings.isNullOrEmpty(value)) {
+			return "";
+		}
+
+		String[] values = value.split(" ");
+		StringBuffer buffer = new StringBuffer();
+		String v;
+		char fv;
+		for (int index = 0; (index < values.length && buffer.length() < maxSize); index++) {
+			v = values[index];
+			if (!v.isEmpty() && (Character.isLetter(fv = v.charAt(0)))) {
+				buffer.append(fv);
+			}
+		}
+
+		return buffer.toString().toUpperCase();
+	}
+
+	/**
+	 * Check given {@link String} value is a {@link Integer} or not
+	 *
+	 * @param value
+	 *            the given {@link String} value
+	 * @return the result
+	 */
+	public static boolean isInt(String value) {
+		try {
+			Integer.valueOf(value);
+
+			return true;
+		} catch (Exception ex) {
+			return false;
+		}
+	}
+
+	/**
+	 * Check Null object
+	 *
+	 * @param object
+	 * @return
+	 */
+	public static boolean isNotNull(Object object) {
+		return null != object;
+	}
+}

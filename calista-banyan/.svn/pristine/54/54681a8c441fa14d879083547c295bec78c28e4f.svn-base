@@ -1,0 +1,233 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.data.Field;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.customquery.SearchDto;
+import com.inet.calista.collatask.model.CustomQuery;
+import com.inet.calista.collatask.model.CustomQuery.Scope;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+/**
+ * CustomQueryBO.
+ *
+ * @author Duyen Tang
+ * @version $Id: CustomQueryBO.java Apr 10, 2018 9:45:33 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("collatask_customquerybo")
+public class CustomQueryBO extends CollaborationTaskBO<CustomQuery> implements BeanInitiateInvoke {
+
+	/**
+	 * Create {@link CustomQuery} instance
+	 * 
+	 * @param contentBf
+	 *            the given {@link MagicContentBF} instance
+	 */
+	@Inject
+	protected CustomQueryBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+		super(contentBf, "collatask_custom_query");
+	}
+
+	/**
+	 * Remove default filter on given type for given user
+	 * 
+	 * @param authorUname
+	 *            the given author user name
+	 * @param type
+	 *            the given type
+	 */
+	public void removeDefaultFilter(String orgCode, String authorUname, String type) {
+		QueryImpl<JSONDB> query = createQuery(orgCode);
+		query.field("scope").equal(Scope.personal.name())
+			 .field("type").equal(type)
+			 .field("authUname").equal(authorUname)
+			 .field("defaultQuery").equal(true);
+
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("defaultQuery", false);
+
+		update(update, query);
+	}
+
+	/**
+	 * Share custom query for other user
+	 * 
+	 * @param item
+	 *        Given {@link CustomQuery}
+	 * @param executors
+	 *        Given list of {@link Executor}
+	 */
+	public void share(CustomQuery item, List<Executor> executors) 
+	{
+		UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.addAll("sharedFors", executors, false);
+
+		update(item.getUuid(), update);
+	}
+
+	/**
+	 * Find {@link CustomQuery} by given condition
+	 * 
+	 * @param orgCode
+	 *        Given organization code
+	 * @param authorUname
+	 *        Given author user name
+	 * @param type
+	 *        Given type
+	 * @param scope
+	 *         Given scope
+	 * @return the list of custom query
+	 */
+	public List<CustomQuery> findBy(String orgCode, String authorUname, String type) 
+	{
+		QueryImpl<JSONDB> query = createQuery(orgCode);
+		query.field("type").equal(type);
+		
+		// OR condition MUST BE started inside AND
+		query.and(query.or(query.criteria("authUname").equal(authorUname),
+						  query.criteria("scope").equal(Scope.company.name())));
+		
+		query.retrievedFields(false, "fields");
+
+		return query(query).getItems();
+	}
+
+	/**
+	 * Search custom query by given condition
+	 * 
+	 * @param searchCriteria
+	 *            the given search criteria
+	 * @return the result
+	 */
+	public SearchDTO<CustomQuery> search(SearchCriteria<SearchDto> searchCriteria) 
+	{
+		QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+		SearchDto dto = searchCriteria.getCriteria();
+
+		// search on organization code
+		query.field("orgCode").equal(searchCriteria.getOrgCode());
+		
+		// search on key
+		if (!Strings.isNullOrEmpty(dto.getKey())) {
+			query.field("name").like(dto.getKey());
+		}
+
+		// search on type
+		if (!Strings.isNullOrEmpty(dto.getType())) {
+			query.field("type").equal(dto.getType());
+		}
+
+		// search on application
+		if (!Strings.isNullOrEmpty(dto.getApplication())) 
+		{
+			query.field("application").equal(dto.getApplication());
+		}
+
+		// search on permission and scope
+		if (Strings.isNullOrEmpty(dto.getScope())) 
+		{
+			query.field("scope").equal(Scope.company.name());
+			query.and(query.or(query.criteria("authUname").equal(searchCriteria.getUsername()),
+							   query.criteria("sharedFors.uname").equal(searchCriteria.getUsername())));
+		} 
+		else 
+		{
+			query.field("scope").equal(dto.getScope());
+			if (Scope.personal.name().equals(dto.getScope())) 
+			{
+				query.and(query.or(query.criteria("authUname").equal(searchCriteria.getUsername()),
+								   query.criteria("sharedFors.uname").equal(searchCriteria.getUsername())));
+			}
+		}
+
+		// don't retrieve some field
+		query.retrievedFields(false, "fields", "queryObject");
+
+		// query data
+		return query(query);
+	}
+
+	// THIS WAY MAKE JAVA REDUCE MEMORY AS WELL AS PERFORMANCE BETTER !
+	private static final Map<String, Class<?>> map = new HashMap<>();
+	static {
+		map.put("fields", Field.class);
+		map.put("shareFors", Executor.class);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+	 */
+	@Override
+	protected Map<String, Class<?>> childrenConvertMap() {
+		return map;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<CustomQuery> getClassConvetor() {
+		return CustomQuery.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() 
+	{
+		ensureIndex("orgCode,scope");
+		ensureIndex("orgCode,scope,application");
+		ensureIndex("orgCode,scope,application,type");
+		ensureIndex("orgCode,scope,authUname");
+		ensureIndex("orgCode,scope,sharedFors.uname");
+		
+		ensureIndex("orgCode,scope,application,authUname");
+		ensureIndex("orgCode,scope,application,sharedFors.uname");
+		
+		ensureIndex("orgCode,scope,application,type,authUname");
+		ensureIndex("orgCode,scope,application,type,sharedFors.uname");
+		
+		ensureIndex("orgCode,scope,type");
+		ensureIndex("orgCode,scope,type,authUname");
+		ensureIndex("orgCode,scope,type,sharedFors.uname");
+		
+		ensureIndex("orgCode,type,authUname");
+		
+		ensureIndex("orgCode,scope,type,authUname,defaultQuery");
+	}
+}

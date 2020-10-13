@@ -1,0 +1,27 @@
+package com.inet.calista.crm.model.template;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Template.
+ *
+ * @author thoangtran
+ * @version Template 2019 01-29 14:07
+ */
+@Getter
+@Setter
+public class Template extends NoSqlModel<Template> {
+  private String providerID;
+  private String module;
+  private String title;
+  private String content;
+  private String coverImgLocation;
+  private String description;
+
+  @Override
+  protected boolean equals(Template other) {
+    return false;
+  }
+}

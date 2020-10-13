@@ -1,0 +1,152 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.reportservice;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.global.bo.GlbReportResultBO;
+import com.inet.calista.global.bo.GlbReportTemplateBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.xportal.module.web.util.FirmServiceUtil;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.report.bo.ReportBuilderBO;
+import com.inet.xportal.report.model.ReportDocument;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileDownloadAction;
+import com.inet.xportal.web.data.IdentityDTO;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * GlbReportExportAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbReportExportAbstraction.java Feb 13, 2020 11:29:24 AM $
+ *
+ * @since 1.0
+ */
+public abstract class GlbReportExportAbstraction extends GlbAbstraction 
+{
+	@Inject
+	protected ReportBuilderBO reportBO;
+	
+	/**
+	 * 
+	 * @param reportInf
+	 * @return
+	 */
+	protected final String reportName(final ReportDocument reportInf)
+	{
+		return reportInf.reportFullName();
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param templateID
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	protected Object reportBuilder(String organId, String templateID, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException
+	{
+		if (action instanceof FileDownloadAction)
+		{
+			return reportBO.reportBuilder(GlbReportTemplateBO.class,
+					GlbReportResultBO.class,
+					action.getWebScope().copeScope(),
+					organId,
+					templateID,
+					action.getUploadSaveDir(),
+					(FileDownloadAction)action,
+					params);
+		}
+		else
+		{
+			return reportBO.reportBuilder(GlbReportTemplateBO.class,
+					GlbReportResultBO.class,
+					action.getWebScope().copeScope(),
+					organId,
+					templateID,
+					action.getUploadSaveDir(),
+					params);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 */
+	protected String reportTemplateID(String organId, final AbstractBaseAction action, final Map<String, Object> params)
+	{
+		String templateID = XParamUtils.getString("templateID", params);
+		if (!StringUtils.hasLength(templateID))
+		{
+			logger.error("The templateID is required.");
+			action.getViolation().add(new ViolationDTO("TEMPLATE", "TEMPLATE", 1, "TEMPLATE_MISSED"));
+			throw new WebOSBOException("Bad request!");
+		}
+		
+		return templateID;
+	}
+	
+	/**
+	 * 
+	 * @param reportDataUUID
+	 * @return
+	 */
+	protected final WebDataService dataService(Object reportDataUUID )
+	{
+		if (reportDataUUID instanceof String)
+			return new ObjectWebDataservice<>(new IdentityDTO(XParamUtils.getString(reportDataUUID)));
+		else
+			return new ObjectWebDataservice<>(reportDataUUID);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected final WebDataService service(final SiteDataModel site, 
+			final SubFirmProfile firmProfile,
+			final AbstractBaseAction action,
+			final Map<String, Object> params) throws WebOSBOException  
+	{
+		String organId = FirmServiceUtil.getOrganId(site, firmProfile);
+		String usercode = SecurityUtil.getPrincipal();
+		String templateID = reportTemplateID(organId, action, params);
+		final Map<String,Object> values = paramsBuilder(organId, usercode, action, params);
+		return dataService(reportBuilder(organId,templateID,action, values));
+	}
+}

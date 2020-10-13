@@ -1,0 +1,78 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import com.inet.calista.global.bo.GlbEmailFirmBO;
+import com.inet.calista.global.dataservice.GlbAbstraction;
+import com.inet.calista.global.model.GlbEmailFirm;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.subfirmservice.
+ *
+ * @author Phong Tran
+ * @version : TemplateCreateService.java Jun 20, 2019 09:40 phongtt $
+ * @since 1.0
+ */
+/*@Named("glfirmemailcreate")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/firm/email/create",
+        transaction = true,
+        xssLevel = -1,
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)*/
+public class EmailCreateService extends GlbAbstraction {
+
+    @Inject
+    private GlbEmailFirmBO templateBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site,
+                                     final SubFirmProfile profile,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        final GlbEmailFirm template = action.getModel(GlbEmailFirm.class);
+        template.setOrganId(getOrganId(site, profile));
+        template.setApplication(XParamUtils.getString("application", params, action.getApplication()));
+        template.setLanguage(XParamUtils.getString("language", params, action.getMultilangual()));
+
+        if (!templateBO.verifyTemplate(template, action.getViolation())) {
+            throw new WebOSBOException("Bad request!");
+        } else if (templateBO.checkTemplate(template.getApplication(),
+                template.getOrganId(),
+                template.getEmailCode(),
+                template.getLanguage())) {
+            putError(action, "TEMPLATE", "TEMPLATE_EXISTS");
+            throw new WebOSBOException("Bad request!");
+        }
+
+        template.setUuid(templateBO.add(template));
+
+        return new ObjectWebDataservice<>(template);
+    }
+}

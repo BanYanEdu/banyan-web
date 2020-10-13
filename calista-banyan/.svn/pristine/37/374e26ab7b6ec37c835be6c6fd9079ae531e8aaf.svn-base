@@ -1,0 +1,178 @@
+package com.inet.calista.global.bo.contact;
+
+
+import com.inet.calista.global.bo.GLNoSqlBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.dto.GLAddress;
+import com.inet.calista.global.dto.SearchCriteria;
+import com.inet.calista.global.dto.search.QSearchCriteria;
+import com.inet.calista.global.model.contact.GLOrgan;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * OrganizationInfoBo.
+ *
+ * @author thoangtran
+ * @version OrganizationInfoBo 2018 04-16 15:46
+ */
+@Named("GLOrganBO")
+@Slf4j
+public class GLOrganBO extends GLNoSqlBo<GLOrgan> implements BeanInitiateInvoke {
+    @Inject
+    public GLOrganBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+        super(contentBf, GLOrgan.COLLECTION_NAME);
+    }
+
+    @Override
+    public String add(final GLOrgan model) throws WebOSBOException {
+        if (StringUtils.hasLength(model.getOrganId())) {
+            final GLOrgan data = loadByOrganId(model.getOrganId());
+            logger.debug("found OrganizationInfo {} with organId {}", data, model.getOrganId());
+
+            if (data != null) {
+                return data.getUuid();
+            }
+        }
+        return super.add(model);
+    }
+
+    /**
+     * Save or update organization
+     *
+     * @param organization
+     * @return
+     */
+    public GLOrgan saveOrUpdate(final GLOrgan organization) {
+        // check update if exist by organId
+        final GLOrgan exist = this.loadByOrganId(organization.getOrganId());
+        if (null != exist) {
+            organization.setUuid(exist.getUuid());
+            this.update(organization.getUuid(), organization);
+        } else
+            organization.setUuid(this.add(organization));
+        return organization;
+    }
+
+    /**
+     * Search organization by criteria
+     *
+     * @param criteria
+     * @return
+     */
+    public SearchDTO<GLOrgan> search(final SearchCriteria<QSearchCriteria> criteria) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        // search by key
+        QSearchCriteria qSearchCriteria = criteria.getCriteria();
+        if (null != qSearchCriteria && StringUtils.hasLength(criteria.getCriteria().getKeyword())) {
+            final String keywords = criteria.getCriteria().getKeyword();
+            query.or(query.criteria("name").like(keywords),
+                    query.criteria("primaryEmail").startsWith(keywords)
+            );
+        }
+        pagination(query, criteria.getPageNumber(), criteria.getPageSize());
+        return this.query(query);
+    }
+
+    /**
+     * @param organId
+     * @return
+     */
+    public GLOrgan loadByOrganId(String organId) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(CommonConstant.ORGAN_ID).equal(organId);
+        return this.load(query);
+    }
+
+    /**
+     * @param organName
+     * @return
+     */
+    public GLOrgan loadByOrganName(String organName) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("name").equal(organName);
+        return this.load(query);
+    }
+
+    /**
+     * @param taxCode
+     * @return
+     */
+    public GLOrgan loadByTaxCode(String taxCode) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("taxCode").equal(taxCode);
+        return this.load(query);
+    }
+
+    /**
+     * Load organization info by organId
+     *
+     * @param organId the give
+     * @return
+     */
+    public GLOrgan loadByOrganId(String organId, String... properties) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field(CommonConstant.ORGAN_ID).equal(organId);
+        if (null != properties && properties.length > 0)
+            query.retrievedFields(true, properties);
+        return this.load(query);
+    }
+
+    /**
+     * @param key
+     * @param term
+     * @return
+     */
+    public SearchDTO<GLOrgan> findBy(String key, String term) {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("deleted").notEqual(true);
+        if (CommonConstant.NAME.equals(key)) {
+            query.field(CommonConstant.NAME).equal(term);
+        } else if (CommonConstant.TAX_CODE.equals(key)) {
+            query.field(CommonConstant.TAX_CODE).equal(term);
+        }
+        if (CommonConstant.ADDRESS.equals(key)) {
+            query.field(CommonConstant.ADDRESS).equal(term);
+        } else {
+            query.field(key).like(term);
+        }
+        return this.query(query);
+    }
+
+
+    @Override
+    protected Class<GLOrgan> getClassConvetor() {
+        return GLOrgan.class;
+    }
+
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        final Map<String, Class<?>> map = new HashMap<>();
+        map.put("officeAddress", GLAddress.class);
+        return map;
+    }
+
+    @Override
+    public void init() {
+        createIndex();
+    }
+
+    void createIndex() {
+        ensureIndex("uuid");
+        ensureIndex("name");
+        ensureIndex("primaryEmail");
+        ensureIndex("organId");
+    }
+}

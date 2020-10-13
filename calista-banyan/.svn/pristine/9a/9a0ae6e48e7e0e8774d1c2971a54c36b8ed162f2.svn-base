@@ -1,0 +1,261 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.bo;
+
+import com.inet.calista.erp.purchase.bo.ERPPurchaseBase;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.bo.POSProductBO;
+import com.inet.calista.pos.common.model.POSItem;
+import com.inet.calista.pos.retail.POSRetailConstant;
+import com.inet.calista.pos.retail.data.POSModule;
+import com.inet.calista.pos.retail.data.POSProdPurchase;
+import com.inet.calista.pos.retail.data.POSPurchaseItem;
+import com.inet.calista.pos.retail.model.POSPurchase;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: POSPurchaseBO.java Jun 07, 2018 10:22 phongtt $
+ * @since 1.0
+ */
+@Named("POSPurchaseBO")
+public class POSPurchaseBO extends ERPPurchaseBase<POSPurchase> implements BeanInitiateInvoke {
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<String, Class<?>>();
+        childrenConvert.put("items", POSPurchaseItem.class);
+    }
+
+    @Inject
+    protected POSPurchaseBO(@ContentContext(context = POSConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    @Override
+    protected Class<POSPurchase> getClassConvetor() {
+        return POSPurchase.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("outletId");
+        ensureIndex("code");
+        ensureIndex("createDate");
+
+        ensureIndex("organId,outletId,code,createDate");
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public POSProdPurchase loadProdPurchase(String organId, String outletId, String code) throws WebOSBOException {
+        final POSProductBO itemBO = WebContext.INSTANCE.cache().getBean(POSProductBO.class);
+
+        final POSItem product = itemBO.loadByCode(organId, code);
+
+        logger.debug("found product {} with code {}", product, code);
+
+        if (product != null) {
+            return new POSProdPurchase()
+                    .withProduct(product)
+                    .withBarcode(itemBO.loadBarcode(product, code));
+        }
+
+        return new POSProdPurchase();
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param defaultCode
+     * @return
+     */
+    public String counterGenerate(String organId, String outletId, String defaultCode) {
+        return super.counterGenerate(organId, outletId, getCounter(), defaultCode);
+    }
+
+    /**
+     * @return
+     */
+    public String getModule() {
+        return POSModule.PUR_RETAIL.name();
+    }
+
+    /**
+     * @return
+     */
+    public String getCounter() {
+        return POSRetailConstant.COUNTER_PURCHASE;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param from
+     * @param to
+     * @param empIds
+     * @param supIds
+     * @param prodIds
+     * @param groupBy
+     * @param limit
+     * @param offset
+     * @throws WebOSBOException
+     */
+    public void summary(String organId, String outletId,
+                        long from, long to,
+                        final List<String> empIds,
+                        final List<String> supIds,
+                        final List<String> prodIds,
+                        int groupBy, int limit, int offset) throws WebOSBOException {
+
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (!CollectionUtils.isEmpty(empIds)) {
+            query.field("employeeId").in(empIds);
+        }
+        if (!CollectionUtils.isEmpty(supIds)) {
+            query.field("supplierId").in(supIds);
+        }
+        if (!CollectionUtils.isEmpty(prodIds)) {
+            query.field("supplierId").in(prodIds);
+        }
+
+        if (from > 0) {
+            query.field("createDate").greaterThanOrEq(from);
+        }
+
+        if (to > 0) {
+            query.field("createDate").lessThanOrEq(to);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param keyword
+     * @param from
+     * @param to
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<POSPurchase> query(String organId, String outletId,
+                                        String keyword, int status, int paid,
+                                        final List<String> empIds,
+                                        final List<String> supIds,
+                                        long from, long to,
+                                        int limit, int offset) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (status >= 0) {
+            query.field("status").equal(status);
+        }
+
+        //unpaid
+        if (paid == 0) {
+            query.field("totalRemainAmount").lessThan(0);
+        }
+        //paid
+        if (paid == 1) {
+            query.field("totalRemainAmount").greaterThanOrEq(0);
+        }
+
+        if (StringUtils.hasLength(outletId)) {
+            query.field("outletId").equal(outletId);
+        }
+
+        if (!CollectionUtils.isEmpty(empIds)) {
+            query.field("employeeId").in(empIds);
+        }
+        if (!CollectionUtils.isEmpty(supIds)) {
+            query.field("supplierId").in(supIds);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("employeeName").like(keyword),
+                    query.criteria("supplierName").like(keyword)
+            ));
+        }
+
+        if (from > 0) {
+            query.field("createDate").greaterThanOrEq(from);
+        }
+
+        if (to > 0) {
+            query.field("createDate").lessThanOrEq(to);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        return super.query(query);
+    }
+}

@@ -1,0 +1,22 @@
+package com.inet.calista.crm.service.setting.dicts;
+
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+
+import javax.inject.Named;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtd
+ * @version $$Id: CreateService 6/2/16 3:37 PM thoangtd $$
+ * @since 1.0
+ */
+@Named("crm_setting_dict_saveservice")
+@XPortalDataService(roles = { Roles.SETTING_DICT}, description = "Manage dictionary")
+@XPortalPageRequest(uri = "crm/setting/dicts/save", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaveService extends SaveDictService {
+
+}

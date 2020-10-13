@@ -1,0 +1,63 @@
+# How to build project
+Please read calista-platform's readme.md
+
+
+# Initial project
+
+- Eclipse:
+```bash
+mvn eclipse:clean
+mvn eclipse:eclipse
+```
+- IntelliJ IDEA:
+```bash
+mvn idea:clean
+mvn idea:idea
+```
+# Install external libraries(if necessary):
+*  Base library
+
+```bash
+mvn install:install-file -DgroupId=com.inet -DartifactId=com.inet.base -Dversion=2.5.1.RELEASE -Dpackaging=jar -Dfile=lib/com.inet.base-2.5.1.RELEASE.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=com.inet.web -Dversion=2.5.1.RELEASE -Dpackaging=jar -Dfile=lib/com.inet.web-2.5.1.RELEASE.jar
+```
+
+* iNet cloud library:
+
+```bash
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-web -Dversion=4.0 -Dpackaging=jar -Dfile=lib/icloud-web-4.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-core -Dversion=4.0 -Dpackaging=jar -Dfile=lib/icloud-core-4.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-nosql-web -Dversion=5.0 -Dpackaging=jar -Dfile=lib/icloud-nosql-web-5.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-xdb -Dversion=3.5.0 -Dpackaging=jar -Dfile=lib/icloud-xdb-3.5.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=cloud-docx -Dversion=3.0 -Dpackaging=jar -Dfile=lib/cloud-docx-3.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=cloud-docx-lib -Dversion=3.5 -Dpackaging=jar -Dfile=lib/cloud-docx-lib-3.5.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=unifiedpush-lib -Dversion=2.0 -Dpackaging=jar -Dfile=lib/unifiedpush-lib-2.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=cloud-protocol -Dversion=1.0 -Dpackaging=jar -Dfile=lib/cloud-protocol-1.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=cloud-camel-lib -Dversion=3.0 -Dpackaging=jar -Dfile=lib/cloud-camel-lib-3.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-plugin -Dversion=5.0 -Dpackaging=jar -Dfile=lib/icloud-plugin-5.0.jar
+mvn install:install-file -DgroupId=com.inet -DartifactId=icloud-config -Dversion=3.0 -Dpackaging=jar -Dfile=lib/icloud-config-3.0.jar
+```
+* JSON lib
+```bash
+mvn install:install-file -DgroupId=net.sf.json-lib -DartifactId=json-lib -Dversion=2.4 -Dpackaging=jar -Dfile=lib/json-lib-2.4.jar
+```
+# Build project
+```bash
+mvn install package
+```
+
+# More command for developer 
+- Build package
+```bash
+mvn package 
+```
+- Install package
+
+```bash
+mvn install package
+```
+- Install ignore test
+```bash
+mvn install -DSkipTest=true
+```
+

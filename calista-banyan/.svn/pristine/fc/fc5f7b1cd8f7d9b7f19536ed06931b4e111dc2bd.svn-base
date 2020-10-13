@@ -1,0 +1,92 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.constants;
+
+/**
+ * CollaTaskJsonConstants.
+ *
+ * @author Duyen Tang
+ * @version $Id: CollaTaskJsonConstants.java Dec 29, 2017 9:33:34 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public interface CollaTaskJsonConstants {
+  String SUBMISSION = "submission";
+  String CONSTRAINT = "constraint";
+  
+  // common
+  String FIELDS_STR = "fieldsStr";
+  String UUID = "uuid";
+  String UUIDS = "uuids";
+  String STATUS = "status";
+  String STATUSES_STR = "statusesStr";
+  String NAME = "name";
+  String DESC = "desc";
+  String TITLE = "title";
+  String TYPE = "type";
+  String TYPES = "types";
+  String BLOCK_TYPES = "blockTypes";
+  String KEY = "key";
+  String KEYS = "keys";
+  String TYPES_STR = "typesStr";
+  String NOTE = "note";
+  String REF_UUID = "refUuid";
+  String REF_UUID_STR = "refUuidStr";
+  String REF_TYPE = "refType";
+  String DEADLINE = "deadline";
+  String ATTACHMENTS = "attachments";
+  String ATTACHMENTS_STR = "attachmentsStr";
+  String CODE = "code";
+  String CONTENT_UUID = "contentUuid";
+  String START_DATE = "startDate";
+  String END_DATE = "endDate";
+  String PROGRESS = "progress";
+  String AUTH_UNAME = "authUname";
+  String SEARCH_TYPE = "searchType";
+  
+  // smart document constants
+  String TAGS_STR = "tagsStr";
+  String RECEIVER = "receiver";
+  String RECEIVER_UNAME = "receiverUname";
+  String RECEIVER_NAME = "receiverName";
+  String RECEIVERS = "receivers";
+  String RECEIVERS_STR = "receiversStr";
+  String ASSIGNEE_STR = "assigneeStr";
+  String WATCHERS_STR = "watchersStr";
+  String COORDINATORS_STR = "coordinatorsStr";
+  String SMART_DOC_UUID = "smartDocUuid";
+  String SMART_DOC_UUID_STR = "smartDocUuidStr";
+  String TASK_UUID = "taskUuid";
+  String PERMISSIONS = "permissions";
+  String UNAME = "uname";
+  
+  // project constants
+  String MEMBERS_STR = "membersStr";
+  String PROJECT_UUID = "projectUuid";
+  String MANAGERS = "managers";
+  String LEADERS = "leaders";
+  String WORKERS = "workers";
+  String WATCHER = "watchers";
+  String SUPPORTERS = "supporters";
+  
+  // custom query
+  String SCOPE = "scope";
+  String SHAREDFORS_STR = "sharedForsStr";
+  
+  // common search
+  String DATE_FROM = "dateFrom";
+  String DATE_TO = "dateTo";
+}

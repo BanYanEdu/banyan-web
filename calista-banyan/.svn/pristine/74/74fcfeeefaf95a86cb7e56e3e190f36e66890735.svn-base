@@ -1,0 +1,48 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.calista.erp.common.data.ERPItemStatus;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+
+import javax.inject.Named;
+
+/**
+ * ProductImageDataservice.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ProductImageDataservice.java Dec 12, 2017 11:58:58 AM $
+ * @since 1.0
+ */
+@Named(value = "ECMItemimage")
+@XPortalDataService(description = "Product service")
+@XPortalPageRequest(uri = "commerce/product/image",
+        inherit = true,
+        action = WebConstant.FILE_DOWNLOAD_ACTON,
+        result = WebConstant.ACTION_XSTREAM_RESULT)
+public class ProductImageDataservice extends BinaryViewAbstraction {
+    /**
+     * @return
+     */
+    @Override
+    protected String statusLoad() {
+        return ERPItemStatus.USED.name();
+    }
+}

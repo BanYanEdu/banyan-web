@@ -1,0 +1,29 @@
+package com.inet.calista.common.provider;
+
+import com.inet.xportal.nosql.web.bo.AbstractPairValueBO;
+import com.inet.xportal.nosql.web.provider.CloudConfigAbstraction;
+import com.inet.xportal.web.context.ApplicationContext;
+import com.inet.xportal.web.context.ContentContext;
+
+import javax.enterprise.inject.Default;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+/**
+ * NoSqlCalDatabaseConfig.
+ *
+ * @author thoangtd
+ * @version $$Id: NoSqlCalDatabaseConfig 8/16/16 10:08 AM thoangtd $$
+ * @since 1.0
+ */
+@ApplicationContext(context = "NoSqlCalConfig")
+@Default
+@Named("NoSqlCalDatabaseConfig")
+@Singleton
+public class NoSqlCalDatabaseConfig extends CloudConfigAbstraction {
+    @Inject
+    public NoSqlCalDatabaseConfig(@ContentContext(context = "CloudPairValue") AbstractPairValueBO pairValueBO) {
+        super(pairValueBO, "cloud-calista-config", "cloud-calista.properties");
+    }
+}

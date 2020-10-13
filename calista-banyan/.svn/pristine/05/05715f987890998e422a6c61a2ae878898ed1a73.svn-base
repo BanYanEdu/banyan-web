@@ -1,0 +1,88 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.customquery;
+
+/**
+ * SearchDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: SearchDto.java Apr 26, 2018 2:08:47 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class SearchDto {
+  private String application;
+  private String type;
+  private String scope;
+  
+  private String key;
+
+  /**
+   * @return the application
+   */
+  public String getApplication() {
+    return application;
+  }
+
+  /**
+   * @param application the application to set
+   */
+  public void setApplication(String application) {
+    this.application = application;
+  }
+
+  /**
+   * @return the type
+   */
+  public String getType() {
+    return type;
+  }
+
+  /**
+   * @param type the type to set
+   */
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  /**
+   * @return the scope
+   */
+  public String getScope() {
+    return scope;
+  }
+
+  /**
+   * @param scope the scope to set
+   */
+  public void setScope(String scope) {
+    this.scope = scope;
+  }
+
+  /**
+   * @return the key
+   */
+  public String getKey() {
+    return key;
+  }
+
+  /**
+   * @param key the key to set
+   */
+  public void setKey(String key) {
+    this.key = key;
+  }
+}

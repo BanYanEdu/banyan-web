@@ -1,0 +1,35 @@
+package com.inet.calista.crm.constant;
+
+/**
+ * CommonConstant.
+ *
+ * @author thoangtran
+ * @version CommonConstant 2018 04-04 17:01
+ */
+public interface CommonConstant {
+  String KEY = "key";
+  String VALUE = "value";
+  String MASTER= "master";
+  String IDS= "ids";
+  String KEYS= "keys";
+  String UUID= "uuid";
+  String USERNAME= "username";
+  String NAME= "name";
+  String MOBILE_PHONE= "mobilePhone";
+  String PRIMARY_PHONE= "primaryPhone";
+  String PRIMARY_MAIL= "primaryMail";
+  String PRIMARY_EMAIL= "primaryEmail";
+  String TENANT= "tenant";
+  String LAST_NAME = "lastName";
+  String FIRST_NAME = "firstName";
+  String CONTACT_TYPE = "contactType";
+  String ADDRESS = "address";
+  String ADDRESS_STR = "addressStr";
+  String OFFICE_ADDRESS_STR = "officeAddressStr";
+  String ASSIGN_TO_STR = "assignToStr";
+  String ASSIGN_TO = "assignTo";
+  String REF_TYPE = "refType";
+  String REF_ID = "refId";
+  String OWNER_ID = "orgCode";
+  String CODE = "code";
+}

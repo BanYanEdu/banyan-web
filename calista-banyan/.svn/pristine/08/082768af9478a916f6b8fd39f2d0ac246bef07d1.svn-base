@@ -1,0 +1,160 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model;
+
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * FollowUp.
+ *
+ * @author Duyen Tang
+ * @version $Id: FollowUp.java Jan 26, 2018 11:08:05 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class FollowUp extends BaseModel {
+  private String orgCode;
+  private String authorUname;
+  private long date;
+  // the type of follow up
+  //private String type = Type.process.name();
+  
+  private String refUuid;
+  private String refType;
+  
+  private String note;
+
+  /**
+   * Create {@link FollowUp} instance
+   */
+  public FollowUp() {}
+
+  /**
+   * Create {@link FollowUp} instance
+   * 
+   * @param orgCode the given organization code
+   * @param authorUname the given author user name
+   * @param date the given date
+   * @param refUuid the given reference UUID
+   * @param refType the given reference type
+   */
+  public FollowUp(String orgCode, String authorUname, long date, String refUuid, String refType) {
+    this.orgCode = orgCode;
+    this.authorUname = authorUname;
+    this.date = date;
+    this.refUuid = refUuid;
+    this.refType = refType;
+  }
+  
+  
+  /**
+   * @return the orgCode
+   */
+  public String getOrgCode() {
+    return orgCode;
+  }
+
+  /**
+   * @param orgCode the orgCode to set
+   */
+  public void setOrgCode(String orgCode) {
+    this.orgCode = orgCode;
+  }
+
+  /**
+   * @return the authorUname
+   */
+  public String getAuthorUname() {
+    return authorUname;
+  }
+
+  /**
+   * @param authorUname the authorUname to set
+   */
+  public void setAuthorUname(String authorUname) {
+    this.authorUname = authorUname;
+  }
+
+  /**
+   * @return the date
+   */
+  public long getDate() {
+    return date;
+  }
+
+  /**
+   * @param date the date to set
+   */
+  public void setDate(long date) {
+    this.date = date;
+  }
+
+  /**
+   * @return the type
+   */
+  /*public String getType() {
+    return type;
+  }
+
+  *//**
+   * @param type the type to set
+   *//*
+  public void setType(String type) {
+    this.type = type;
+  }*/
+
+  /**
+   * @return the refUuid
+   */
+  public String getRefUuid() {
+    return refUuid;
+  }
+
+  /**
+   * @param refUuid the refUuid to set
+   */
+  public void setRefUuid(String refUuid) {
+    this.refUuid = refUuid;
+  }
+
+  /**
+   * @return the refType
+   */
+  public String getRefType() {
+    return refType;
+  }
+
+  /**
+   * @param refType the refType to set
+   */
+  public void setRefType(String refType) {
+    this.refType = refType;
+  }
+
+  /**
+   * @return the note
+   */
+  public String getNote() {
+    return note;
+  }
+
+  /**
+   * @param note the note to set
+   */
+  public void setNote(String note) {
+    this.note = note;
+  }
+}

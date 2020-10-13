@@ -1,0 +1,37 @@
+package com.inet.calista.global.constant;
+
+/**
+ * CommonConstant.
+ *
+ * @author thoangtran
+ * @version CommonConstant 2018 04-04 17:01
+ */
+public interface CommonConstant {
+  String KEY = "key";
+  String KEYWORD = "keyword";
+  String ORGAN_ID = "organId";
+  String MASTER= "master";
+  String IDS= "ids";
+  String KEYS= "keys";
+  String UUID= "uuid";
+  String USERNAME= "username";
+  String USER_CODE= "userCode";
+  String NAME= "name";
+  String CODE= "code";
+  String MOBILE_PHONE= "mobilePhone";
+  String PRIMARY_PHONE= "primaryPhone";
+  String PRIMARY_MAIL= "primaryMail";
+  String PRIMARY_EMAIL= "primaryEmail";
+  String TENANT= "tenant";
+  String LAST_NAME = "lastName";
+  String FIRST_NAME = "firstName";
+  String CONTACT_TYPE = "contactType";
+  String ADDRESS = "address";
+  String ADDRESS_STR = "addressStr";
+  String OFFICE_ADDRESS_STR = "officeAddressStr";
+  String ASSIGN_TO_STR = "assignToStr";
+  String TAX_CODE = "taxCode";
+  String ASSIGN_TO = "assignTo";
+
+    String existed = "existed";
+}

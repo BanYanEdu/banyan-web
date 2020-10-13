@@ -1,0 +1,91 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.calista.ecommerce.bo.ECMItemBO;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.erp.masterdata.service.ERPItemAbstraction;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.ecommerce.service.common.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMItemAbstraction.java Jan 10, 2019 08:43 phongtt $
+ * @since 1.0
+ */
+public abstract class ECMItemAbstraction extends ERPItemAbstraction {
+    @Inject
+    protected ECMItemBO productBO;
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @param items
+     * @return
+     * @throws WebOSBOException
+     */
+    protected abstract WebDataService service(final SiteDataModel siteData,
+                                              final SubFirmProfile subFirm,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params,
+                                              final SearchDTO<ECMItem> items) throws WebOSBOException;
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    @Override
+    protected final WebDataService service(final SiteDataModel siteData,
+                                           final SubFirmProfile subFirm,
+                                           final AbstractBaseAction action,
+                                           final Map<String, Object> params) throws WebOSBOException {
+        String outletId = StringUtils.EMPTY_STRING;
+        String organId = getOrganId(siteData, subFirm);
+
+        String keyword = XParamUtils.getString("keyword", params, StringUtils.EMPTY_STRING);
+        int orderBy = XParamUtils.getInteger("orderBy", params, 0);
+
+        List<String> groupNames = groupList(siteData, subFirm, action, params);
+
+        final SearchDTO<ECMItem> data = productBO.queryByOutlet(
+                organId, outletId, groupNames, keyword, orderBy,
+                getPageOffset(params),
+                getPageSize(params, 10));
+
+        return service(siteData, subFirm, action, params, data);
+    }
+}

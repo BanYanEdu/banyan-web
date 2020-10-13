@@ -1,0 +1,814 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.data.ECMProdBarcode;
+import com.inet.calista.ecommerce.message.ECMItemMessage;
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.model.ECMProgram;
+import com.inet.calista.erp.common.bo.ERPItemBase;
+import com.inet.calista.erp.common.data.ERPBinaryModel;
+import com.inet.calista.erp.common.data.ERPItemStatus;
+import com.inet.calista.erp.masterdata.bo.ERPUomBO;
+import com.inet.xportal.cms.web.bo.CMSAssetFileBO;
+import com.inet.xportal.cms.web.bo.CMSItemBO;
+import com.inet.xportal.cms.web.data.LinkType;
+import com.inet.xportal.cms.web.data.RatingDTO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.PairValueDTO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.CriteriaContainer;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ECMProductBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: ECMProductBO.java Dec 12, 2017 10:51:45 AM $
+ * @since 1.0
+ */
+@Named("ECMItemBO")
+public class ECMItemBO extends ERPItemBase<ECMItem> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(ECMItemBO.class);
+
+    @Inject
+    private CMSAssetFileBO binaryBO;
+
+    @Inject
+    private CMSItemBO cmsItemBO;
+
+
+    /**
+     * @param businessFacade
+     */
+    @Inject
+    protected ECMItemBO(@ContentContext(context = ECMConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    /**
+     * @return the binaryBO
+     */
+    public CMSAssetFileBO getBinaryBO() {
+        return binaryBO;
+    }
+
+    /**
+     * @return the cmsItemBO
+     */
+    public CMSItemBO getCmsItemBO() {
+        return cmsItemBO;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+     */
+    @Override
+    protected Class<ECMItem> getClassConvetor() {
+        return ECMItem.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        childrenConvert.put("points", RatingDTO.class);
+        childrenConvert.put("elements", PairValueDTO.class);
+        return childrenConvert;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("code");
+        ensureIndex("group");
+        ensureIndex("unit");
+        ensureIndex("category");
+        ensureIndex("organId");
+        ensureIndex("organId,code");
+        ensureIndex("organId,unit");
+
+        ensureIndex("organId,group");
+        ensureIndex("organId,category");
+        ensureIndex("organId,group,category");
+
+        ensureIndex("organId,name,status");
+        ensureIndex("organId,name,status,category");
+        ensureIndex("name,status");
+        ensureIndex("name,status,category");
+
+        ensureIndex("organId,status");
+        ensureIndex("organId,name,group,category,status");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+    @Override
+    public String add(ECMItem info) throws WebOSBOException {
+        prodDefData(info);
+
+        ECMItem item = loadByCode(info.getOrganId(), info.getCode());
+        if (item != null) {
+            throw new WebOSBOException("Duplicate data!");
+            //return item.getUuid();
+        }
+
+
+        return super.add(info);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+     */
+
+    @Override
+    public void update(String uuid, final ECMItem info) throws WebOSBOException {
+        prodDefData(info);
+
+        addProdUnit(info.getOrganId(), info.getUnit());
+
+        try {
+            new ECMItemMessage()
+                    .update(info.getOrganId(), super.load(uuid), info)
+                    .execute();
+        } catch (Throwable ex) {
+            //TODO: ignore exception
+        }
+
+        super.update(uuid, info);
+    }
+
+    /**
+     * @return
+     */
+    public String getCounter() {
+        return ECMConstant.COUNTER_PRODUCT;
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param groups
+     * @param keyword
+     * @param orderBy
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByOutlet(String organId, String outletId, List<String> groups,
+                                            String keyword, int orderBy,
+                                            int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        query.field("status").equal("USED");
+
+        query.and(query.or(
+                query.criteria("saleOnWeb").doesNotExist(),
+                query.criteria("saleOnWeb").equal(true)
+        ));
+
+        if (!CollectionUtils.isEmpty(groups)) {
+            query.field("group").in(groups);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+
+            //query.fulltext(keyword, true);
+        }
+
+        if (StringUtils.hasLength(outletId)) {
+            query.and(query.or(
+                    query.criteria("outlets").doesNotExist(),
+                    query.criteria("outlets").equal(outletId)
+            ));
+        }
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (orderBy) {
+            case 0:
+                query.order("name");
+                break;
+            case 1:
+                query.order("-name");
+                break;
+            case 2:
+                query.order("price");
+                break;
+            case 3:
+                query.order("-price");
+                break;
+            default:
+                query.order("name");
+                break;
+        }
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param item
+     * @param code
+     * @return
+     */
+    public ECMProdBarcode loadBarcode(final ECMItem item, String code) {
+        ECMProdBarcode barcode = null;
+        if (item != null) {
+            barcode = new ECMProdBarcode();
+            barcode.setProdId(item.getUuid());
+            barcode.setProdCode(item.getCode());
+            barcode.setReorderMax(item.getReorderMax());
+            barcode.setReorderMin(item.getReorderMin());
+            barcode.setProperties(item.getProperties());
+
+            if (StringUtils.hasLength(item.getSku())) {
+                barcode.setSku(item.getSku());
+            } else {
+                barcode.setSku(item.getCode());
+            }
+        }
+
+        return barcode;
+    }
+
+    /**
+     * @param organId
+     * @param unit
+     * @throws WebOSBOException
+     */
+    public void addProdUnit(String organId, String unit) throws WebOSBOException {
+        WebContext.INSTANCE.cache()
+                .getBean(ERPUomBO.class)
+                .addUnit(organId, unit);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> prodUnits(String organId) throws WebOSBOException {
+        return WebContext.INSTANCE.cache()
+                .getBean(ERPUomBO.class)
+                .list(organId);
+    }
+
+    /**
+     * @param info
+     */
+    private void prodDefData(final ECMItem info) {
+        try {
+            if (!StringUtils.hasLength(info.getCode()))
+                info.setCode(uuidRandom());
+
+            if (!StringUtils.hasLength(info.getSku()))
+                info.setSku(uuidRandom());
+
+            if (!info.getGroup().equals(info.getCmsTab().getTabgroup()))
+                info.getCmsTab().setTabgroup(info.getGroup());
+
+            if (!StringUtils.hasLength(info.getAvatar()) && !CollectionUtils.isEmpty(info.getImages())) {
+                info.setAvatar(info.getImages().get(0).getCode());
+            }
+        } catch (Throwable ex) {
+            logger.warn("prodDefData is fail !.");
+        }
+    }
+
+    /**
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> builderCampaign(final List<String> codes) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+
+        final SearchDTO<ECMProgram> programs = WebContext.INSTANCE.cache()
+                .getBean(ECMProgramBO.class)
+                .queryProgram(codes);
+
+        if (programs != null && programs.getTotal() > 0) {
+            final CriteriaContainer container = new QueryImpl<>().or();
+
+            for (ECMProgram program : programs.getItems()) {
+                final QueryImpl<JSONDB> condition = new QueryImpl<>();
+
+                if (!CollectionUtils.isEmpty(program.getProducts())) {
+                    condition.and(
+                            condition.criteria("organId").equal(program.getOrganId()),
+                            condition.criteria("code").in(program.getProducts())
+                    );
+                } else {
+                    if (!CollectionUtils.isEmpty(program.getGroups())) {
+                        condition.and(
+                                condition.criteria("organId").equal(program.getOrganId()),
+                                condition.criteria("group").in(program.getGroups())
+                        );
+                    } else {
+                        condition.and(
+                                condition.criteria("organId").equal(program.getOrganId()),
+                                condition.criteria("code").equal("CampaignProductIsEmpty")
+                        );
+                    }
+                }
+
+                container.add(condition);
+            }
+
+            query.and(container);
+        } else {
+            query.field("code").equal("CampaignCodesIsEmpty");
+        }
+
+        logger.debug("campaign product builder is {}", query);
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @param oldGName
+     * @param newGName
+     * @throws WebOSBOException
+     */
+    public void changeGroup(String organId, String oldGName, String newGName) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId)
+                .field("group").equal(oldGName);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("group", newGName);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+
+    /**
+     * @param oldOrgan
+     * @param newOrgan
+     * @throws WebOSBOException
+     */
+    public void changeOrgan(String oldOrgan, String newOrgan) throws WebOSBOException {
+        final Query<JSONDB> select = new QueryImpl<JSONDB>()
+                .field("organId").equal(oldOrgan);
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("organId", newOrgan);
+
+        super.update(update, (QueryImpl<JSONDB>) select);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> baseProducts(String organId) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        query.retrievedFields(true, "organId", "code", "name", "unit", "price");
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+
+    /**
+     * @param organId
+     * @param codes
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByCode(String organId, String codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId)
+                .field("code").in(CollectionUtils.asList(codes.split(",")));
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMItem order(String organId, String code) throws WebOSBOException {
+        final ECMItem item = loadByCode(organId, code);
+        if (item != null) {
+            //item out of stock
+            if (item.isOutOfStock())
+                return null;
+
+            //item isn't saleecm website
+            if (!item.isSaleOnWeb())
+                return null;
+
+            //item isn't used
+            if (!ERPItemStatus.USED.name().equalsIgnoreCase(item.getStatus()))
+                return null;
+
+            return item;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param item
+     * @throws WebOSBOException
+     */
+    public void remove(ECMItem item) throws WebOSBOException {
+        if (item != null) {
+            try {
+                // remove all images of this product
+                binaryBO.removeByFolder(item.getUuid());
+
+                // CMS Item (if any)
+                if (StringUtils.hasLength(item.getCmsTab().getContentID()))
+                    getCmsItemBO().remove(item.getCmsTab().getContentID());
+
+                // remove tab content (if any)
+                if (!CollectionUtils.isEmpty(item.getCmsTab().getElements())) {
+                    // remove this CMS item
+                    for (PairValueDTO cmsitem : item.getCmsTab().getElements()) {
+                        if (StringUtils.hasLength(item.getUuid()) &&
+                                LinkType.INTERNAL.name().equalsIgnoreCase(cmsitem.getValue()))
+                            getCmsItemBO().remove(item.getUuid());
+                    }
+                }
+            } catch (Throwable ex) {
+                logger.warn("remove cms || image for product {} fail !...", item.getUuid());
+            }
+            // remove this product
+            super.remove(item.getUuid());
+        }
+    }
+
+    /**
+     * @param organId
+     * @param group
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByOrgan(String organId, String group, int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        if (StringUtils.hasLength(group))
+            query.field("group").equal(group);
+
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param group
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByOrgan(String organId, String group,
+                                           String keyword, int orderBy,
+                                           int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        if (StringUtils.hasLength(group))
+            query.field("group").equal(group);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.field("code").like(keyword);
+            query.field("name").like(keyword);
+        }
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (orderBy) {
+            case 0:
+                query.order("name");
+                break;
+            case 1:
+                query.order("-name");
+                break;
+            case 2:
+                query.order("price");
+                break;
+            case 3:
+                query.order("-price");
+                break;
+            default:
+                query.order("name");
+                break;
+        }
+
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param codes
+     * @param groups
+     * @param keyword
+     * @param orderBy
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByCampaign(final List<String> codes, List<String> groups,
+                                              String keyword, int orderBy,
+                                              int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = builderCampaign(codes);
+
+        if (!CollectionUtils.isEmpty(groups)) {
+            query.field("group").in(groups);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.field("code").like(keyword);
+            query.field("name").like(keyword);
+        }
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (orderBy) {
+            case 0:
+                query.order("name");
+                break;
+            case 1:
+                query.order("-name");
+                break;
+            case 2:
+                query.order("price");
+                break;
+            case 3:
+                query.order("-price");
+                break;
+            default:
+                query.order("name");
+                break;
+        }
+
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @param groups
+     * @param keyword
+     * @param orderBy
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> queryByOrgan(String organId, List<String> groups,
+                                           String keyword, int orderBy,
+                                           int offset, int limit) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        if (!CollectionUtils.isEmpty(groups)) {
+            query.field("group").in(groups);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+
+            //query.fulltext(keyword, true);
+        }
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit > 0)
+            query.limit(limit);
+
+        switch (orderBy) {
+            case 0:
+                query.order("name");
+                break;
+            case 1:
+                query.order("-name");
+                break;
+            case 2:
+                query.order("price");
+                break;
+            case 3:
+                query.order("-price");
+                break;
+            default:
+                query.order("name");
+                break;
+        }
+
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param prod
+     * @param imageId
+     * @throws WebOSBOException
+     */
+    public boolean removeImage(final ECMItem prod, String imageId) throws WebOSBOException {
+        if (prod != null && !CollectionUtils.isEmpty(prod.getImages())) {
+            ERPBinaryModel image = null;
+
+            for (ERPBinaryModel img : prod.getImages()) {
+                if (img.getCode().equals(imageId)) {
+                    image = img;
+                    break;
+                }
+            }
+
+            // remove this object from list
+            if (image != null && prod.getImages().remove(image)) {
+                try {
+                    // remove picture
+                    binaryBO.remove(image.getUuid());
+
+                    return true;
+                } catch (Exception ex) {
+                    //TODO: ignore exception
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
+     * @param owner
+     * @param group
+     * @param category
+     * @param status
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> query(String owner,
+                                    String group,
+                                    String category,
+                                    String status,
+                                    String keyword,
+                                    int offset,
+                                    int limit) throws WebOSBOException {
+
+        final Query<JSONDB> query = new QueryImpl<JSONDB>().order("-publishedDate");
+
+        if (StringUtils.hasLength(group))
+            query.field("group").equal(group);
+
+        if (StringUtils.hasLength(category))
+            query.field("category").equal(category);
+
+        if (StringUtils.hasLength(owner))
+            query.field("organId").equal(owner);
+
+        if (StringUtils.hasLength(status)) {
+            if (status.split(",").length > 1)
+                query.field("status").in(CollectionUtils.asList(status.split(",")));
+            else
+                query.field("status").equal(status);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword)
+            ));
+        }
+
+
+        if (offset >= 0)
+            query.offset(offset);
+
+        if (limit >= 0)
+            query.limit(limit);
+
+        query.order("code");
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param group
+     * @param category
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ECMItem> query(String group,
+                                    String category,
+                                    String keyword,
+                                    int offset,
+                                    int limit) throws WebOSBOException {
+        return query(StringUtils.EMPTY_STRING, group, category, ERPItemStatus.USED.name(), keyword, offset, limit);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> groups(String organId) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+
+        if (StringUtils.hasLength(organId))
+            query.field("organId").equal(organId);
+
+        return super.distinct("group", (QueryImpl<JSONDB>) query);
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> categories(String organId) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>();
+
+        if (StringUtils.hasLength(organId))
+            query.field("organId").equal(organId);
+
+        return super.distinct("category", (QueryImpl<JSONDB>) query);
+    }
+}

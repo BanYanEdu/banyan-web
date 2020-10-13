@@ -1,0 +1,70 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.book.model;
+
+import com.inet.calista.erp.common.model.ERPBase;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * com.inet.xportal.erp.cash.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPCashBook.java Apr 10, 2018 16:48 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPCashBook extends ERPBase {
+    private String outletId;
+
+    //information Voucher
+    //ex: SALE-RETAIL, BILL-COFFEE, PURCHASE
+    private String module;
+    private String voucherCode;
+    private long voucherDate;
+
+    private String currency;
+    private float rate;
+
+    private float amount;
+    private float amountEx;
+
+    private float discAmount;
+    private float discAmountEx;
+
+    private float vatAmount;
+    private float vatAmountEx;
+
+    private float totalAmount;
+    private float totalAmountEx;
+
+    //0: in; 1: out
+    private int inOut;
+
+    /**
+     *
+     */
+    public void calc() {
+        setAmountEx(getAmount() * getRate());
+        setDiscAmountEx(getDiscAmount() * getRate());
+        setVatAmountEx(getVatAmount() * getRate());
+        setTotalAmountEx(getTotalAmount() * getRate());
+    }
+}

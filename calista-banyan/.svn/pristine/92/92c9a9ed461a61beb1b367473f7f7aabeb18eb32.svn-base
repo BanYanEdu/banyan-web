@@ -1,0 +1,282 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.bo.project;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.CollaborationTaskBo;
+import com.inet.calista.collatask.bo.LogTimeBo;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.data.Member;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.project.AdvanceSearchDto;
+import com.inet.calista.collatask.dto.project.QuickSearchDto;
+import com.inet.calista.collatask.model.LogTime;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.model.project.Project.Type;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import com.mongodb.BasicDBObject;
+
+/**
+ * ProjectBo.
+ *
+ * @author Duyen Tang
+ * @version $Id: ProjectBo.java Mar 2, 2018 4:17:01 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("collatask_projectbo")
+public class ProjectBo extends CollaborationTaskBo<Project> implements BeanInitiateInvoke {
+  @Inject
+  private LogTimeBo logTimeBo;
+
+  /**
+   * Create {@link ProjectBo} instance
+   * 
+   * @param contentBf the given {@link MagicContentBF} instance
+   */
+  @Inject
+  protected ProjectBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "collatask_project");
+  }
+  
+  /**
+   * Add {@link LogTime} for project
+   * 
+   * @param uuid the given {@link Project} UUID
+   * @param logTime the given {@link LogTime}
+   */
+  public void addLogTime(String uuid, LogTime logTime) {
+    logTime.setRefUuid(uuid);
+    logTime.setRefType(ReferenceType.project.name());
+    // add log time
+    logTimeBo.add(logTime);
+    
+    UpdateImpl<JSONDB> update = new UpdateImpl<>();
+    update.inc("spentTime", logTime.getTime());
+    
+    // update increase spent time on project
+    update(uuid, update);
+  }
+  
+  /**
+   * Increase spent time for project
+   * 
+   * @param uuid the given {@link Project} UUID
+   * @param time the given time
+   */
+  public void increaseSpentTime(String uuid, double time) {
+    UpdateImpl<JSONDB> update = new UpdateImpl<>();
+    update.inc("spentTime", time);
+    
+    // update increase spent time on project
+    update(uuid, update);
+  }
+  
+  /**
+   * Quick search on project
+   * 
+   * @param searchCriteria the given criteria
+   * @return the result
+   */
+  public SearchDTO<Project> quickSearch(SearchCriteria<QuickSearchDto> searchCriteria) {
+    return query(createQuickSearchQuery(searchCriteria));
+  }
+  
+  /**
+   * Create query for quick search on project
+   * 
+   * @param searchCriteria the given criteria
+   * @return the query
+   */
+  private QueryImpl<JSONDB> createQuickSearchQuery(SearchCriteria<QuickSearchDto> searchCriteria) {
+    // create query
+    QueryImpl<JSONDB> query = createSearchQueryWithOrgCode(searchCriteria);
+    
+    QuickSearchDto dto = searchCriteria.getCriteria();
+    
+    // search on key
+    if (!Strings.isNullOrEmpty(dto.getKey())) {
+      query.or(
+          query.criteria("code").like(dto.getKey()),
+          query.criteria("name").like(dto.getKey()),
+          query.criteria("desc").like(dto.getKey()),
+          query.criteria("assignerName").like(dto.getKey()),
+          query.criteria("tags").like(dto.getKey())
+        );
+    }
+    
+    // search on start date
+    searchBetweenDate(query, "startDate", dto.getDateFrom(), dto.getDateTo());
+    
+    // search on type of project
+    searchEqual(query, "type", dto.getType());
+    
+    // search on status of project
+    searchIn(query, "status", dto.getStatuses());
+    
+    // search on permission
+    query.or(
+        query.criteria("creatorUname").equal(searchCriteria.getUsername()),
+        query.criteria("members.uname").equal(searchCriteria.getUsername()),
+        query.criteria("type").equal(Type.overt.name())
+      );
+    query.field("orgCode").equal(searchCriteria.getOrgCode());
+    
+    // order data
+    query.order("-startDate,-createDate");
+    
+    return query;
+  }
+  
+  /**
+   * Advance search on project
+   * 
+   * @param searchCriteria the given criteria
+   * @return the result
+   */
+  public SearchDTO<Project> advanceSearch(SearchCriteria<AdvanceSearchDto> searchCriteria) {
+    return query(createAdvanceSearchQuery(searchCriteria));
+  }
+  
+  /**
+   * Create advance search project
+   * 
+   * @param searchCriteria the given search criteria
+   * @return the query
+   */
+  private QueryImpl<JSONDB> createAdvanceSearchQuery(SearchCriteria<AdvanceSearchDto> searchCriteria) {
+    // create query
+    QueryImpl<JSONDB> query = createSearchQuery(searchCriteria);
+    
+    AdvanceSearchDto dto = searchCriteria.getCriteria();
+    
+    // search on code
+    searchLike(query, "code", dto.getCode());
+    
+    // search on name
+    searchLike(query, "name", dto.getName());
+    
+    // search on description
+    searchLike(query, "desc", dto.getDesc());
+    
+    // search on start date
+    searchBetweenDate(query, "startDate", dto.getStartDateFrom(), dto.getStartDateTo());
+    
+    // search on deadline 
+    searchBetweenDate(query, "deadline", dto.getDeadlineFrom(), dto.getDeadlineTo());
+    
+    // search on completed date
+    searchBetweenDate(query, "completedDate", dto.getCompletedDateFrom(), dto.getCompletedDateTo());
+    
+    // search on type
+    searchEqual(query, "type", dto.getType());
+    
+    // search on status
+    searchIn(query, "status", dto.getStatuses());
+    
+    // search on assigner user name
+    searchEqual(query, "assignerUname", dto.getAssignerUname());
+    
+    // search on tag
+    searchIn(query, "tags", dto.getTags());
+    
+    // search on members
+    List<BasicDBObject> members = dto.getMembers();
+    if (!CollectionUtils.isEmpty(members)) {
+      if (members.size() == 1) {
+        query.field("members").hasThisElement(members.get(0));
+      } else {
+        List<BasicDBObject> elemMembers = new LinkedList<>();
+        members.forEach(member -> elemMembers.add(new BasicDBObject("$elemMatch", member)));
+        
+        // match all members
+        query.field("members").hasAllOf(elemMembers);
+      }
+    }
+    
+    // search on permission
+    query.or(
+        query.criteria("creatorUname").equal(searchCriteria.getUsername()),
+        query.criteria("members.uname").equal(searchCriteria.getUsername()),
+        query.criteria("type").equal(Type.overt.name())
+      );
+    query.field("orgCode").equal(searchCriteria.getOrgCode());
+    
+    // order data
+    query.order("-startDate,-createDate");
+    
+    return query;
+  }
+  
+  /**
+   * Check given user has given roles on project with given UUID or not
+   * 
+   * @param exeUname the given executor user name
+   * @param uuid the given UUID
+   * @param roles the given role
+   * @return the result
+   */
+  public boolean hasRole(String exeUname, String uuid, String... roles) {
+    if (roles == null || roles.length == 0) {
+      return false;
+    }
+    
+    QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field("_id").equal(CommonUtils.toObjectId(uuid))
+         .field("members").hasThisElement(
+             new BasicDBObject("uname", exeUname)
+             .append("role", new BasicDBObject("$in", Arrays.asList(roles))));
+    
+    return count(query) > 0;
+  }
+
+  @Override
+  protected Class<Project> getClassConvetor() {
+    return Project.class;
+  }
+  
+  @Override
+  protected Map<String, Class<?>> childrenConvertMap() {
+    Map<String, Class<?>> map = new HashMap<String, Class<?>>();
+    map.put("members", Member.class);
+    
+    return map;
+  }
+  
+
+  @Override
+  public void init() {
+    ensureIndex("orgCode,creatorUname,members.uname,type,-startDate,-createDate");
+  }
+}

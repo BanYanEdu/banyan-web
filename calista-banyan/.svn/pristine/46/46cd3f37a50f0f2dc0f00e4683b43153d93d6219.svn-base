@@ -1,0 +1,68 @@
+package com.inet.calista.global.model;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.global.dto.GLAddress;
+import com.inet.xportal.common.profile.BaseAccountDTO;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * ContactInfo.
+ *
+ * @author thoangtran
+ * @version ContactInfo 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class GLContact extends BaseModel {
+    // collection name
+    public static final String COLLECTION_NAME = "gl_contact";
+
+    // from organization
+    private String organId;
+    private String ownerId;
+    private String userCode; // private information not load
+    
+    // class properties =======================================
+    private long createdDate = System.currentTimeMillis();
+    private String createdBy;
+    private String modifiedBy;
+    private long modifiedDate = System.currentTimeMillis();
+    private String salutationType; // Mr , Ms , Mrs , Dr , Prof
+    private String sex;
+    private String firstName;
+    private String lastName; // require
+    private String middleName;
+    private String fullName; // for search
+    private String primaryEmail;
+    private String officePhone;
+    private String mobilePhone;
+    private String homePhone;
+    private long dateOfBirth = 0;
+    private String dateOfBirthIso;
+    private String taxCode;
+    private String skype;
+    private String facebook;
+    private String title; // refer to dictionary
+    private String department;
+    private String status;
+    private String avatar;
+
+    private GLAddress address;
+    private String description;
+    private boolean deleted = false;
+
+    /**
+     * @return
+     */
+    public String fullNameBuilder() 
+    {
+    		if (StringUtils.hasLength(getFullName()))
+			return getFullName();
+		else
+			return BaseAccountDTO.getFullname(getFirstName(), getMiddleName(), getLastName());
+    }
+}

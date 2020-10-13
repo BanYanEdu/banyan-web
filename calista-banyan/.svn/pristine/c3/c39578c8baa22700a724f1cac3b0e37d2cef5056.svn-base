@@ -1,0 +1,107 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.erp.common.bo.ERPItemBase;
+import com.inet.calista.erp.masterdata.model.ERPItem;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.CollectionUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPItemBO.java May 15, 2018 11:55 phongtt $
+ * @since 1.0
+ */
+@Named("ERPItemBO")
+public class ERPItemBO extends ERPItemBase<ERPItem> implements BeanInitiateInvoke {
+    @Inject
+    protected ERPItemBO(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF businessFacade) {
+        super(businessFacade);
+    }
+
+    @Override
+    protected Class<ERPItem> getClassConvetor() {
+        return ERPItem.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("code");
+        ensureIndex("group");
+        ensureIndex("organId,code");
+        ensureIndex("organId,group");
+        ensureIndex("organId,code,group");
+    }
+
+    /**
+     * @return
+     */
+    public String skuRandom() {
+        return uuidRandom();
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> organs() throws WebOSBOException {
+        return super.distinct("organId", new QueryImpl<>());
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPItem> excludeCodes(String organId, final List<String> codes) throws WebOSBOException {
+        final Query<JSONDB> query = new QueryImpl<JSONDB>()
+                .field("organId").equal(organId);
+
+        if (!CollectionUtils.isEmpty(codes)) {
+            query.field("code").notIn(codes);
+        }
+
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+}

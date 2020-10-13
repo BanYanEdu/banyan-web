@@ -1,0 +1,173 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model;
+
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * Attachment.
+ *
+ * @author Duyen Tang
+ * @version $Id: Attachment.java Dec 26, 2017 12:13:33 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Attachment extends BaseModel {
+	private String creatorUname;
+	private String creatorName;
+	private String name;
+	private String mimetype;
+	private String contentUuid;
+	private long size;
+	private String orgCode;
+	private String refUuid;
+	private String refType;
+
+	/**
+	 * @return the creatorUname
+	 */
+	public String getCreatorUname() {
+		return creatorUname;
+	}
+
+	/**
+	 * @param creatorUname
+	 *            the creatorUname to set
+	 */
+	public void setCreatorUname(String creatorUname) {
+		this.creatorUname = creatorUname;
+	}
+
+	/**
+	 * @return the creatorName
+	 */
+	public String getCreatorName() {
+		return creatorName;
+	}
+
+	/**
+	 * @param creatorName
+	 *            the creatorName to set
+	 */
+	public void setCreatorName(String creatorName) {
+		this.creatorName = creatorName;
+	}
+
+	/**
+	 * @return the name
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * @param name
+	 *            the name to set
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	/**
+	 * @return the mimetype
+	 */
+	public String getMimetype() {
+		return mimetype;
+	}
+
+	/**
+	 * @param mimetype
+	 *            the mimetype to set
+	 */
+	public void setMimetype(String mimetype) {
+		this.mimetype = mimetype;
+	}
+
+	/**
+	 * @return the contentUuid
+	 */
+	public String getContentUuid() {
+		return contentUuid;
+	}
+
+	/**
+	 * @param contentUuid
+	 *            the contentUuid to set
+	 */
+	public void setContentUuid(String contentUuid) {
+		this.contentUuid = contentUuid;
+	}
+
+	/**
+	 * @return the size
+	 */
+	public long getSize() {
+		return size;
+	}
+
+	/**
+	 * @param size
+	 *            the size to set
+	 */
+	public void setSize(long size) {
+		this.size = size;
+	}
+
+	/**
+	 * @return the orgCode
+	 */
+	public String getOrgCode() {
+		return orgCode;
+	}
+
+	/**
+	 * @param orgCode
+	 *            the orgCode to set
+	 */
+	public void setOrgCode(String orgCode) {
+		this.orgCode = orgCode;
+	}
+
+	/**
+	 * @return the refUuid
+	 */
+	public String getRefUuid() {
+		return refUuid;
+	}
+
+	/**
+	 * @param refUuid
+	 *            the refUuid to set
+	 */
+	public void setRefUuid(String refUuid) {
+		this.refUuid = refUuid;
+	}
+
+	/**
+	 * @return the refType
+	 */
+	public String getRefType() {
+		return refType;
+	}
+
+	/**
+	 * @param refType
+	 *            the refType to set
+	 */
+	public void setRefType(String refType) {
+		this.refType = refType;
+	}
+}

@@ -1,0 +1,179 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbCountry;
+import com.inet.calista.global.model.GlbRegion;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * 
+ * GlbRegionBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbRegionBO.java Feb 7, 2020 10:44:36 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbRegionBO")
+public class GlbRegionBO extends GlbNoSqlBO<GlbRegion> implements BeanInitiateInvoke {
+	@Inject
+	private GlbCountryBO countryBO;
+	
+	/*
+	 *
+	 */
+	@Inject
+	protected GlbRegionBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+		super(businessFacade, "gl_region");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+	 */
+	@Override
+	public String add(GlbRegion item) throws WebOSBOException {
+		GlbRegion info = loadByCode(item.getCountryID(), item.getCode());
+		if (info != null)
+		{
+			info.setName(item.getName());
+			
+			if (StringUtils.hasLength(item.getOtherName()))
+				info.setOtherName(item.getOtherName());
+			
+			super.update(info.getUuid(), info);
+			
+			return info.getUuid();
+		}
+		else
+		{
+			return super.add(item);
+		}
+	}
+
+	/**
+	 * 
+	 * @param countryID
+	 * @param code
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public GlbRegion loadByCode(String countryID, String code) throws WebOSBOException 
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("countryID").equal(countryID)
+				.field("code").equal(code);
+		return load((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 * 
+	 * @param countryID
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public SearchDTO<GlbRegion> query(String countryID) throws WebOSBOException 
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("countryID").equal(countryID);
+		return query((QueryImpl<JSONDB>) query);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<GlbRegion> getClassConvetor() {
+		return GlbRegion.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() {
+		ensureIndex("countryID");
+		ensureIndex("countryID,code");
+
+		if (count() <= 0) 
+		{
+			logger.debug("init region data from global-region.json file");
+			String json = ResourceUtil.getResourceAsString("global-region.json");
+			if (StringUtils.hasLength(json))
+			{
+				JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+				if (arrJson.size() > 0) 
+				{
+					final Map<String, GlbCountry> map = new HashMap<>();
+					for (int idx = 0; idx < arrJson.size(); idx++)
+					{
+						JSONObject jsonItem = (JSONObject) arrJson.get(idx);
+						GlbRegion item = JSONUtil.json2Bean(GlbRegion.class, jsonItem);
+
+						String country = StringUtils.EMPTY_STRING;
+						if (jsonItem.has("country"))
+							country = jsonItem.getString("country");
+
+						if (StringUtils.hasLength(country) &&
+							StringUtils.hasLength(item.getCode()) && 
+							StringUtils.hasLength(item.getName())) 
+						{
+							if (!map.containsKey(country)) 
+								map.put(country,countryBO.loadByCode(country));
+							
+							GlbCountry countryItem = map.get(country);
+							if (countryItem != null) 
+							{
+								item.setCountryID(country);
+								add(item);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

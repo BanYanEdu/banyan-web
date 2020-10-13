@@ -1,0 +1,80 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.service.common.ward;
+
+import com.inet.calista.global.GlobalConstant;
+import com.inet.calista.global.bo.common.GlobalWardBo;
+import com.inet.calista.global.exception.GlServiceException;
+import com.inet.calista.global.model.GlobalWard;
+import com.inet.calista.global.service.GlAbstractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SaveService.
+ *
+ * @author thoangtran
+ * @version SaveService 2018 08-09 15:10
+ */
+@Named("glwardupdate")
+@XPortalDataService(roles = {WebConstant.ROLE_ADMIN}, description = "Contry service")
+@XPortalPageRequest(uri = "gl/ward/update", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class WardUpdateService extends GlAbstractService {
+
+    @Inject
+    private GlobalWardBo wardBo;
+
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        try {
+            String uuid = validateStringField(action, params, GlobalConstant.UUID);
+            validateStringField(action, params, GlobalConstant.NAME);
+            validateStringField(action, params, GlobalConstant.CODE);
+            GlobalWard ward = action.getModel(GlobalWard.class);
+            if (wardBo.existByCode(ward.getCode(), uuid)) {
+                putError(action, GlobalConstant.CODE, GlobalConstant.existed);
+            }
+            if (action.getViolation().size() > 0)
+                return FAILURE_RESULT;
+
+            wardBo.update(uuid, ward);
+            return new ObjectWebDataservice<>(ward);
+        } catch (Exception ex) {
+            GlServiceException iex = new GlServiceException("Error occurs during updating≈ ward", ex);
+
+            // log error
+            log.error(iex.getMessage(), iex);
+            putServiceError(action);
+
+            throw iex;
+        }
+    }
+}

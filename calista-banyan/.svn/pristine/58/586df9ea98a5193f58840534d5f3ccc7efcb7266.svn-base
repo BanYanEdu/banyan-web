@@ -1,0 +1,27 @@
+package com.inet.calista.crm.model.marketing;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.model.common.Communication;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Set;
+
+/**
+ * Campaign.
+ *
+ * @author thoangtran
+ * @version Campaign 2019 01-29 10:53
+ */
+@Getter
+@Setter
+public class Campaign  extends NoSqlModel<Campaign> {
+  private String name;
+  private String template;
+  private Set<Communication> communications;
+
+  @Override
+  protected boolean equals(Campaign other) {
+    return false;
+  }
+}

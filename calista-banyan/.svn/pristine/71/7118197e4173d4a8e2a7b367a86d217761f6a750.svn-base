@@ -1,0 +1,150 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.service.saleretail;
+
+import com.inet.calista.erp.common.data.ERPCodeName;
+import com.inet.calista.pos.retail.POSRetailConstant;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.saleretail.
+ *
+ * @author Phong Tran
+ * @version $Id: SaleRetailSettingService.java Aug 16, 2018 17:02 phongtt $
+ * @since 1.0
+ */
+@Named("posretailsetting")
+@XPortalDataService(roles = {POSRetailConstant.ROLE_USER}, description = POSRetailConstant.ROLE_USER_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/retail/setting",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaleRetailSettingService extends POSSaleRetailAbstraction {
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.ecommerce.cmsservice.ProductContentBase#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.ecommerce.model.CommerceProduct, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        int type = XParamUtils.getInteger("type", params, -1);
+
+        if (type == 0) {
+            final JSONObject data = new JSONObject();
+            data.put("sign", "01/KH31");
+            data.put("templNumber", "05/MST/083");
+            data.put("category", "Hóa đơn bán hàng");
+
+            return new ObjectWebDataservice<>(data);
+        } else if (type == 1) {
+            final List<ERPCodeName> list = new ArrayList<>();
+            ERPCodeName item;
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Thanh toán bằng thẻ");
+            item.setName("Thanh toán bằng thẻ");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Thanh toán qua cổng");
+            item.setName("Thanh toán qua cổng");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Thanh toán bằng ví điện tử");
+            item.setName("Thanh toán bằng ví điện tử");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Thanh toán bằng thiết bị di động thông minh");
+            item.setName("Thanh toán bằng thiết bị di động thông minh");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Trả tiền mặt khi giao hàng");
+            item.setName("Trả tiền mặt khi giao hàng");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Thanh toán qua chuyển khoản ngân hàng");
+            item.setName("Thanh toán qua chuyển khoản ngân hàng");
+            list.add(item);
+
+            return new ObjectWebDataservice<>(new SearchDTO<>(list, list.size()));
+        } else if (type == 2) {
+            final List<ERPCodeName> list = new ArrayList<>();
+            ERPCodeName item;
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Ngân hàng Xây dựng");
+            item.setName("Ngân hàng Xây dựng");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Ngân hàng Đại Dương");
+            item.setName("Ngân hàng Đại Dương");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Ngân hàng Dầu Khí Toàn Cầu");
+            item.setName("Ngân hàng Dầu Khí Toàn Cầu");
+            list.add(item);
+
+            item = new ERPCodeName();
+            item.setOrganId(getOrganId(siteData, subFirm));
+            item.setCode("Ngân hàng Á Châu");
+            item.setName("Ngân hàng Á Châu");
+            list.add(item);
+
+            return new ObjectWebDataservice<>(new SearchDTO<>(list, list.size()));
+
+        }
+
+
+        return new ObjectWebDataservice<>(type);
+    }
+}

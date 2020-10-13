@@ -1,0 +1,26 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * SavedEmployer
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedEmployer.java Jan 18, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class SavedEmployer {
+    private String uuid;
+    private String username;
+    private String candidateName;
+    private String candidateProfileTitle;
+    private String organId;
+    private String employerName;
+    private String employerLogoUrl;
+    private Long savedDate;
+}

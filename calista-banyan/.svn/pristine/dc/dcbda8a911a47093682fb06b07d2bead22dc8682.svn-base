@@ -1,0 +1,132 @@
+package com.inet.calista.crm.bo.setting;
+
+import com.inet.calista.crm.bo.CRMNoSqlBo;
+import com.inet.calista.crm.dto.SearchCriteria;
+import com.inet.calista.crm.dto.search.QSearchCriteria;
+import com.inet.calista.crm.model.common.Address;
+import com.inet.calista.crm.model.setting.internal.Employee;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * EmployeeBo.
+ *
+ * @author thoangtran
+ * @version EmployeeBo 2018 04-10 16:18
+ */
+@Named("crm.employeeBo")
+@Slf4j
+public class EmployeeBo extends CRMNoSqlBo<Employee>  implements BeanInitiateInvoke {
+
+  /**
+   * Constructor
+   * @param contentBf
+   */
+  @Inject
+  public EmployeeBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+    super(contentBf, "crm_setting_empls");
+  }
+
+  /**
+   *
+   * @param uuid
+   * @param orgCode
+   * @return
+   */
+  public Employee loadById(String uuid, String orgCode) {
+    final QueryImpl<JSONDB> query = getQueryOwner(orgCode);
+    query.field("uuid").equal(uuid);
+    return this.load(query);
+  }
+
+
+  /**
+   * Mark delete
+   * @param ids
+   * @param tenantId
+   */
+  public void markDelete(List<String> ids, String tenantId){
+    final QueryImpl<JSONDB> query = getQueryOwner(tenantId);
+    query.field("uuid").in(ids);
+
+    final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+    update.set("deleted", true);
+    log.debug("Query by: {}", query.getQueryObject().toJson());
+    log.debug("Update by: {}", update.getOps().toMap());
+    this.update(update, query);
+  }
+  /**
+   * Save or update employee
+   * @param employee
+   * @return
+   */
+  public Employee save(Employee employee) {
+    if(StringUtils.hasLength(employee.getUuid())) {
+      this.update(employee.getUuid(), employee);
+    } else {
+      employee.setUuid(this.add(employee));
+    }
+    return employee;
+  }
+
+  /**
+   * Search employee by Criteria
+   * @param criteria
+   * @return
+   */
+  public SearchDTO<Employee> search(SearchCriteria<QSearchCriteria> criteria, String ownerId) {
+    final QueryImpl<JSONDB> query = getQueryOwner(ownerId);
+    query.field("deleted").notEqual(true);
+    if(StringUtils.hasLength(criteria.getCriteria().getKeyword())) {
+      query.or(
+          query.criteria("username").startsWith(criteria.getCriteria().getKeyword()),
+          query.criteria("lastName").startsWith(criteria.getCriteria().getKeyword()),
+          query.criteria("mobilePhone").startsWith(criteria.getCriteria().getKeyword())
+      );
+    }
+    log.debug("Search employee query {}", query.getQueryObject().toJson());
+    return search(query, criteria.getPageNumber(), criteria.getPageSize());
+  }
+
+
+  public boolean exist(String tenant, String username, String uuid) {
+    final QueryImpl<JSONDB> query = getQueryOwner(tenant);
+    query.field("username").equal(username);
+    if(StringUtils.hasLength(uuid)){
+      query.field("uuid").equal(uuid);
+    }
+    return this.count(query) > 0;
+  }
+
+  @Override
+  protected Map<String, Class<?>> childrenConvertMap() {
+    final  Map<String, Class<?>> children = new HashMap<>();
+    children.put("address", Address.class);
+    return children;
+  }
+
+  @Override
+  protected Class<Employee> getClassConvetor() {
+    return Employee.class;
+  }
+
+  @Override
+  public void init() {
+    ensureIndex("uuid");
+    ensureIndex("username,uui");
+
+  }
+}

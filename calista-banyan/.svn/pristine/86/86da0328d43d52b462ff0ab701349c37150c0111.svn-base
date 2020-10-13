@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#!/usr/bin/env bash
+echo "Initialize iNet cloud library .........................."
+mvn install:install-file -DgroupId=com.inet.base -DartifactId=com.inet.base -Dversion=2.5.1.RELEASE -Dpackaging=jar -Dfile=lib/com.inet.base-2.5.1.RELEASE.jar
+mvn install:install-file -DgroupId=com.inet.base -DartifactId=com.inet.web -Dversion=2.5.1.RELEASE -Dpackaging=jar -Dfile=lib/com.inet.web-2.5.1.RELEASE.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-web -Dversion=4.0 -Dpackaging=jar -Dfile=lib/icloud-web-4.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-core -Dversion=4.0 -Dpackaging=jar -Dfile=lib/icloud-core-4.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=cloud-docx -Dversion=3.0 -Dpackaging=jar -Dfile=lib/cloud-docx-3.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-nosql-web -Dversion=5.0 -Dpackaging=jar -Dfile=lib/icloud-nosql-web-5.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-xdb -Dversion=3.5.0 -Dpackaging=jar -Dfile=lib/icloud-xdb-3.5.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=unifiedpush-lib -Dversion=2.0 -Dpackaging=jar -Dfile=lib/unifiedpush-lib-2.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=cloud-protocol -Dversion=1.0 -Dpackaging=jar -Dfile=lib/cloud-protocol-1.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-plugin -Dversion=5.0 -Dpackaging=jar -Dfile=lib/icloud-plugin-5.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-config -Dversion=3.0 -Dpackaging=jar -Dfile=lib/icloud-config-3.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=icloud-common -Dversion=1.0 -Dpackaging=jar -Dfile=lib/icloud-common-1.0.jar
+mvn install:install-file -DgroupId=com.inet.cloud -DartifactId=cloud-thesis -Dversion=1.0 -Dpackaging=jar -Dfile=lib/cloud-thesis-lib-1.0.jar
+
+echo "Build for idea ...................."
+mvn eclipse:clean
+mvn eclipse:eclipse
+echo "Install  ...................."
+mvn install -DSkipTest=true

@@ -1,0 +1,211 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+package com.inet.calista.global.bo;
+
+import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.data.GlbDictionaryType;
+import com.inet.calista.global.model.GlbDictionary;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.util.JSONUtil;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.web.util.ResourceUtil;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * 
+ * GLDictionaryBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GLDictionaryBO.java May 21, 2019 8:34:17 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbDictionaryBO")
+public class GlbDictionaryBO extends GlbNoSqlBO<GlbDictionary> implements BeanInitiateInvoke {
+	/**
+	 * Constructor
+	 * 
+	 * @param contentBf
+	 */
+	@Inject
+	protected GlbDictionaryBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF contentBf) {
+		super(contentBf, "gl_dictionary");
+	}
+
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public SearchDTO<GlbDictionary> queryByKey(String key) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("key").equal(key).field("type")
+				.equal(GlbDictionaryType.ITEM.name()).order("order");
+
+		return query((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 *
+	 * @param ids
+	 * @return
+	 */
+	public SearchDTO<GlbDictionary> findByIds(List<String> ids) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").in(ids);
+		return query((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 *
+	 * @param ids
+	 */
+	public void removeByIds(List<String> ids) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").in(ids).field("system").notEqual(true);
+
+		remove((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 * 
+	 * @param key
+	 */
+	public void removeByKey(String key) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("key").equal(key).field("system").notEqual(true);
+		remove((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 * 
+	 * @param type
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public boolean exists(String type, String key, String value) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("key").equal(key).field("type").equal(type);
+
+		if (GlbDictionaryType.ITEM.name().equals(type))
+			query.field("value").equal(value);
+
+		return count((QueryImpl<JSONDB>) query) > 0;
+	}
+
+	/**
+	 * 
+	 * @param type
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public GlbDictionary loadByCode(String type, String key, String value) {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>().field("key").equal(key).field("type").equal(type);
+
+		if (GlbDictionaryType.ITEM.name().equals(type))
+			query.field("value").equal(value);
+
+		return load((QueryImpl<JSONDB>) query);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+	 */
+	@Override
+	public String add(GlbDictionary item) throws WebOSBOException {
+		GlbDictionary info = loadByCode(item.getType(), item.getKey(), item.getValue());
+		if (info != null)
+			return info.getUuid();
+		return super.add(item);
+	}
+
+	/**
+	 *
+	 * @param uuid
+	 * @param system
+	 * @return
+	 */
+	public void system(String uuid, boolean system) {
+		final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+		update.set("system", system);
+		update(uuid, update);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+	public void init() {
+		ensureIndex("uuid,system");
+		ensureIndex("key,system");
+		ensureIndex("key,type");
+		ensureIndex("key,type,value");
+		ensureIndex("key,type,order");
+
+		if (count() > 0)
+			return;
+
+		String json = ResourceUtil.getResourceAsString("dictionary.json");
+		if (StringUtils.hasLength(json)) {
+			JSONArray arrJson = ResourceUtil.getJsonAsArray(json);
+			if (arrJson.size() > 0) {
+				logger.debug("load {} items", arrJson.size());
+				for (int idx = 0; idx < arrJson.size(); idx++) {
+					JSONObject jsonItem = (JSONObject) arrJson.get(idx);
+					GlbDictionary item = JSONUtil.json2Bean(GlbDictionary.class, jsonItem);
+
+					if (!StringUtils.hasLength(item.getValue()))
+						item.setType(GlbDictionaryType.KEY.name());
+					else if (!StringUtils.hasLength(item.getType()))
+						item.setType(GlbDictionaryType.ITEM.name());
+
+					if (StringUtils.hasLength(item.getKey()) && StringUtils.hasLength(item.getKey())) {
+						add(item);
+					}
+
+				}
+			}
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#getClassConvetor()
+	 */
+	@Override
+	protected Class<GlbDictionary> getClassConvetor() {
+		return GlbDictionary.class;
+	}
+}

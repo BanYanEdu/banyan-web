@@ -1,0 +1,161 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.saleecm;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMSaleWebBO;
+import com.inet.calista.ecommerce.data.ECMSaleItem;
+import com.inet.calista.ecommerce.model.ECMSaleWeb;
+import com.inet.calista.ecommerce.service.common.CommerceBaseAbstraction;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.util.SecurityUtil;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.dataservice.
+ *
+ * @author Phong Tran
+ * @version $Id: POSPriceListAbstraction.java May 07, 2018 14:08 phongtt $
+ * @since 1.0
+ */
+public abstract class ECMSaleRetailAbstraction extends CommerceBaseAbstraction {
+
+    @Inject
+    protected ECMSaleWebBO saleEcmBO;
+
+    /**
+     * @return
+     */
+    protected String getOutletId() {
+        return StringUtils.EMPTY_STRING;
+    }
+
+    /**
+     * @param info
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void invoiceCheck(final ECMSaleWeb info, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(info.getCode())) {
+            logger.error("code is required!");
+            action.fieldError("SALERECM", "CODE_NOT_FOUND");
+        }
+
+        if (!StringUtils.hasLength(info.getUuid())) {
+            if (saleEcmBO.checkCodeExists(info.getOrganId(), info.getOutletId(), info.getCode())) {
+                logger.error("sale ecm {} is exists.", info.getCode());
+                action.fieldError("SALERECM", "CODE_EXISTS");
+            }
+        }
+
+        if (!StringUtils.hasLength(info.getCurrencyId())) {
+            info.setCurrencyId(ECMConstant.CURRENCY);
+            info.setRate(1);
+        }
+    }
+
+    /**
+     * @param item
+     * @param action
+     * @throws WebOSBOException
+     */
+    public void itemCheck(final ECMSaleItem item, final AbstractBaseAction action) throws WebOSBOException {
+        if (!StringUtils.hasLength(item.getUuid())) {
+            item.setUuid(new ObjectId().toHexString());
+
+            if (!StringUtils.hasLength(item.getProdCode())) {
+                logger.error("Code is required!");
+                action.fieldError("SALEITEM", "CODE_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getProdName())) {
+                logger.error("Name is required!");
+                action.fieldError("SALEITEM", "NAME_NOT_FOUND");
+            }
+
+            if (!StringUtils.hasLength(item.getUnit())) {
+                logger.error("Unit is required!");
+                action.fieldError("SALEITEM", "UNIT_NOT_FOUND");
+            }
+
+            if (item.getQty() <= 0) {
+                logger.error("Qty is greater than 0!");
+                action.fieldError("SALEITEM", "QTY_GREATER_0");
+            }
+        }
+    }
+
+    /**
+     * @param organId
+     * @param outletId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMSaleWeb invoiceLoad(String organId, String outletId, String code) throws WebOSBOException {
+        return saleEcmBO.loadByCode(organId, outletId, code);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMSaleWeb invoiceLoad(String organId, String code) throws WebOSBOException {
+        return saleEcmBO.loadByCode(organId, StringUtils.EMPTY_STRING, code);
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    public ECMSaleWeb invoiceCreate(final CMSFirm cmsfirm,
+                                    final OrganizationDTO orgItem,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+        String organId = orgItem.getOrganId();
+        String outletId = StringUtils.EMPTY_STRING;
+
+        final ECMSaleWeb info = action.getModel(ECMSaleWeb.class);
+        info.setOrganId(organId);
+        info.setModule(saleEcmBO.getModule());
+        info.setEmployeeId(SecurityUtil.getPrincipal());
+        info.setEmployeeName(SecurityUtil.getAlias());
+        info.setCode(saleEcmBO.counterGenerate(organId, outletId, info.getCode()));
+
+        invoiceCheck(info, action);
+
+        info.setUuid(saleEcmBO.add(info));
+
+
+        return info;
+    }
+}

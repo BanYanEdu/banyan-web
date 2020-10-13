@@ -1,0 +1,21 @@
+package com.inet.calista.global;
+
+/**
+ * 
+ * GlobalConstant.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlobalConstant.java May 16, 2019 4:44:04 PM $
+ *
+ * @since 1.0
+ */
+public interface GlobalConstant {
+	public static final String ORGAN_ID = "organId";
+	public static final String UUID = "uuid";
+	public static final String USER_NAME = "username";
+	public static final String USER_CODE = "userCode";
+	public static final String NAME = "name";
+	public static final String ADDRESS_STR = "addressStr";
+	public static final String OFFICE_ADDRESS_STR = "officeAddressStr";
+	public static final String existed = "existed";
+}

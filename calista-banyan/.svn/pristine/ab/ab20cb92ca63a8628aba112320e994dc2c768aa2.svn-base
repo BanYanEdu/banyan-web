@@ -1,0 +1,49 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.service.common.country;
+
+import com.inet.calista.global.bo.common.GlobalCountryBo;
+import com.inet.calista.global.service.common.GlobalDeleteService;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * DeleteService.
+ *
+ * @author thoangtran
+ * @version DeleteService 2018 08-13 12:11
+ */
+@Named("glcountrydelete")
+@XPortalDataService(roles = {WebConstant.ROLE_ADMIN}, description = "Country search service")
+@XPortalPageRequest(uri = "gl/country/delete", inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CountryDeleteService extends GlobalDeleteService {
+    @Inject
+    private GlobalCountryBo countryBo;
+
+    @Override
+    protected void delete(String uuid) {
+        countryBo.removeById(uuid);
+    }
+}

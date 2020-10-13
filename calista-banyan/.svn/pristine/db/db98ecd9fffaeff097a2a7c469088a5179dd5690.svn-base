@@ -1,0 +1,125 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ProjectBo;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.data.Member.Role;
+import com.inet.calista.collatask.data.task.Process;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * CheckPermissionService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CheckPermissionService.java Apr 9, 2018 3:47:17 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_checkpermissionservice")
+@XPortalDataService(roles = {Roles.BIZ_COMMON}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/chkperm",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CheckPermissionService extends TaskService {
+  @Inject
+  private ProjectBo projectBo;
+  
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    try {
+      // load task by UUID
+      Task task = loadTask(params, false, "attContentUuids", "histories");
+      
+      Map<String, String> result = new HashMap<>();
+      result.put("status", task.getStatus());
+      
+      // check on assignee
+      if (getUsername().equals(task.getAssignee().getReceiverUname())) {
+        result.put("assigneeStatus", task.getAssignee().getStatus());
+        
+        return new ObjectWebDataservice<>(result);
+      }
+      
+      // check on coordinator
+      for (Executor coordinator : task.getCoordinators()) {
+        if (getUsername().equals(coordinator.getUname())) {
+          result.put("responsibility", "coordinator");
+          
+          return new ObjectWebDataservice<>(result);
+        }
+      }
+      
+      // check on watcher
+      for (Executor watcher : task.getWatchers()) {
+        if (getUsername().equals(watcher.getUname())) {
+          result.put("responsibility", "watcher");
+          
+          return new ObjectWebDataservice<>(result);
+        }
+      }
+      
+      // check on creator
+      if (getUsername().equals(task.getCreatorUname())) {
+        result.put("responsibility", "creator");
+        
+        return new ObjectWebDataservice<>(result);
+      }
+      
+      // check on processed
+      for (Process process : task.getProcesses()) {
+        if (getUsername().equals(process.getReceiverUname())) {
+          result.put("assigneeStatus", process.getStatus());
+          
+          return new ObjectWebDataservice<>(result);
+        }
+      }
+      
+      // check task depend on project which this user has managed role or not
+      if (Strings.isNullOrEmpty(task.getProjectUuid())
+          || !projectBo.hasRole(getUsername(), task.getUuid(), Role.manager.name(), Role.leader.name())) {
+        // don't have permission on task
+        result.put("status", ErrorCode.forbidden.name());
+      }
+      
+      return new ObjectWebDataservice<>(result);
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      return new ObjectWebDataservice<String>("{status: not_found}");
+    } 
+  }
+
+}

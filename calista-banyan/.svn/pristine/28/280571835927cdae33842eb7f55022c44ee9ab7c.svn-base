@@ -1,0 +1,221 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.service.saleretail;
+
+import com.inet.calista.pos.retail.POSRetailConstant;
+import com.inet.calista.pos.retail.data.POSSaleItem;
+import com.inet.calista.pos.retail.model.POSSaleRetail;
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.saleretail.
+ *
+ * @author Phong Tran
+ * @version $Id: SaleRetailCreateService.java Jun 07, 2018 11:15 phongtt $
+ * @since 1.0
+ */
+@Named("posretailinvoice")
+@XPortalDataService(roles = {POSRetailConstant.ROLE_SALE}, description = POSRetailConstant.ROLE_SALE_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/retail/invoice",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaleRetailInvoiceService extends POSSaleRetailAbstraction {
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.ecommerce.cmsservice.ProductContentBase#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.ecommerce.model.CommerceProduct, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+        String infoCode = XParamUtils.getString("infoCode", params, StringUtils.EMPTY_STRING);
+
+        final POSSaleRetail info = invoiceLoad(organId, infoCode);
+        if (info == null) {
+            logger.error("sale invoice {} is not found", infoCode);
+            action.fieldError("SALERETAIL", "CODE_NOT_FOUND");
+        }
+
+        if (StringUtils.hasLength(info.getInvoiceNo())) {
+            logger.error("sale invoice {} exported!", infoCode);
+            action.fieldError("SALERETAIL", "INVOICE_EXPORTED");
+        }
+
+        if (XParamUtils.getBoolean("reqExportInvoice", params, false)) {
+            info.setReqExportInvoice(true);
+            return new ObjectWebDataservice<>(info);
+        } else if (XParamUtils.getBoolean("ignExportInvoice", params, false)) {
+            info.setReqExportInvoice(false);
+            return new ObjectWebDataservice<>(info);
+        }
+
+        String appName = XParamUtils.getString("appName", params, "collaboration");
+        String serviceName = XParamUtils.getString("serviceName", params, "invoice_inv_integrate_exposedinvoiceservice");
+        String functionName = XParamUtils.getString("functionName", params, "saveAndPublish");
+        final String[] callback = null;// new String[]{"posretailinvoice", "upload"};
+
+        if (StringUtils.hasLength(appName) ||
+                StringUtils.hasLength(serviceName) ||
+                StringUtils.hasLength(functionName)) {
+
+            final FirmInformation firm = MngmFactoryManager.INSTANCE
+                    .service()
+                    .organization(siteData, info.getOrganId());
+
+            pushInvoice(firm, info, params);
+
+            logger.debug("invoice params {}", params);
+
+            Object data = null;
+
+
+            try {
+                /*data = super.discovery(siteData, subFirm,
+                        appName, serviceName, functionName,
+                        callback, action, new Object[]{params});*/
+
+                if (data != null) {
+                    final JSONObject result = JSONObject.fromObject(data);
+                    if (result.containsKey("invoiceNo") && result.containsKey("invoiceDate")) {
+                        info.setInvoiceNo(result.getString("invoiceNo"));
+                        info.setInvoiceDate(result.getLong("invoiceDate"));
+                        info.setReqExportInvoice(false);
+
+                        saleRetailBO.update(info.getUuid(), info);
+
+                        return new ObjectWebDataservice<>(info);
+                    }
+                }
+
+            } catch (Exception ex) {
+                logger.error("parser data fail ", ex);
+            }
+
+            logger.debug("discovery return {}", data);
+        }
+
+        action.fieldError("SALERETAIL", "INVOICE_EXPORT_FAIL");
+
+        return new ObjectWebDataservice<>(info);
+    }
+
+    /**
+     * @param firm
+     * @param info
+     * @param params
+     */
+    private void pushInvoice(final FirmInformation firm, final POSSaleRetail info, final Map<String, Object> params) {
+        params.put("customerAccNumber", XParamUtils.getString("customerAccNumber", params, StringUtils.EMPTY_STRING));
+        params.put("customerAddress", XParamUtils.getString("customerAddress", params, StringUtils.EMPTY_STRING));
+        params.put("customerBankName", XParamUtils.getString("customerBankName", params, StringUtils.EMPTY_STRING));
+        params.put("customerName", XParamUtils.getString("customerName", params, StringUtils.EMPTY_STRING));
+        params.put("customerOrgName", XParamUtils.getString("customerOrgName", params, StringUtils.EMPTY_STRING));
+        params.put("customerPaymentMethod", XParamUtils.getString("customerPaymentMethod", params, StringUtils.EMPTY_STRING));
+        params.put("customerTaxCode", XParamUtils.getString("customerTaxCode", params, StringUtils.EMPTY_STRING));
+        params.put("customerPhone", XParamUtils.getString("customerPhone", params, StringUtils.EMPTY_STRING));
+        params.put("customerEmail", XParamUtils.getString("customerEmail", params, StringUtils.EMPTY_STRING));
+
+        params.put("templNumber", XParamUtils.getString("templNumber", params, StringUtils.EMPTY_STRING));
+        params.put("sign", XParamUtils.getString("sign", params, StringUtils.EMPTY_STRING));
+
+        params.put("taxCode", XParamUtils.getString("taxCode", params, StringUtils.EMPTY_STRING));
+        params.put("taxPercent", XParamUtils.getDouble("taxPercent", params, 0D));
+        params.put("taxType", XParamUtils.getInteger("taxType", params, 0));
+
+        params.put("orgCode", XParamUtils.getString("orgCode", params, info.getOrganId()));
+        params.put("orgName", XParamUtils.getString("orgName", params, firm.getOrgName()));
+        params.put("phone", XParamUtils.getString("phone", params, firm.getPhone()));
+        params.put("fax", XParamUtils.getString("fax", params, firm.getFax()));
+        params.put("address", XParamUtils.getString("address", params, firm.getAddress1()));
+
+        params.put("accNumber", XParamUtils.getString("accNumber", params, StringUtils.EMPTY_STRING));
+        params.put("bankName", XParamUtils.getString("bankName", params, StringUtils.EMPTY_STRING));
+        params.put("category", XParamUtils.getString("category", params, StringUtils.EMPTY_STRING));
+        params.put("note", XParamUtils.getString("note", params, StringUtils.EMPTY_STRING));
+
+        params.put("authorName", XParamUtils.getString("authorName", params, SecurityUtil.getPrincipal()));
+        params.put("authorUname", XParamUtils.getString("authorUname", params, SecurityUtil.getAlias()));
+
+        params.put("currency", XParamUtils.getString("currency", params, info.getCurrencyId()));
+        params.put("exchangeRate", XParamUtils.getDouble("exchangeRate", params, Double.parseDouble(Float.toString(info.getRate()))));
+
+
+        /*
+        private int order;
+        private String code;
+        private String name;
+        private String calUnit;
+        private int quantity;
+        private double unitPrice;
+        private double taxPercent;
+        private double taxMoney;
+        private double totalMoBeTax;
+        private double totalMoAfTax;
+        private String ortherContent;
+         */
+
+        if (!CollectionUtils.isEmpty(info.getItems())) {
+            final JSONArray objects = new JSONArray();
+            for (int i = 0; i <= info.getItems().size() - 1; i++) {
+                final POSSaleItem item = info.getItems().get(i);
+
+                final JSONObject object = new JSONObject();
+                object.put("order", i);
+                object.put("code", item.getProdCode());
+                object.put("name", item.getProdName());
+                object.put("calUnit", item.getUnit());
+                object.put("quantity", item.getQty());
+                object.put("unitPrice", item.getPrice());
+                object.put("taxPercent", 0);
+                object.put("taxMoney", 0);
+                object.put("totalMoBeTax", item.getAmount());
+                object.put("totalMoAfTax", item.getAmount());
+                object.put("ortherContent", "");
+                objects.add(object);
+            }
+
+            params.put("productsStr", objects.toString());
+        }
+    }
+}

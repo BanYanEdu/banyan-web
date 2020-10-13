@@ -1,0 +1,38 @@
+package com.inet.calista.crm.model.setting.internal;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Employee.
+ *
+ * @author thoangtran
+ * @version Employee 2018 04-06 09:40
+ */
+@Getter
+@Setter
+public class Employee extends NoSqlModel<Employee> {
+
+  private String lastName;
+  private String firstName;
+  private String username; // link to account
+  private String primaryEmail;
+  private String title;
+  private String department;
+  private String homePhone;
+  private String officePhone;
+  private String mobilePhone;
+  private String secondaryPhone;
+  // private Address address;
+  private String primaryGroupId;
+  private boolean active = true;
+  private boolean deleted = false;
+
+
+  @Override
+  protected boolean equals(Employee other) {
+    return false;
+  }
+}

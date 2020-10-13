@@ -1,0 +1,33 @@
+package com.inet.jobportal.bf;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.provider.NoSQLConfigProvider;
+import com.inet.xportal.web.context.ApplicationContext;
+import com.inet.xportal.web.context.ContentContext;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+@Named("CloudJobPortalContentBF")
+@ContentContext(context= AppConstants.DB_CONTEXT)
+public class CloudJobPortalContentBF extends MagicContentBF {
+    /**
+     *
+     * @param provider
+     */
+    @Inject
+    protected CloudJobPortalContentBF(@ApplicationContext(context = "NoSQLCloudJobPortalProvider") NoSQLConfigProvider provider)
+    {
+        super(provider);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bf.MagicExContentBF#isDbContext()
+     */
+    @Override
+    protected boolean isDbContext() {
+        return true;
+    }
+}

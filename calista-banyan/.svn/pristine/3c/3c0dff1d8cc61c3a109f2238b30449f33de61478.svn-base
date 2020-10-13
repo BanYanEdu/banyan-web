@@ -1,0 +1,21 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * CareerInfo
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: CareerInfo.java Feb 27, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class CareerInfo {
+    private  String highestEduLevelCode;
+    private  Long yearsOfExperiences;
+    private  String currentJobLevelCode;
+}

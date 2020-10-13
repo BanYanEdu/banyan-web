@@ -1,0 +1,93 @@
+package com.inet.calista.global.bo;
+
+
+import com.inet.calista.common.bo.CalNoSqlBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.model.NoSqlModel;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.StringUtils;
+import org.bson.types.ObjectId;
+
+import java.util.List;
+
+/**
+ * CRMNoSqlBo.
+ *
+ * @author thoangtran
+ * @version CRMNoSqlBo 2018 04-04 14:47
+ */
+@Slf4j
+public abstract class GLNoSqlBo<T extends NoSqlModel<T>> extends CalNoSqlBo<T> {
+
+  /**
+   * Constructor default
+   * @param magicContentBF
+   * @param collection
+   */
+  public GLNoSqlBo(MagicContentBF magicContentBF, String collection) {
+    super(magicContentBF, collection);
+  }
+
+
+  protected QueryImpl<JSONDB> pagination(final QueryImpl<JSONDB> query, int pageNumber, int pageSize) {
+    query.skip(pageNumber * pageSize).limit(pageSize);
+    return query;
+  }
+
+  /**
+   *
+   * @param query
+   * @param pageNumber
+   * @param pageSize
+   * @return
+   */
+  protected SearchDTO<T> search(final QueryImpl<JSONDB> query, int pageNumber, int pageSize){
+    this.pagination(query, pageNumber, pageSize);
+    return this.query(query);
+  }
+
+
+
+  /**
+   *
+   * @param uuids
+   */
+  public void delete(List<String> uuids) {
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field("uuid").in(uuids);
+    this.remove(query);
+  }
+
+
+  /**
+   *
+   * @param uuid
+   * @return
+   */
+  public boolean existById(String uuid){
+    final QueryImpl<JSONDB> query = new QueryImpl<>();
+    query.field(CommonConstant.UUID).equal(uuid);
+    return this.count(query) > 0;
+  }
+
+  /**
+   *
+   * @param code
+   * @param uuid
+   * @return
+   */
+  public boolean existByCode(String code, String uuid ) {
+    final Query<JSONDB> query = new QueryImpl<JSONDB>().field("code").equal(code);
+    if(StringUtils.hasLength(uuid)){
+      query.field("_id").notEqual(new ObjectId(uuid));
+    }
+    log.debug("Query: {}", query.toString());
+    return this.count((QueryImpl)query) > 0;
+  }
+}
+

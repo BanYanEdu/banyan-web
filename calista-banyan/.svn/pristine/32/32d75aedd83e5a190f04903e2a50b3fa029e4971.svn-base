@@ -1,0 +1,145 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail.service.saleretail;
+
+import com.inet.calista.erp.masterdata.bo.ERPPriceDailyBO;
+import com.inet.calista.erp.masterdata.model.ERPPriceDaily;
+import com.inet.calista.pos.retail.POSRetailConstant;
+import com.inet.calista.pos.retail.data.POSProdSale;
+import com.inet.calista.pos.retail.data.POSSaleItem;
+import com.inet.calista.pos.retail.model.POSSaleRetail;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.saleretail.
+ *
+ * @author Phong Tran
+ * @version $Id: SaleItemAddService.java Jun 07, 2018 12:07 phongtt $
+ * @since 1.0
+ */
+@Named("posretailitemadd")
+@XPortalDataService(roles = {POSRetailConstant.ROLE_SALESMAN}, description = POSRetailConstant.ROLE_SALESMAN_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/retail/item/add",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaleItemAddService extends POSSaleRetailAbstraction {
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.ecommerce.cmsservice.ProductContentBase#service(com.inet.xportal.sphere.model.CMSFirm, com.inet.xportal.web.data.OrganizationDTO, com.inet.xportal.ecommerce.model.CommerceProduct, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = getOutletId(siteData, subFirm, action);
+
+        String infoCode = XParamUtils.getString("infoCode", params, StringUtils.EMPTY_STRING);
+
+        String barcode = XParamUtils.getString("barcode", params, StringUtils.EMPTY_STRING);
+        final POSSaleItem saleItem = action.getModel(POSSaleItem.class);
+        saleItem.setQty(XParamUtils.getFloat("qty", params, 1F));
+
+        if (StringUtils.hasLength(barcode)) {
+            final POSProdSale prodData = saleRetailBO.loadProdSale(organId, StringUtils.EMPTY_STRING, barcode);
+            logger.debug("found prodData {} by barcode {}", prodData, barcode);
+
+            if (!prodData.isNull()) {
+                if (!prodData.isProdNull()) {
+                    saleItem.setProdId(prodData.getProduct().getUuid());
+                    saleItem.setProdCode(prodData.getProduct().getCode());
+                    saleItem.setProdName(prodData.getProduct().getName());
+                    saleItem.setUnit(prodData.getProduct().getUnit());
+                    saleItem.setPrice(prodData.getProduct().getPrice());
+                    saleItem.getProdInfo().put("scanCode", prodData.getProduct().getCode());
+                }
+
+                if (!prodData.isBarcodeNull()) {
+                    saleItem.setSku(prodData.getBarcode().getSku());
+                    saleItem.getProdInfo().put("scanCode", barcode);
+                } else {
+                    saleItem.setSku(saleItem.getProdCode());
+                }
+            } else {
+                logger.error("barcode {} is not found!", barcode);
+                action.fieldError("SALERETAIL", "BARCODE_NOT_FOUND");
+            }
+        }
+
+        itemCheck(saleItem, action);
+
+        POSSaleRetail info = null;
+        if (StringUtils.hasLength(infoCode)) {
+            info = invoiceLoad(organId, infoCode);
+        } else {
+            info = invoiceCreate(siteData, subFirm, action, params);
+        }
+
+        if (info == null) {
+            logger.error("sale invoice isn't create");
+            action.fieldError("SALERETAIL", "INFO_NOT_FOUND");
+        }
+
+        int itemIndex = info.getItems().indexOf(saleItem);
+        if (itemIndex >= 0) {
+            saleItem.setQty(saleItem.getQty() + info.getItems().get(itemIndex).getQty());
+
+            info.getItems().remove(saleItem);
+        }
+
+        final ERPPriceDaily priceDaily = WebContext.INSTANCE.cache()
+                .getBean(ERPPriceDailyBO.class)
+                .loadPriceForDay(
+                        organId, POSRetailConstant.PRICELIST_SALE_POS_RETAIL, outletId,
+                        saleItem.getProdCode(), info.getCurrencyId());
+
+        if (priceDaily != null) {
+            saleItem.setPrice(priceDaily.getPrice());
+        }
+        saleItem.calc();
+
+        info.getItems().add(0, saleItem);
+        info.calc();
+
+        saleRetailBO.update(info.getUuid(), info);
+
+        analysis(info, saleItem, action);
+
+        fireEvent(organId, outletId, info.getCode());
+
+        return new ObjectWebDataservice<>(info);
+    }
+}

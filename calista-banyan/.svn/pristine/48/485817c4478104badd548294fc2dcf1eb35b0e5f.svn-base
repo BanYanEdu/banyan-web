@@ -1,0 +1,90 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.dataservice;
+
+import com.inet.calista.global.bo.GlbContactBO;
+import com.inet.calista.global.model.GlbContact;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.calista.global.service.contact.profile.
+ *
+ * @author Phong Tran
+ * @version $Id: CreateService.java Nov 02, 2018 14:38 phongtt $
+ * @since 1.0
+ */
+@Named("glcontactprofilecreate")
+@XPortalDataService(description = "User role")
+public class ContactCreateService extends GlbAbstraction {
+    @Inject
+    private GlbContactBO contactBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site,
+                                     final SubFirmProfile profile,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        final GlbContact contactInfo = action.getModel(GlbContact.class);
+
+        if (!StringUtils.hasLength(contactInfo.getFirstName())) {
+            contactInfo.setFirstName(XParamUtils.getString("fname", params, StringUtils.EMPTY_STRING));
+        }
+        if (!StringUtils.hasLength(contactInfo.getMiddleName())) {
+            contactInfo.setMiddleName(XParamUtils.getString("mname", params, StringUtils.EMPTY_STRING));
+        }
+        if (!StringUtils.hasLength(contactInfo.getLastName())) {
+            contactInfo.setLastName(XParamUtils.getString("lname", params, StringUtils.EMPTY_STRING));
+        }
+        if (!StringUtils.hasLength(contactInfo.getUserCode())) {
+            String userName = XParamUtils.getString("username", params, StringUtils.EMPTY_STRING);
+            if (StringUtils.hasLength(userName) && !userName.contains("@")) {
+                userName += "@inetcloud.vn";
+            }
+            contactInfo.setUserCode(userName);
+        }
+
+        logger.debug("found contact {}", JSONObject.fromObject(contactInfo));
+
+        if (!StringUtils.hasLength(contactInfo.getUserCode()) ||
+                !StringUtils.hasLength(contactInfo.getFirstName()) ||
+                !StringUtils.hasLength(contactInfo.getLastName())) {
+            logger.error("Contact information required is missing !...");
+            action.fieldError("CONTACT_PROFILE", "BASE_INFO_MISS");
+        }
+
+        contactInfo.setFullName(contactInfo.fullNameBuilder());
+        contactInfo.setCreatedDate(System.currentTimeMillis());
+        contactInfo.setModifiedDate(System.currentTimeMillis());
+
+        return new ObjectWebDataservice<>(contactBO.add(contactInfo));
+    }
+}

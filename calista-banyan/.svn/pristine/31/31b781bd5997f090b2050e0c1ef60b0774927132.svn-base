@@ -1,0 +1,25 @@
+package com.inet.jobportal.model.sys;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * System Data
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SystemData.java Dec 22, 2018 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class SystemData {
+    private String uuid;
+    private String dataName;
+    private String code;
+    private String nameVi;
+    private String nameEn;
+    private Integer sortId;
+    private Boolean inactive;
+}

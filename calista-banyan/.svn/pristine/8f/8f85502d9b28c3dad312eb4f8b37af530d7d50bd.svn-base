@@ -1,0 +1,67 @@
+package com.inet.calista.crm.service.setting.sysconfig;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.setting.SystemConfigurationBo;
+import com.inet.calista.crm.model.setting.configuration.SystemConfiguration;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * AbSaveService.
+ *
+ * @author thoangtran
+ * @version AbSaveService 2018 04-04 16:01
+ */
+
+@Named("crm_adm_sysconf_save")
+@XPortalDataService(roles = { Roles.SETTING_CONFIG}, description = "System config role")
+@XPortalPageRequest(uri = "crm/adm/sys-config/save", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class SaveService extends CRMAbstractService {
+  @Inject
+  private SystemConfigurationBo systemConfigurationBo;
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try{
+      SystemConfiguration sysConfig = action.getModel(SystemConfiguration.class);
+
+      if(Strings.isNullOrEmpty(sysConfig.getKey())){
+        putError(action, CommonConstant.KEY, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      SystemConfiguration exist = systemConfigurationBo.getByKey(subFirm.getOrganiId(), sysConfig.getKey());
+      if(null == exist){
+        sysConfig.setOrgCode(subFirm.getOrganiId());
+        sysConfig.setUuid(systemConfigurationBo.add(sysConfig));
+      } else {
+        exist.setDescription(sysConfig.getDescription());
+        exist.setValue(sysConfig.getValue());
+        systemConfigurationBo.update(exist.getUuid(), exist);
+      }
+      return new ObjectWebDataservice<>(sysConfig);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during saving configuration", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+      throw iex;
+    }
+  }
+}

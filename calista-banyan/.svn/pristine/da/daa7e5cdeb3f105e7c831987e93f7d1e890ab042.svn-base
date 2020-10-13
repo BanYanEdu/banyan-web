@@ -1,0 +1,18 @@
+package com.inet.calista.crm.model.setting.configuration;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Holiday.
+ *
+ * @author thoangtran
+ * @version Holiday 2018 04-06 11:21
+ */
+@Getter
+@Setter
+public class Holiday {
+  private long day;
+  private String name;
+
+}

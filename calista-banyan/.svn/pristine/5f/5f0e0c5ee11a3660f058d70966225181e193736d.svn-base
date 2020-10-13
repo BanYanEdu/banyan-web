@@ -1,0 +1,119 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.data;
+
+
+import com.inet.calista.collatask.util.JsonUtils;
+
+import net.sf.json.JSONObject;
+
+/**
+ * Field.
+ *
+ * @author Duyen Tang
+ * @version $Id: Field.java Apr 17, 2018 3:17:13 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class Field {
+//the name of field to submit
+  private String name;
+  private int order;
+  
+  private String operator;
+  // String or JSONObject/JSONArray (as String) value
+  private String value;
+
+  /**
+   * Create {@link Field} instance
+   */
+  public Field() {}
+  
+  /**
+   * Create {@link Field} instance
+   * 
+   * @param name the given name
+   * @param order the given order
+   * @param operator the given operator
+   * @param value the given value
+   */
+  public Field(String name, int order, String operator, String value) {
+    this.name = name;
+    this.order = order;
+    this.operator = operator;
+    this.value = value;
+  }
+
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the order
+   */
+  public int getOrder() {
+    return order;
+  }
+
+  /**
+   * @param order the order to set
+   */
+  public void setOrder(int order) {
+    this.order = order;
+  }
+
+  /**
+   * @return the operator
+   */
+  public String getOperator() {
+    return operator;
+  }
+
+  /**
+   * @param operator the operator to set
+   */
+  public void setOperator(String operator) {
+    this.operator = operator;
+  }
+
+  /**
+   * @return the value
+   */
+  public String getValue() {
+    return value;
+  }
+
+  /**
+   * @param value the value to set
+   */
+  public void setValue(String value) {
+    this.value = value;
+  }
+  
+  public static Field fromObject(JSONObject object) {
+    return new Field(JsonUtils.getString(object, "name"), JsonUtils.getInt(object, "order"), JsonUtils.getString(object, "operator"), JsonUtils.getString(object,"value"));
+  }
+}

@@ -1,0 +1,28 @@
+package com.inet.calista.crm.model.admin.configuration;
+
+/**
+ * Holiday.
+ *
+ * @author thoangtran
+ * @version Holiday 2018 04-06 11:21
+ */
+public class Holiday {
+  private long day;
+  private String name;
+
+  public long getDay() {
+    return day;
+  }
+
+  public void setDay(long day) {
+    this.day = day;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+}

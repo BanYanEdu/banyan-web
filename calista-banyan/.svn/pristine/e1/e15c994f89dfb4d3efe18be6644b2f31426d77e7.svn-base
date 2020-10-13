@@ -1,0 +1,60 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.model;
+
+import com.inet.calista.erp.common.model.ERPBase;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * com.inet.xportal.ecommerce.model.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMWishList.java Oct 09, 2018 08:02 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ECMWishList extends ERPBase {
+    private String userCode;
+
+    private String prodId;
+    private String prodCode;
+
+    private long createDate = System.currentTimeMillis();
+    private long updateDate;
+
+    //true: is wishList; false: is view
+    private boolean wishList;
+    private long notifyDate;
+
+
+    /**
+     * @param prod
+     * @return
+     */
+    public ECMWishList withProduct(final ECMItem prod) {
+        if (prod != null) {
+            this.setProdId(prod.getUuid());
+            this.setProdCode(prod.getCode());
+        }
+
+        return this;
+    }
+}

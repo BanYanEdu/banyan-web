@@ -1,0 +1,229 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.util;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.bson.types.ObjectId;
+
+import com.google.common.base.Strings;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * DocumentCommonUtils.
+ *
+ * @author Duyen Tang
+ * @version $Id: DocumentCommonUtils.java Dec 19, 2017 11:10:19 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class CommonUtils {
+  public static final String ARRAY_SEPARATOR = ";";
+  
+  /**
+   * Return the {@link List} of {@link String} from given {@link String}
+   * 
+   * @param value the given {@link String} value
+   * @return the result
+   */
+  public static List<String> toStringList(String value) {
+    return Arrays.asList(toStringArray(value));
+  }
+  
+  /**
+   * Return the {@link List} of {@link String} from given {@link String}
+   * 
+   * @param value the given {@link String} value
+   * @return the result
+   */
+  public static Set<String> toStringSet(String value) {
+    String[] values = toStringArray(value);
+    Set<String> results = new HashSet<>();
+    for (String v : values) {
+      results.add(v);
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Return the {@link List} of {@link Long} value from given {@link String} value
+   * 
+   * @param value the given value
+   * @return the {@link List} of {@link Long} value
+   */
+  public static List<Long> toLongList(String value) {
+    return toLongList(value, ARRAY_SEPARATOR);
+  }
+
+  /**
+   * Return the {@link List} of {@link Long} value from given {@link String} value
+   * 
+   * @param value the given value
+   * @param separator the given separator
+   * @return the {@link List} of {@link Long} value
+   */
+  public static List<Long> toLongList(String value, String separator) {
+    if (Strings.isNullOrEmpty(value)) {
+      return new ArrayList<Long>();
+    }
+    
+    if (Strings.isNullOrEmpty(separator)) {
+      separator = ARRAY_SEPARATOR;
+    }
+    
+    String[] arrays = value.split(separator);
+    List<Long> results = new ArrayList<Long>(arrays.length);
+    
+    for (String v : arrays) {
+      long l = toLong(v);
+      if (!results.contains(l)) {
+        results.add(l);
+      }
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Convert from {@link String} value to {@link Long} value
+   * 
+   * @param value the given {@link String} value
+   * @return the {@link Long} value
+   */
+  public static long toLong(String value) {
+    try {
+      return Long.valueOf(value);
+    } catch (Exception ex) {
+      return 0L;
+    }
+  }
+  
+  /**
+   * Return the array of {@link String} from given {@link String}
+   * 
+   * @param value the given {@link String} value
+   * @return the result
+   */
+  public static String[] toStringArray(String value) {
+    if (Strings.isNullOrEmpty(value)) {
+      return new String[]{};
+    }
+    
+    return value.split(ARRAY_SEPARATOR);
+  }
+  
+  /**
+   * Return list of {@link ObjectId} from value
+   * 
+   * @param value the given value
+   * @return the result
+   */
+  public static List<ObjectId> toObjectIdList(Collection<String> values) {
+    if (values.size() == 0) {
+      return new ArrayList<ObjectId>();
+    }
+    
+    return values.stream().map(ObjectId::new).collect(Collectors.toList());
+  }
+  
+  /**
+   * Convert given {@link JSONArray} to list of bean
+   * 
+   * @param array the given {@link JSONArray} data
+   * @param clazz the class to convert to
+   * @return the result
+   */
+  public static <T> List<T> toListBean(JSONArray array, Class<T> clazz) {
+    List<T> results = new ArrayList<>();
+    
+    for (int index = 0; index < array.size(); index++) {
+      results.add(clazz.cast(JSONObject.toBean(array.getJSONObject(index), clazz)));
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Return {@link ObjectId} from given value
+   * 
+   * @param value the given value
+   * @return the result
+   */
+  public static ObjectId toObjectId(String value) {
+    return new ObjectId(value);
+  }
+  
+  /**
+   * Put given object to list if it's not null
+   * 
+   * @param list the given list
+   * @param object the given object
+   */
+  public static <T> void putIfNotNull(List<T> list, T object) {
+    if (object != null) {
+      list.add(object);
+    }
+  }
+  
+  /**
+   * Subtract two collections
+   * 
+   * @param from the given left collection
+   * @param to the given right collection
+   * @return the result
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> Collection<T> subtract(Collection<T> from, Collection<T> to) {
+    if (CollectionUtils.isEmpty(from)) {
+      return null;
+    }
+    
+    if (CollectionUtils.isEmpty(to)) {
+      return new ArrayList<>(from);
+    }
+    
+    return org.apache.commons.collections.CollectionUtils.subtract(from, to);
+  }
+  
+  /**
+   * Check given two collection is equal or not
+   * 
+   * @param first the given first collection
+   * @param second the given second collection
+   * @return equal or not
+   */
+  public static <T> boolean isEqualCollection(Collection<T> first, Collection<T> second) {
+    if (CollectionUtils.isEmpty(first) && CollectionUtils.isEmpty(second)) {
+      return true;
+    }
+    
+    if (CollectionUtils.isEmpty(first) || CollectionUtils.isEmpty(second)) {
+      return false;
+    }
+    
+    return org.apache.commons.collections.CollectionUtils.isEqualCollection(first, second);
+  }
+}

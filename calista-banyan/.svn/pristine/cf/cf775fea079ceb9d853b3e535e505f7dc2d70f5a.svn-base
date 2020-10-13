@@ -1,0 +1,53 @@
+package com.inet.jobportal.service.candidate.saved_employer;
+
+import com.inet.jobportal.bo.candidate.SavedEmployerBO;
+import com.inet.jobportal.model.candidate.SavedEmployer;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SavedEmployerCreateDS.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedEmployerCreateDS.java Jan 18, 2019 11:50:38 AM nguyen_dv $
+ * @since 1.0
+ */
+@Named("jobportalsavedemployercreate")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description = "SavedEmployer Create service")
+@XPortalPageRequest(uri = "jobportal/candidate/savedemployer/create",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SavedEmployerCreateDS extends JobPortalAbsractService {
+    @Inject
+    private SavedEmployerBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+//        String organId = firmProfile.getOrganiId();
+        String username = SecurityUtil.getPrincipal();
+
+        SavedEmployer item = action.getModel(SavedEmployer.class);
+
+        if (username.equals(item.getUsername())) {
+            bo.add(item);
+            return new ObjectWebDataservice<>(item);
+        } else {
+            // TO BE MODIFIED
+            return new ObjectWebDataservice<>(item);
+        }
+    }
+}

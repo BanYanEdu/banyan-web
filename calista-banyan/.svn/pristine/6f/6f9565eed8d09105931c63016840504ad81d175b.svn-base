@@ -1,0 +1,35 @@
+package com.inet.calista.hrm.service;
+
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.ViolationDTO;
+
+/**
+ * HRMService.
+ *
+ * @author thoangtran
+ * @version HRMService 2018 10-08 10:56
+ */
+public abstract class HRMService extends PluginSubfirmAbstraction {
+
+    /**
+     * Create {@link ViolationDTO} from given information
+     *
+     * @param field     the given field
+     * @param errorCode the given error
+     * @return the result
+     */
+    public static ViolationDTO createViolationDto(String field, String errorCode) {
+        return new ViolationDTO(field, errorCode, 0, "");
+    }
+
+    /**
+     * Put service error to {@link AbstractBaseAction}
+     *
+     * @param action the given action
+     */
+    public static void putServiceError(AbstractBaseAction action) {
+        action.getViolation().add(createViolationDto("service", ErrorCode.SERVICE_ERROR));
+    }
+}

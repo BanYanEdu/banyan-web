@@ -1,0 +1,11 @@
+package com.inet.calista.hrm.constant;
+
+/**
+ * Role.
+ *
+ * @author thoangtran
+ * @version Role 2018 10-08 10:57
+ */
+public interface Role {
+  String ADM_NODE = "hrm.admin.node";
+}

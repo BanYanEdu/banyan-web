@@ -1,0 +1,460 @@
+package com.inet.jobportal.bo.candidate;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.jobportal.model.candidate.*;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Job Portal CandidateProfile BO.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: CandidateProfileBO.java Dec 21, 2018 3:24:24 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("CandidateProfileBO")
+public class CandidateProfileBO extends MagicContentBO<CandidateProfile> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(CandidateProfile.class);
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("workingRecords", WorkingRecord.class);
+        childrenConvert.put("eduRecords", EduRecord.class);
+        childrenConvert.put("referencePersons", ReferencePerson.class);
+        childrenConvert.put("languageSkills", LanguageSkill.class);
+        childrenConvert.put("professionalSkills", ProfessionalSkill.class);
+    }
+
+    @Inject
+    public CandidateProfileBO(@ContentContext(context = AppConstants.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "jobportal_candidate_profile");
+    }
+
+    @Override
+    public String add(CandidateProfile item) throws WebOSBOException {
+        item.setCreatedDate(System.currentTimeMillis());
+        return super.add(item);
+    }
+
+    @Override
+    public void update(String uuid, CandidateProfile item) throws WebOSBOException {
+        item.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, item);
+    }
+
+    public void updateAccountInfo(String uuid, AccountInfo item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        profile.setAccountInfo(item);
+        profile.setAccountInfoStatus(true);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+        updateProfileStatus(uuid);
+    }
+    public void updatePersonalInfo(String uuid, PersonalInfo item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        profile.setPersonalInfo(item);
+        profile.setPersonalInfoStatus(true);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+        updateProfileStatus(uuid);
+    }
+    public void updateJobInfo(String uuid, JobInfo item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        profile.setJobInfo(item);
+        profile.setJobInfoStatus(true);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+        updateProfileStatus(uuid);
+    }
+    public void updateCareerInfo(String uuid, CareerInfo item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        profile.setCareerInfo(item);
+        profile.setCareerInfoStatus(true);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+        updateProfileStatus(uuid);
+    }
+    public void updateCareerHighlights(String uuid, String item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        profile.setCareerHighlights(item);
+        super.update(uuid, profile);
+    }
+
+    // Working Records
+    public void addWorkingRecord(String uuid, WorkingRecord item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<WorkingRecord> workingRecords = profile.getWorkingRecords();
+
+        if (workingRecords != null) {
+            workingRecords.add(item);
+        } else {
+            workingRecords = new ArrayList<>();
+            workingRecords.add(item);
+        }
+        profile.setWorkingRecords(workingRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void updateWorkingRecord(String uuid, WorkingRecord item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<WorkingRecord> workingRecords = profile.getWorkingRecords();
+
+        for (int i=0; i<workingRecords.size();i++) {
+
+            if (workingRecords.get(i) == null) {
+            } else {
+              WorkingRecord  record = workingRecords.get(i);
+              if (record.getUuid().equals(item.getUuid())) {
+                        workingRecords.set(i, item);
+                        break;
+              }
+            }
+        }
+        profile.setWorkingRecords(workingRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void deleteWorkingRecord(String uuid, String workingRecordId) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<WorkingRecord> workingRecords = profile.getWorkingRecords();
+
+        for (int i=0; i<workingRecords.size();i++) {
+            WorkingRecord  record = workingRecords.get(i);
+            if (record.getUuid().equals(workingRecordId)) {
+                workingRecords.remove(i);
+                break;
+            }
+        }
+        profile.setWorkingRecords(workingRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    // Edu Records
+    public void addEduRecord(String uuid, EduRecord item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<EduRecord> eduRecords = profile.getEduRecords();
+
+        if (eduRecords != null) {
+            eduRecords.add(item);
+        } else {
+            eduRecords = new ArrayList<>();
+            eduRecords.add(item);
+        }
+        profile.setEduRecords(eduRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void updateEduRecord(String uuid, EduRecord item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<EduRecord> eduRecords = profile.getEduRecords();
+
+        for (int i=0; i<eduRecords.size();i++) {
+            if (eduRecords.get(i) == null) {
+            } else {
+                EduRecord record = eduRecords.get(i);
+                if (record.getUuid().equals(item.getUuid())) {
+                    eduRecords.set(i, item);
+                    break;
+                }
+            }
+        }
+        profile.setEduRecords(eduRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void deleteEduRecord(String uuid, String eduRecordId) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<EduRecord> eduRecords = profile.getEduRecords();
+
+        for (int i=0; i<eduRecords.size();i++) {
+            EduRecord  record = eduRecords.get(i);
+            if (record.getUuid().equals(eduRecordId)) {
+                eduRecords.remove(i);
+                break;
+            }
+        }
+        profile.setEduRecords(eduRecords);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    // Ref Persons
+    public void addReferencePerson(String uuid, ReferencePerson item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ReferencePerson> referencePersons = profile.getReferencePersons();
+
+        if (referencePersons != null) {
+            referencePersons.add(item);
+        } else {
+            referencePersons = new ArrayList<>();
+            referencePersons.add(item);
+        }
+        profile.setReferencePersons(referencePersons);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void updateReferencePerson(String uuid, ReferencePerson item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ReferencePerson> referencePersons = profile.getReferencePersons();
+
+        for (int i=0; i<referencePersons.size();i++) {
+            if (referencePersons.get(i) == null) {
+            } else {
+                ReferencePerson record = referencePersons.get(i);
+                if (record.getUuid().equals(item.getUuid())) {
+                    referencePersons.set(i, item);
+                    break;
+                }
+            }
+        }
+        profile.setReferencePersons(referencePersons);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void deleteReferencePerson(String uuid, String referencePersonId) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ReferencePerson> referencePersons = profile.getReferencePersons();
+
+        for (int i=0; i<referencePersons.size();i++) {
+            ReferencePerson  record = referencePersons.get(i);
+            if (record.getUuid().equals(referencePersonId)) {
+                referencePersons.remove(i);
+                break;
+            }
+        }
+        profile.setReferencePersons(referencePersons);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    // Language Skills
+    public void addLanguageSkill(String uuid, LanguageSkill item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<LanguageSkill> skills = profile.getLanguageSkills();
+
+        if (skills != null) {
+            skills.add(item);
+        } else {
+            skills = new ArrayList<>();
+            skills.add(item);
+        }
+        profile.setLanguageSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void updateLanguageSkill(String uuid, LanguageSkill item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<LanguageSkill> skills= profile.getLanguageSkills();
+
+        for (int i=0; i<skills.size();i++) {
+            if (skills.get(i) == null) {
+            } else {
+                LanguageSkill skill = skills.get(i);
+                if (skill.getUuid().equals(item.getUuid())) {
+                    skills.set(i, item);
+                    break;
+                }
+            }
+        }
+        profile.setLanguageSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void deleteLanguageSkill(String uuid, String itemId) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<LanguageSkill> skills = profile.getLanguageSkills();
+
+        for (int i=0; i<skills.size();i++) {
+            LanguageSkill skill = skills.get(i);
+            if (skill.getUuid().equals(itemId)) {
+                skills.remove(i);
+                break;
+            }
+        }
+        profile.setLanguageSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    // Professional Skills
+    public void addProfessionalSkill(String uuid, ProfessionalSkill item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ProfessionalSkill> skills = profile.getProfessionalSkills();
+
+        if (skills != null) {
+            skills.add(item);
+        } else {
+            skills = new ArrayList<>();
+            skills.add(item);
+        }
+        profile.setProfessionalSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void updateProfessionalSkill(String uuid, ProfessionalSkill item) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ProfessionalSkill> skills= profile.getProfessionalSkills();
+
+        for (int i=0; i<skills.size();i++) {
+            if (skills.get(i) == null) {
+            } else {
+                ProfessionalSkill skill = skills.get(i);
+                if (skill.getUuid().equals(item.getUuid())) {
+                    skills.set(i, item);
+                    break;
+                }
+            }
+        }
+        profile.setProfessionalSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+    public void deleteProfessionalSkill(String uuid, String itemId) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+        if (profile == null) {
+            return;
+        }
+        List<ProfessionalSkill> skills = profile.getProfessionalSkills();
+
+        for (int i=0; i<skills.size();i++) {
+            ProfessionalSkill skill = skills.get(i);
+            if (skill.getUuid().equals(itemId)) {
+                skills.remove(i);
+                break;
+            }
+        }
+        profile.setProfessionalSkills(skills);
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    // Update Candidate Profile Status based on multiple status
+    public void updateProfileStatus(String uuid) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        CandidateProfile profile = this.search(query).getItems().get(0);
+
+        Boolean accountInfoStatus = profile.getAccountInfoStatus();
+        Boolean jobInfoStatus = profile.getJobInfoStatus();
+        Boolean personalInfoStatus = profile.getPersonalInfoStatus();
+        Boolean careerInfoStatus = profile.getCareerInfoStatus();
+
+        if (accountInfoStatus && jobInfoStatus && personalInfoStatus && careerInfoStatus) {
+            profile.setCompletionStatus(true);
+            profile.setReady(true);
+            profile.setSearchable(true);
+        } else {
+            profile.setCompletionStatus(false);
+            profile.setReady(false);
+            profile.setSearchable(false);
+        }
+        profile.setModifiedDate(System.currentTimeMillis());
+        super.update(uuid, profile);
+    }
+
+    public SearchDTO<CandidateProfile> search(Query<JSONDB> query) throws WebOSBOException {
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("username");
+//        ensureIndex("uuid");
+    }
+
+    @Override
+    protected Class<CandidateProfile> getClassConvetor() {
+        return CandidateProfile.class;
+    }
+
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+}

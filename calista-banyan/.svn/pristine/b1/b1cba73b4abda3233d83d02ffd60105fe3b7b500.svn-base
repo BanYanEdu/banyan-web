@@ -1,0 +1,50 @@
+package com.inet.calista.crm.dto;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * MapData.
+ *
+ * @author thoangtd
+ * @version $$Id: MapData 6/2/16 4:10 PM thoangtd $$
+ * @since 1.0
+ */
+public class MapData<K, V> {
+  private Map<K, V> data;
+
+  /**
+   * Create {@link MapData} instance
+   */
+  public MapData() {
+    data = new HashMap<K, V>();
+  }
+
+  /**
+   * Create {@link MapData} instance
+   *
+   * @param data the given data
+   */
+  public MapData(Map<K, V> data) {
+    this.data = data;
+  }
+
+  /**
+   * Put data to map
+   *
+   * @param key the given key
+   * @param value the given value
+   */
+  public void put(K key, V value) {
+    data.put(key, value);
+  }
+
+  /**
+   * Return date
+   *
+   * @return the data
+   */
+  public Map<K, V> getData() {
+    return data;
+  }
+}

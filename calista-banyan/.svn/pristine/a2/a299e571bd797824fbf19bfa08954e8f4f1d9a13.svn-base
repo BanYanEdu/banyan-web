@@ -1,0 +1,57 @@
+package com.inet.calista.crm.service.setting.employee;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.deployer.ConfigureLoader;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * FetchNativeInfoService.
+ *
+ * @author thoangtran
+ * @version FetchNativeInfoService 2018 04-16 13:35
+ */
+@Named("crm_setting_empls_nativeservice")
+@XPortalDataService(roles = { Roles.SETTING_EMPLOYEE}, description = "Manage employee")
+@XPortalPageRequest(uri = "crm/setting/empls/native", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class FetchNativeInfoService extends CRMAbstractService {
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile firm, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try{
+
+      final String username = XParamUtils.getString(CommonConstant.USERNAME, params);
+      if(Strings.isNullOrEmpty(username)){
+        putError(action, CommonConstant.USERNAME, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      return new ObjectWebDataservice<>(ConfigureLoader.INSTANCE.ini()
+          .getHdlUserProfile().loadAccountProfile(username));
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during loading native information", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

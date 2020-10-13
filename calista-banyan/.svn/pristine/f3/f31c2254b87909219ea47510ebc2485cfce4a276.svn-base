@@ -1,0 +1,57 @@
+package com.inet.jobportal.service.candidate.job_visit;
+
+import com.inet.jobportal.bo.candidate.JobVisitBO;
+import com.inet.jobportal.model.candidate.JobVisit;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * JobVisitSearchDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobVisitSearchDS.java Feb 7, 2019 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportaljobvisitsearch")
+@XPortalDataService(description="Job Visit Search service")
+@XPortalPageRequest(uri="jobportal/candidate/jobvisit/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobVisitSearchDS extends JobPortalAbsractService {
+    @Inject
+    private JobVisitBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String organId = firmProfile.getOrganiId();
+        String jobpostId = XParamUtils.getString("jobpostId", params,"");
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("organId").equal(organId);
+        query.field("jobpostId").equal(jobpostId);
+
+        SearchDTO<JobVisit> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

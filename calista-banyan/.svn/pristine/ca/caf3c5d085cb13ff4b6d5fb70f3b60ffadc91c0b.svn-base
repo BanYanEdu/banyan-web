@@ -1,0 +1,116 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto;
+
+/**
+ * DashboardBlock.
+ *
+ * @author Duyen Tang
+ * @version $Id: DashboardBlock.java Jan 19, 2018 3:40:35 PM tttduyen $
+ *
+ * @since 1.0
+ */
+public class DashboardBlock {
+  private long total;
+  private long noneRead;
+  private long recInDay;
+  private long lateInDay;
+  private long lated;
+
+  /**
+   * Create {@link DashboardBlock} instance
+   */
+  public DashboardBlock() {}
+
+  /**
+   * Create {@link DashboardBlock} instance
+   * 
+   * @param total the given total result
+   */
+  public DashboardBlock(long total) {
+    this.total = total;
+  }
+
+  /**
+   * @return the total
+   */
+  public long getTotal() {
+    return total;
+  }
+
+  /**
+   * @param total the total to set
+   */
+  public void setTotal(long total) {
+    this.total = total;
+  }
+
+  /**
+   * @return the noneRead
+   */
+  public long getNoneRead() {
+    return noneRead;
+  }
+
+  /**
+   * @param noneRead the noneRead to set
+   */
+  public void setNoneRead(long noneRead) {
+    this.noneRead = noneRead;
+  }
+
+  /**
+   * @return the recInDay
+   */
+  public long getRecInDay() {
+    return recInDay;
+  }
+
+  /**
+   * @param recInDay the recInDay to set
+   */
+  public void setRecInDay(long recInDay) {
+    this.recInDay = recInDay;
+  }
+
+  /**
+   * @return the lateInDay
+   */
+  public long getLateInDay() {
+    return lateInDay;
+  }
+
+  /**
+   * @param lateInDay the lateInDay to set
+   */
+  public void setLateInDay(long lateInDay) {
+    this.lateInDay = lateInDay;
+  }
+
+  /**
+   * @return the lated
+   */
+  public long getLated() {
+    return lated;
+  }
+
+  /**
+   * @param lated the lated to set
+   */
+  public void setLated(long lated) {
+    this.lated = lated;
+  }
+}

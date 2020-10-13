@@ -1,0 +1,54 @@
+package com.inet.calista.global.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.global.dto.GLAddress;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * OrganizationInfo.
+ *
+ * @author thoangtran
+ * @version OrganizationInfo 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class GLOrgan extends BaseModel {
+    // collection name
+    public static final String COLLECTION_NAME = "gl_organization";
+    
+    private String organId; // DINH DANH CUA TO CHUC SU DUNG DE SU DUNG TREN TOAN HE THONG
+    private String ownerId; // TO CHUC SO HUU THONG TIN
+
+    private long createdDate = System.currentTimeMillis();
+    private String createdBy;
+    private String modifiedBy;
+    private long modifiedDate = System.currentTimeMillis();
+
+    private String name; // required
+    private String foreignName;
+    private String abbreviationName;
+    private String address; // dia chi cong ty
+    private String taxCode;
+    private String primaryEmail;
+    private String website;
+    private String primaryPhone;
+    private String fax;
+    private int foundedYear = 0; // Năm thanh lap
+    private String legalRepName; // dai hien phap luat
+    private String legalRepCanonId; // link to contact
+    //
+    private String companySize;
+    private String industry; // LINH HOAT ĐỘNG
+    private List<String> busAces = new ArrayList<>(); // NGHANH NGHE
+    private String memberOfId; // Parent Org
+
+    private String region; // thi truong
+    private String logo;
+    private String description;
+    private GLAddress officeAddress;
+}

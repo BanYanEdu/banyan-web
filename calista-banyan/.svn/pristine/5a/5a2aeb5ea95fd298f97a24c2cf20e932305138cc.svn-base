@@ -1,0 +1,106 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.task.TaskBo;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.dto.task.HandleDto;
+import com.inet.calista.collatask.dto.task.ReceiverDto;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONObject;
+
+/**
+ * HandleService.
+ *
+ * @author Duyen Tang
+ * @version $Id: HandleService.java Nov 20, 2018 3:24:20 PM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_handleservice")
+@XPortalDataService(roles = {Roles.TASK}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/handle",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class HandleService extends TaskService {
+  @Inject
+  private TaskBo taskBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    try {
+      // get handle information
+      HandleDto handleDto = action.getModel(HandleDto.class);
+      ViolationDTO error = null;
+      if ((error = isEmpty(CollaTaskJsonConstants.UUID, handleDto.getUuid())) != null
+          && ((error = isEmpty(CollaTaskJsonConstants.REF_UUID, handleDto.getRefUuid())) != null 
+              || (error = isEmpty(CollaTaskJsonConstants.REF_TYPE, handleDto.getRefType())) != null)) {
+        action.getViolation().add(error);
+        return FAILURE_RESULT;
+      }
+      
+      // check progress
+      if (handleDto.getProgress() < 0 || handleDto.getProgress() > 100) {
+        putError(action, CollaTaskJsonConstants.PROGRESS, ErrorCode.invalid);
+        return FAILURE_RESULT;
+      }
+      
+      // set executor
+      handleDto.setExecutor(getExecutor(site, subFirm));
+      
+      // get receivers information
+      String assigneeStr = XParamUtils.getString(CollaTaskJsonConstants.ASSIGNEE_STR, params);
+      if (!Strings.isNullOrEmpty(assigneeStr)) {
+        ReceiverDto assignee = (ReceiverDto) JSONObject.toBean(JSONObject.fromObject(assigneeStr), ReceiverDto.class);
+        if (Strings.isNullOrEmpty(assignee.getReceiverName())
+            || Strings.isNullOrEmpty(assignee.getReceiverUname())) {
+          putError(action, CollaTaskJsonConstants.ASSIGNEE_STR, ErrorCode.invalid);
+          return FAILURE_RESULT;
+        }
+        
+        // set assignee
+        handleDto.setAssignee(assignee);
+      }
+      
+      // handle task
+      return new ObjectWebDataservice<>(taskBo.handle(handleDto));
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      return FAILURE_RESULT;
+    }
+  }
+
+}

@@ -1,0 +1,6 @@
+package com.inet.jobportal;
+
+public class AppConstants {
+//        public static final String DB_CONTEXT = "CloudCLMContext";
+        public static final String DB_CONTEXT = "CloudJobPortalContext";
+}

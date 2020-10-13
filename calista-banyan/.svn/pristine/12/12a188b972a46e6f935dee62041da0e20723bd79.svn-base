@@ -1,0 +1,107 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.inventory.data;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.StringUtils;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.inventory.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPRptInvBalance.java Sep 18, 2018 10:11 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPRptInvBalance {
+    private String prodId;
+    private String prodCode;
+    private String prodName;
+    private Map<String, String> prodInfo = new HashMap<>();
+    private String scanCode;
+    private String sku;
+    private String group;
+    private String unit;
+
+    private float opQty;
+    private float opAmount;
+    private float inQty;
+    private float inAmount;
+    private float outQty;
+    private float outAmount;
+    private float clQty;
+    private float clAmount;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj != null && obj instanceof ERPRptInvBalance) {
+            if (StringUtils.hasLength(getScanCode())) {
+                return getScanCode().equals(((ERPRptInvBalance) obj).getScanCode());
+            } else if (StringUtils.hasLength(getSku())) {
+                return getSku().equals(((ERPRptInvBalance) obj).getSku());
+            } else if (StringUtils.hasLength(getProdId())) {
+                return getProdId().equals(((ERPRptInvBalance) obj).getProdId());
+            } else if (StringUtils.hasLength(getProdCode())) {
+                return getProdCode().equals(((ERPRptInvBalance) obj).getProdCode());
+            }
+        }
+
+        return super.equals(obj);
+    }
+
+    /**
+     * @param data
+     * @return
+     */
+    public ERPRptInvBalance copyData(final ERPRptInvBalance data) {
+        if (data != null) {
+            setProdId(data.getProdId());
+            setProdCode(data.getProdCode());
+            setProdName(data.getProdName());
+            setProdInfo(data.getProdInfo());
+            setScanCode(data.getScanCode());
+            setSku(data.getSku());
+            setGroup(data.getGroup());
+            setUnit(data.getUnit());
+
+            setOpQty(data.getOpQty());
+            setOpAmount(data.getOpAmount());
+            setInQty(data.getInQty());
+            setInAmount(data.getInAmount());
+            setOutQty(data.getOutQty());
+            setOutAmount(data.getOutAmount());
+            setClQty(data.getClQty());
+            setClAmount(data.getClAmount());
+        }
+        return this;
+    }
+
+    /**
+     *
+     */
+    public void calc() {
+        setClQty(getOpQty() + getInQty() - getOutQty());
+        setClAmount(getOpAmount() + getInAmount() - getOutAmount());
+    }
+}

@@ -1,0 +1,65 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.group;
+
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.bo.POSGroupBO;
+import com.inet.calista.pos.common.service.common.POSAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * GroupTreeService.
+ *
+ * @author Phong Tran
+ * @version $Id: GroupTreeService.java Dec 21, 2016 20:47 phongtt $
+ * @since 1.0
+ */
+@Named("posgrouptree")
+@XPortalDataService(roles = {POSConstant.ROLE_ADMIN}, description = POSConstant.ROLE_ADMIN_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/group/tree",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class GroupTreeService extends POSAbstraction {
+    @Inject
+    private POSGroupBO groupBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        return new ObjectWebDataservice<>(groupBO.tree(getOrganId(siteData, subFirm)));
+    }
+}

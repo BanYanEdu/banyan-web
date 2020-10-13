@@ -1,0 +1,26 @@
+package com.inet.calista.global.model;
+
+import com.inet.calista.common.model.BaseModel;
+import com.inet.calista.global.GlobalConstant;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * GlbExcelTemplate.
+ *
+ * @author thoangtran
+ * @version GlbExcelTemplate 2019 07-02 10:55
+ */
+@Getter
+@Setter
+public class GlbExcelTemplate extends BaseModel {
+  private String organId = GlobalConstant.CLOUD_MNGM;
+  private String application;
+  private String module;
+  private String type;
+  private int version = 1;
+  private String contentUid;
+  private String name;
+  private String mimetype;
+  private String description;
+}

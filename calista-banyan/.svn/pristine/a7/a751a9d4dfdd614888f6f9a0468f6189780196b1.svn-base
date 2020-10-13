@@ -1,0 +1,65 @@
+package com.inet.calista.global.dto;
+
+import com.google.common.base.Objects;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * SearchCriteria.
+ *
+ * @author thoangtd
+ * @version $$Id: SearchCriteria 6/20/16 2:00 PM thoangtd $$
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class SearchCriteria<T> {
+  //~ class properties ========================================
+  private int pageSize;
+  private int pageNumber;
+  private long total;
+  private String username;
+  private String organId;
+  private String type; // advance | quick
+  private T criteria;
+  private String sortField;
+  private int sortAsc = -1;
+
+  //~ class members ===========================================
+
+  public SearchCriteria() {
+  }
+
+  /**
+   * Create {@link SearchCriteria} instance
+   */
+  public SearchCriteria(String username, String tenantId) {}
+
+  /**
+   * Create {@link SearchCriteria} instance
+   *
+   * @param pageSize the given start pageSize
+   * @param pageNumber the given pageNumber
+   * @param total the given total
+   * @param criteria the given criteria
+   */
+  public SearchCriteria(int pageSize, int pageNumber, long total, T criteria) {
+    this.pageNumber = pageNumber;
+    this.pageSize = pageSize;
+    this.total = total;
+    this.criteria = criteria;
+  }
+
+
+
+  @Override
+  public String toString() {
+    return Objects.toStringHelper(SearchCriteria.class)
+      .add("pageNumber", pageNumber)
+      .add("pageSize", pageSize)
+      .add("sortField", sortField)
+      .add("sortAsc", sortAsc)
+      .add("type", type)
+      .add("criteria", criteria).toString();
+  }
+}

@@ -1,0 +1,191 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.shop;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMOrderBO;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.data.ECMOrderPayType;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.erp.util.ERPUtil;
+import com.inet.xportal.module.web.data.PaymentRequest;
+import com.inet.xportal.module.web.plugin.dataservice.PluginFirmPaymentAbstract;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.cache.RedirectPageManager;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * ShopOrderPaymentService.
+ *
+ * @author Phong Tran
+ * @version $Id: ShopOrderPaymentService.java Dec 02, 2017 09:16 phongtt $
+ * @since 1.0
+ */
+@Named("shoporderpayment")
+@XPortalDataService(description = ECMConstant.ROLE_SHOP_DESCRIPTION)
+@XPortalPageRequest(uri = "shop/order/payment",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShopOrderPaymentService extends PluginFirmPaymentAbstract {
+    @Inject
+    private ECMOrderBO orderBO;
+
+
+    private ECMOrder order;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected JSONObject detailBuilder(final SiteDataModel siteData,
+                                       final SubFirmProfile subFirm,
+                                       final AbstractBaseAction action,
+                                       final Map<String, Object> params) {
+        String orderId = XParamUtils.getString("orderId", params);
+        order = orderBO.loadByCode(ERPUtil.getOrganId(siteData, subFirm), orderId);
+
+        final JSONObject data = new JSONObject();
+        if (order != null && !CollectionUtils.isEmpty(order.getItems())) {
+            final List<JSONObject> objects = new ArrayList<>();
+            for (ECMOrderItem item : order.getItems()) {
+                final JSONObject object = new JSONObject();
+                object.put("description", item.getProdName());
+                object.put("quantity", item.getQty());
+                object.put("price", item.getPrice());
+                object.put("subtotal", item.getAmount());
+                objects.add(object);
+            }
+
+            data.put("items", objects);
+            data.put("description", order.getCode());
+            data.put("subtotal", order.getTotalAmount());
+        }
+
+        return data;
+    }
+
+    @Override
+    protected float paymentAmount(final SiteDataModel siteData,
+                                  final SubFirmProfile subFirm,
+                                  final JSONObject detail,
+                                  final AbstractBaseAction action,
+                                  final Map<String, Object> params) {
+        if (order != null) {
+            return order.getTotalAmount();
+        }
+
+        /*detail.put("shipping", 0);
+        detail.put("tax", 0);
+        detail.put("fee", 0);
+        detail.put("subtotal", paymentAmount);
+
+        logger.debug("payment amount {}", paymentAmount);*/
+        return 0;
+    }
+
+    @Override
+    protected JSONObject payeerBuilder(final SiteDataModel siteData,
+                                       final SubFirmProfile subFirm,
+                                       final AbstractBaseAction action,
+                                       final Map<String, Object> params) {
+        final JSONObject payeerBuilder = new JSONObject();
+        if (order != null && order.getBuyer() != null) {
+            String payeerID = order.getBuyer().getUsername();
+            if (!StringUtils.hasLength(payeerID)) {
+                payeerID = order.getBuyer().getEmail();
+            }
+
+            payeerBuilder.put("payeerID", payeerID);
+            payeerBuilder.put("fullname", order.getBuyer().getFullName());
+            payeerBuilder.put("address", order.getBuyer().getAddress());
+            payeerBuilder.put("birthday", order.getBuyer().getBirthday());
+            payeerBuilder.put("mobile", order.getBuyer().getPhone());
+            payeerBuilder.put("email", order.getBuyer().getEmail());
+
+            final JSONObject callback = new JSONObject();
+            callback.put("domainPath", WebContext.INSTANCE.cache().getDomainPath());
+            callback.put("webContext", WebContext.INSTANCE.cache().getWebContext());
+
+            if (subFirm != null) {
+                callback.put("prefix", subFirm.getPrefix());
+            } else {
+                callback.put("prefix", siteData.getPrefix());
+            }
+
+            String pageUrl = RedirectPageManager.INSTANCE.redirectToPath(action.getSiteID(), ECMConstant.SHOP_PAYMENT_CALLBACK_URL);
+            if (!StringUtils.hasLength(pageUrl)) {
+                pageUrl = ECMConstant.SHOP_PAYMENT_CALLBACK_DEFAULT;
+            }
+            callback.put("pageUrl", pageUrl);
+            callback.put("queryString", "");
+
+            callback.put("serviceUrl", action.getPageUrl());
+
+            payeerBuilder.put("callback", callback);
+        }
+        logger.debug("payeer builder {}", payeerBuilder);
+        return payeerBuilder;
+    }
+
+    @Override
+    protected String firmPaidID(final SiteDataModel siteData,
+                                final SubFirmProfile subFirm,
+                                final JSONObject detail,
+                                final AbstractBaseAction action,
+                                final Map<String, Object> params) {
+        if (subFirm != null) {
+            return subFirm.getOrganiId();
+        }
+
+        return siteData.getOrganiId();
+    }
+
+    @Override
+    protected void paymentRequestCommit(final SiteDataModel siteData,
+                                        final SubFirmProfile subFirm,
+                                        final JSONObject detail,
+                                        final PaymentRequest paymentRequest,
+                                        final AbstractBaseAction action,
+                                        final Map<String, Object> params) {
+
+        String transactionID = paymentRequest.getTransactionID();
+        if (StringUtils.hasLength(transactionID) && order != null) {
+            order.setPaymentType(ECMOrderPayType.PAYMENT.name());
+            order.setTransactionId(transactionID);
+            order.setTransactionStatus("SUBMITTED");
+            orderBO.update(order.getUuid(), order);
+        }
+    }
+}

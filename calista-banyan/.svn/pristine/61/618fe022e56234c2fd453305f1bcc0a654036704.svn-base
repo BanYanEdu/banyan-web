@@ -1,0 +1,245 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.AttachmentBo;
+import com.inet.calista.collatask.bo.task.TaskBo;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.data.task.History;
+import com.inet.calista.collatask.data.task.Modification;
+import com.inet.calista.collatask.data.task.Process;
+import com.inet.calista.collatask.dto.task.ViewDto;
+import com.inet.calista.collatask.model.Attachment;
+import com.inet.calista.collatask.model.project.Activity.Action;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.util.CommonUtils;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.collatask.util.FieldModificationUtils;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+/**
+ * SaveService.
+ *
+ * @author Duyen Tang
+ * @version $Id: SaveService.java Jan 25, 2018 9:28:47 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_saveservice")
+@XPortalDataService(roles = {Roles.TASK}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/save",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaveService extends TaskService {
+  private static final Logger LOG = LoggerFactory.getLogger(SaveService.class);
+  @Inject
+  private TaskBo taskBo;
+  @Inject
+  private AttachmentBo attBo;
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    try {
+      // get task information
+      Task task = action.getModel(Task.class);
+      if (Strings.isNullOrEmpty(task.getName())) {
+        putError(action, CollaTaskJsonConstants.NAME, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      
+      // fill creator information
+      task.setCreatorName(getFullname());
+      task.setCreatorUname(getUsername());
+      task.setOrgCode(getOrgCode(site, subFirm));
+      if (Strings.isNullOrEmpty(task.getStatus())) {
+        task.setStatus(Status.waiting.name());
+      }
+      
+      // get receivers information
+      String assigneeStr = XParamUtils.getString(CollaTaskJsonConstants.ASSIGNEE_STR, params);
+      LOG.debug("The assignee of task [{}]", assigneeStr);
+      Process process = null;
+      if (!Strings.isNullOrEmpty(assigneeStr)) {
+        process = (Process) JSONObject.toBean(JSONObject.fromObject(assigneeStr), Process.class);
+        if (Strings.isNullOrEmpty(process.getReceiverName()) || 
+            Strings.isNullOrEmpty(process.getReceiverUname()) ) {
+          putError(action, CollaTaskJsonConstants.RECEIVER, ErrorCode.invalid);
+          return FAILURE_RESULT;
+        }
+        
+        // fill more information to process
+        process.setSenderName(getFullname());
+        process.setSenderUname(getUsername());
+        process.setCreatedDate(System.currentTimeMillis());
+        //process.setResponsibility(Responsibility.main.name());
+        
+        if (getUsername().equals(process.getReceiverUname())) {
+          process.setViewDate(System.currentTimeMillis());
+        }
+      } else {
+        process = new Process(getUsername(), getFullname());
+        process.setSenderName(getFullname());
+        process.setSenderUname(getUsername());
+        process.setViewDate(process.getCreatedDate());
+      }
+      
+      // add assignee to task
+      task.setAssignee(process);
+      task.addProcess(process);
+      
+      // get coordinators
+      String coordinatorsStr = XParamUtils.getString(CollaTaskJsonConstants.COORDINATORS_STR, params);
+      if (!Strings.isNullOrEmpty(coordinatorsStr)) {
+        JSONArray coodinatorsArray = JSONArray.fromObject(coordinatorsStr);
+        task.setCoordinators(getExecutor(coodinatorsArray));
+      }
+      
+      // get watchers
+      String watchersStr = XParamUtils.getString(CollaTaskJsonConstants.WATCHERS_STR, params);
+      if (!Strings.isNullOrEmpty(watchersStr)) {
+        JSONArray watcherArray = JSONArray.fromObject(watchersStr);
+        task.setWatchers(getExecutor(watcherArray));
+      }
+      
+      // get attachment information
+      String attachmentsStr = XParamUtils.getString(CollaTaskJsonConstants.ATTACHMENTS_STR, params);
+      LOG.debug("The attachments of document [{}]", attachmentsStr);
+      
+      List<Attachment> attachments = null;
+      if (!Strings.isNullOrEmpty(attachmentsStr)) {
+        attachments = getAttachment(JSONArray.fromObject(attachmentsStr));
+      }
+      
+      // put history
+      task.addHistory(createHistory(task, attachments));
+      
+      // save task
+      task.setUuid(taskBo.add(task));
+      
+      // save attachments
+      saveAttachment(attachments, task.getUuid(), ReferenceType.task.name());
+      
+      // add project activity
+      addProjectActivity(Action.add, task, task.getDesc());
+      
+      return new ObjectWebDataservice<>(new ViewDto(task, attachments));
+    } catch (ValidationException ex) {
+      action.getViolation().add(ex.getError());
+      
+      return FAILURE_RESULT;
+    }
+  }
+  
+  /**
+   * Return {@link Attachment} information from given {@link JSONArray}
+   * 
+   * @param array the given {@link JSONArray} data
+   * @return the list of attachment
+   * @throws ValidationException if data input invalid
+   */
+  private List<Attachment> getAttachment(JSONArray array) throws ValidationException {
+    List<Attachment> attachments = new ArrayList<>();
+    Attachment att = null;
+    ViolationDTO error = null;
+    for (int index = 0; index < array.size(); index++) {
+      // get attachment information from JSONObject
+      att = (Attachment) JSONObject.toBean(array.getJSONObject(index), Attachment.class);
+      if ((error = isEmpty("name", att.getName())) != null || 
+          (error = isEmpty("contentUuid", att.getContentUuid())) != null ||
+          (error = isEmpty("mimetype", att.getMimetype())) != null) {
+        throw new ValidationException(error);
+      }
+      
+      // put attachment to list
+      attachments.add(att);
+    }
+    
+    return attachments;
+  }
+  
+  /**
+   * Save {@link Attachment} for given reference information
+   * 
+   * @param attachments the given list of {@link Attachment}
+   * @param refUuid the given reference UUID
+   * @param refType the given reference type
+   */
+  private void saveAttachment(List<Attachment> attachments, String refUuid, String refType) {
+    if (attachments != null) {
+      LOG.debug("Save attachment information");
+      attachments.forEach(attachment -> {
+        if (Strings.isNullOrEmpty(attachment.getUuid())) {
+          // fill reference of attachment
+          attachment.setRefUuid(refUuid);
+          attachment.setRefType(refType);
+          
+          // save attachment information
+          attachment.setUuid(attBo.add(attachment));
+        }
+      });
+    }
+  }
+
+  /**
+   * Create {@link History} from given new {@link Task} information
+   * 
+   * @param task the given {@link Task} information
+   * @return the {@link History} information
+   */
+  private History createHistory(Task task, List<Attachment> attachments) {
+    List<Modification> mods = new ArrayList<>();
+    
+    CommonUtils.putIfNotNull(mods, FieldModificationUtils.modify("name", null, task.getName()));
+    
+    if (attachments != null && !attachments.isEmpty()) {
+      attachments.forEach(att -> CommonUtils.putIfNotNull(mods, 
+          FieldModificationUtils.modify("attachment", null, 
+              new JSONObject().accumulate("name", att.getName())
+                              .accumulate("contentUuid", att.getContentUuid())
+                              .accumulate("mimetype", att.getMimetype()).toString())));
+    }
+    
+    return new History(task.getCreatorUname(), task.getCreatorName() , mods);
+  }
+}

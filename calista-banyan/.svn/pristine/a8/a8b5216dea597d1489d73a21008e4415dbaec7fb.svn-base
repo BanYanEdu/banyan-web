@@ -1,0 +1,119 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.common.data;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.commons.beanutils.BeanUtils;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.erp.inventory.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPItemData.java Apr 10, 2018 16:15 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPItemData {
+    //information product
+    private String prodId;
+    private String prodCode;
+    private String prodName;
+    private Map<String, String> prodInfo = new HashMap<>();
+    private String scanCode;
+    private String sku;
+    private String group;
+
+    private String unit;
+    private float qty;
+    private float price;
+    private float discount;
+    private float discAmount;
+    private float vat;
+    private float vatAmount;
+    private float amount;
+
+    //base item data
+    private String base_unit;
+    private float base_qty;
+    private float base_price;
+    private float base_amount;
+
+    /**
+     * @return
+     */
+    public ERPItemData getItemData() {
+        return this;
+    }
+
+    /**
+     * @param itemData
+     */
+    public void setItemData(final ERPItemData itemData) {
+        if (itemData != null) {
+            try {
+                BeanUtils.copyProperties(this, itemData);
+            } catch (Exception ex) {
+                //TODO: ignore exception
+            }
+        }
+    }
+
+    public void calcData() {
+        float amount = getQty() * getPrice();
+
+        if (getDiscount() > 100) {
+            setDiscount(100);
+        } else if (getDiscount() < 0) {
+            setDiscount(0);
+        }
+
+        if (getVat() > 100) {
+            setVat(100);
+        } else if (getVat() < 0) {
+            setVat(0);
+        }
+
+        if (getDiscount() > 0) {
+            setDiscAmount(amount * getDiscount() / 100);
+        } else if (getDiscAmount() > 0) {
+            if (amount > 0) {
+                setDiscount(getDiscAmount() * 100 / amount);
+            } else {
+                setDiscount(0);
+            }
+        }
+
+        if (getVat() > 0) {
+            setVatAmount(amount * getVat() / 100);
+        } else if (getVatAmount() > 0) {
+            if (amount > 0) {
+                setVat(getVatAmount() * 100 / amount);
+            } else {
+                setVat(0);
+            }
+        }
+
+        setAmount(amount + getVatAmount() - getDiscAmount());
+    }
+}

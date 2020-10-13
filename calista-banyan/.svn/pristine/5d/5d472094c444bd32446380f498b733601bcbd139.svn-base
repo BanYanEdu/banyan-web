@@ -1,0 +1,10 @@
+package com.inet.calista.crm.model.setting.automation;
+
+/**
+ * Scheduler.
+ *
+ * @author thoangtran
+ * @version Scheduler 2018 04-06 11:27
+ */
+public class Scheduler {
+}

@@ -1,0 +1,175 @@
+/*****************************************************************
+   Copyright 2015 by Hien Nguyen (hiennguyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.global.bo;
+
+import java.util.Arrays;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbShelfBox;
+import com.inet.xportal.document.data.FolderType;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+/**
+ * 
+ * GlbShelfBoxBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbShelfBoxBO.java Feb 7, 2020 9:25:14 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbShelfBoxBO")
+public class GlbShelfBoxBO extends GlbNoSqlBO<GlbShelfBox> implements BeanInitiateInvoke {
+	/**
+	 * 
+	 * @param businessFacade
+	 */
+	@Inject
+	protected GlbShelfBoxBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+		super(businessFacade, "glb_shelfbox");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.nosql.web.bo.MagicContentBO#add(java.lang.Object)
+	 */
+	@Override
+	public String add(GlbShelfBox info) throws WebOSBOException 
+	{
+		GlbShelfBox item  = loadByCode(info.getOrganId(),info.getOwner(),info.getCode());
+		
+		if (item == null)
+		{
+			return super.add(info);
+		}
+		else
+		{
+			item.setName(info.getName());
+			super.update(item.getUuid(), item);
+			return item.getUuid();
+		}
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param code
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public GlbShelfBox loadByCode(String organId, String owner, String code) throws WebOSBOException {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("organId").equal(organId)
+				.field("code").equal(code);
+
+		if (StringUtils.hasLength(owner))
+			query.field("owner").equal(owner);
+		
+		return super.load((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param code
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public GlbShelfBox loadByCode(String organId, String code) throws WebOSBOException {
+		return loadByCode(organId, StringUtils.EMPTY_STRING, code);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @param uuid
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public GlbShelfBox loadByID(String organId, String owner, String uuid) throws WebOSBOException {
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("organId").equal(organId)
+				.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(uuid));
+
+		if (StringUtils.hasLength(owner))
+			query.field("owner").equal(owner);
+		
+		return super.load((QueryImpl<JSONDB>) query);
+	}
+
+	/**
+	 * 
+	 * @param organId
+	 * @param uuid
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public GlbShelfBox loadByID(String organId, String uuid) throws WebOSBOException {
+		return loadByID(organId, StringUtils.EMPTY_STRING, uuid);
+	}
+	
+	/**
+	 * 
+	 * @param organId
+	 * @param owner
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	public SearchDTO<GlbShelfBox> query(String organId, String owner) throws WebOSBOException 
+	{
+		final Query<JSONDB> query = new QueryImpl<JSONDB>()
+				.field("organId").equal(organId)
+				.field("owner").in(Arrays.asList(owner,FolderType.COMPANY.name()));
+		
+		return super.query((QueryImpl<JSONDB>) query);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+	 */
+	@Override
+	protected Class<GlbShelfBox> getClassConvetor() {
+		return GlbShelfBox.class;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+	 */
+	@Override
+    public void init() {
+		ensureIndex("organId,owner");
+		ensureIndex("organId,owner,code");
+    }
+}

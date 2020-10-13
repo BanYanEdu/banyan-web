@@ -1,0 +1,34 @@
+package com.inet.jobportal.model.common;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Note
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: Note.java Feb 9, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class Address {
+    private String countryCode;
+    private String countryName;
+    private String provinceCode;
+    private String provinceName;
+    private String cityCode;
+    private String cityName;
+    private String districtCode;
+    private String districtName;
+    private String wardCode;
+    private String wardName;
+    private String addressLine1;
+    private String addressLine2;
+    private String postalCode;
+    private String addressFull;
+    private Long lat;
+    private Long lon;
+}

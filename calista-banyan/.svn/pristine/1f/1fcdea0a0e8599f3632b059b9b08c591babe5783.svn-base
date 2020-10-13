@@ -1,0 +1,80 @@
+package com.inet.calista.crm.model.essentials;
+
+import com.inet.calista.crm.anotation.Searchable;
+import com.inet.calista.crm.model.common.Responsible;
+import com.inet.calista.crm.model.NoSqlModel;
+import com.inet.calista.crm.model.common.Address;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Contact.
+ *
+ * @author thoangtran
+ * @version Contact 2018 04-05 16:27
+ */
+@Getter
+@Setter
+public class Contact  extends NoSqlModel<Contact> {
+  public final static String COLLECTION = "erp_md_contact";
+  // biz properties ==========================================
+  @Searchable(field = "salutationType")
+  private String salutationType; // Mr , Ms , Mrs , Dr , Prof
+  @Searchable(field = "sex")
+  private String sex;
+  @Searchable(field = "firstName")
+  private String firstName;
+  @Searchable(field = "lastName")
+  private String lastName; // require
+  @Searchable(field = "middleName")
+  private String middleName;
+  @Searchable(field = "fullName")
+  private String fullName; // for search
+  @Searchable(field = "primaryEmail")
+  private String primaryEmail;
+  @Searchable(field = "officePhone")
+  private String officePhone;
+  @Searchable(field = "mobilePhone")
+  private String mobilePhone;
+  @Searchable(field = "homePhone")
+  private String homePhone;
+  @Searchable(field = "dateOfBirth")
+  private long dateOfBirth;
+  private String dateOfBirthIso;
+  @Searchable(field = "taxCode")
+  private String taxCode;
+
+  private String title; // refer to dictionary
+  private String department;
+
+  private String skype;
+  private String facebook;
+
+  private Address address;
+  private String description;
+
+  private String ownerId;
+  private String userCode; // private information not load
+
+  private Responsible responsible; // NGUOI THUC HIEN  // require
+
+  private String type;
+  private String status;
+  private String leadSource; // define leadSource*/
+  private String entityId;
+  private String entityName;
+  private String photo;
+  private Character opened = 'Y';
+
+  //
+  private boolean deleted = false;
+  private String canonId; // link to global contact
+
+  // class member ============================================
+  @Override
+  protected boolean equals(Contact other) {
+    return false;
+  }
+
+
+}

@@ -1,0 +1,65 @@
+package com.inet.calista.crm.service.setting.group;
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.setting.GroupBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.setting.internal.Group;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.calista.crm.service.exception.CRMBusinessException;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * LoadByIdService.
+ *
+ * @author thoangtran
+ * @version LoadByIdService 2018 04-17 09:14
+ */
+@Named("crm_setting_group_lbyidservice")
+@XPortalDataService(roles = { Roles.SETTING_GROUP}, description = "Manage group")
+@XPortalPageRequest(uri = "crm/setting/group/lbyid", transaction = true, inherit = true,  result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class LoadByIdService extends CRMAbstractService {
+
+  @Inject
+  private GroupBo groupBo;
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile firm, AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    try{
+      final String uuid = XParamUtils.getString(CommonConstant.UUID, params);
+      if(Strings.isNullOrEmpty(uuid)) {
+        putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+        return FAILURE_RESULT;
+      }
+      final Group group = groupBo.loadById(uuid, firm.getOrganiId());
+      if(group == null) {
+        putError(action, CommonConstant.UUID, ErrorCode.not_existed);
+        return FAILURE_RESULT;
+      }
+      // TOTO find all group belong
+      return new ObjectWebDataservice<>(group);
+    } catch (Exception ex) {
+      CRMBusinessException iex = new CRMBusinessException("Error occurs during loading group information", ex);
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

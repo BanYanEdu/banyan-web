@@ -1,0 +1,81 @@
+package com.inet.calista.crm.model.setting.internal;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.StringUtils;
+import org.bson.Document;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Objects;
+
+/**
+ * LinkTo.
+ *
+ * @author thoangtran
+ * @version LinkTo 2018 04-06 10:10
+ */
+@Getter
+@Setter
+public class LinkTo {
+  private String type = LinkType.employee.name();
+  private String referId; // refer to groupId or username
+  private String name;
+
+  public LinkTo() {
+  }
+
+  public LinkTo(String type, String referId, String name) {
+    this.type = type;
+    this.referId = referId;
+    this.name = name;
+  }
+
+  /**
+   *
+   * @return
+   */
+  public Document createDocument(){
+    final Document document = new Document();
+    if(StringUtils.hasLength(this.getType()))
+      document.append("type",this.getType());
+    if(StringUtils.hasLength(this.getReferId()))
+      document.append("referId", this.getReferId());
+    if(StringUtils.hasLength(this.getName()))
+      document.append("name", this.getName());
+    return document;
+  }
+
+  /**
+   *
+   * @param object
+   * @return
+   */
+  public static LinkTo transform(final JSONObject object) throws JSONException {
+    final LinkTo linkTo = new LinkTo();
+    if(object.has("type")){
+      linkTo.setType(object.getString("type"));
+    }
+    if(object.has("referId")){
+      linkTo.setReferId(object.getString("referId"));
+    }
+    if(object.has("name")){
+      linkTo.setName(object.getString("name"));
+    }
+    return linkTo;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    LinkTo linkTo = (LinkTo) o;
+    return Objects.equals(referId, linkTo.referId);
+  }
+
+  @Override
+  public int hashCode() {
+
+    return Objects.hash(referId);
+  }
+}

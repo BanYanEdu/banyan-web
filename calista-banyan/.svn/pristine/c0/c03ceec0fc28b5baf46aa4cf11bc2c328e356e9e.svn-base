@@ -1,0 +1,211 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.common;
+
+import com.inet.xportal.cms.web.bo.CMSAuthContextBO;
+import com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.sphere.CMSDesignConstant;
+import com.inet.xportal.sphere.bo.CMSMemberBO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.cache.OrganizationManager;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * CommerceBaseAbstraction.
+ *
+ * @author Hien Nguyen
+ * @version $Id: CommerceBaseAbstraction.java Dec 11, 2017 6:37:08 PM $
+ * @since 1.0
+ */
+public abstract class CommerceBaseAbstraction extends PluginSubfirmAbstraction {
+    protected static final Logger logger = LoggerFactory.getLogger(CommerceBaseAbstraction.class);
+
+    @Inject
+    protected CMSAuthContextBO cmsAuthBO;
+
+    /**
+     * @param action
+     * @param obj
+     * @param errMsg
+     * @param errField
+     * @param errCode
+     */
+    protected final void validated(final AbstractBaseAction action, final Object obj, String errField, String errCode, String errMsg) {
+        boolean validated = obj != null;
+
+        if (validated) {
+            if (obj instanceof String) {
+                validated = StringUtils.hasLength((String) obj);
+            }
+        }
+
+        if (!validated) {
+            errors(action, errField, errCode, errMsg);
+        }
+    }
+
+    /**
+     * @param action
+     * @param errMsg
+     * @param errField
+     * @param errCode
+     */
+    protected final void errors(final AbstractBaseAction action, String errField, String errCode, String errMsg) {
+        logger.error(errMsg);
+        action.getViolation().add(new ViolationDTO(errField, errField, 1, errCode));
+        throw new WebOSBOException("Bad request!");
+    }
+
+    /**
+     * @return
+     */
+    protected final SiteDataModel getSiteModel() {
+        return siteProfile();
+    }
+
+    /**
+     * @param siteData
+     * @param subFirm
+     * @return
+     */
+    protected final String getOrganId(final SiteDataModel siteData,
+                                      final SubFirmProfile subFirm) {
+        if (subFirm != null) {
+            return subFirm.getOrganiId();
+        }
+
+        return siteData.getOrganiId();
+    }
+
+    /**
+     * @param action
+     * @return CMS prefix of request
+     */
+    protected final String getCMSPrefix(final AbstractBaseAction action) {
+        return cmsAuthBO.getCMSPrefix(action);
+    }
+
+    /**
+     * @param cmsfirm
+     * @return
+     */
+    protected final String getCMSPrefix(final CMSFirm cmsfirm) {
+        return cmsAuthBO.getCMSPrefix(cmsfirm);
+    }
+
+    /**
+     * @return
+     */
+    protected final CMSMemberBO cmsMemberBO() {
+        return cmsAuthBO.getCMSMemberBO();
+    }
+
+    /**
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final CMSFirm loadCMSFirm(final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        final CMSFirm cmsfirm = cmsAuthBO.loadCMSFirm(getCMSPrefix(action), action, params);
+        if (cmsfirm == null) {
+            logger.error("User request is not validate with {} prefix.", getCMSPrefix(action));
+            action.accessDenied("ACCESS_RESTRICTED", "ACCESS_RESTRICTED");
+        }
+
+        return cmsfirm;
+    }
+
+    /**
+     * @param cmsfirm
+     * @param params
+     * @param action
+     */
+    protected final OrganizationDTO getOwner(final CMSFirm cmsfirm, final Map<String, Object> params, final AbstractBaseAction action) {
+        String prefix = getCMSPrefix(cmsfirm);
+        logger.debug("prefix {}", prefix);
+
+        OrganizationDTO orgItem = new OrganizationDTO();
+        if (CMSDesignConstant.DEFAULT_PREFIX.equals(prefix) ||
+                WebContext.INSTANCE.cache().localContext(prefix)) {
+            logger.debug("local context is loading ....");
+
+            final SiteDataModel siteData = getSiteModel();
+            orgItem.setOrganId(siteData.getOrganiId());
+            orgItem.setAccountDomain(siteData.getOrgDomain());
+        } else {
+            orgItem = OrganizationManager.INSTANCE.getOrganItem(prefix);
+        }
+
+        if (orgItem == null || !StringUtils.hasLength(orgItem.getOrganId())) {
+            logger.error("Organization is not validate with {} prefix.", prefix);
+            action.accessDenied("ACCESS_RESTRICTED", "ACCESS_RESTRICTED");
+        }
+
+        return orgItem;
+    }
+
+    /**
+     * @param action
+     * @param params
+     * @return
+     */
+    protected final String getLanguage(final AbstractBaseAction action, final Map<String, Object> params) {
+        return cmsAuthBO.getLanguage(action, params);
+    }
+
+    /* (non-Javadoc)
+     * @see com.inet.xportal.module.web.plugin.dataservice.PluginSubfirmAbstraction#service(com.inet.xportal.nosql.web.model.SiteDataModel, com.inet.xportal.nosql.web.model.SubFirmProfile, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected final WebDataService service(SiteDataModel site,
+                                           SubFirmProfile subfirm,
+                                           AbstractBaseAction action,
+                                           Map<String, Object> params) throws WebOSBOException {
+        final CMSFirm cmsfirm = loadCMSFirm(action, params);
+        logger.debug("CMSFirm {}", cmsfirm);
+        return service(cmsfirm, getOwner(cmsfirm, params, action), action, params);
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected abstract WebDataService service(final CMSFirm cmsfirm,
+                                              final OrganizationDTO orgItem,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params) throws WebOSBOException;
+}

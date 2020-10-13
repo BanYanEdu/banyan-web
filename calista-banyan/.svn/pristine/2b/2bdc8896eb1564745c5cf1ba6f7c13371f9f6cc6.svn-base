@@ -1,0 +1,19 @@
+package com.inet.calista.global.dto;
+
+import com.inet.calista.global.model.contact.ContactInfo;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * ContactDto.
+ *
+ * @author thoangtran
+ * @version ContactDto 2018 04-16 11:44
+ */
+@Getter
+@Setter
+public class ContactDto {
+  //~ class properties
+  private ContactInfo contact;
+
+}

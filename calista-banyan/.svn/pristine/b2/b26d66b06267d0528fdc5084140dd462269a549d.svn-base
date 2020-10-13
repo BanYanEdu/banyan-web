@@ -1,0 +1,90 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.shift;
+
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.bo.POSShiftBO;
+import com.inet.calista.pos.common.data.POSShiftItem;
+import com.inet.calista.pos.common.model.POSShift;
+import com.inet.calista.pos.common.service.common.POSAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.shift.
+ *
+ * @author Phong Tran
+ * @version $Id: ShiftItemAddService.java May 30, 2018 13:59 phongtt $
+ * @since 1.0
+ */
+@Named("posshiftitemadd")
+@XPortalDataService(roles = {POSConstant.ROLE_CASHIER}, description = POSConstant.ROLE_CASHIER_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/shiftitem/add",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShiftItemAddService extends POSAbstraction {
+    @Inject
+    private POSShiftBO shiftBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String shiftCode = XParamUtils.getString("shiftCode", params, StringUtils.EMPTY_STRING);
+
+        final POSShift data = shiftBO.loadByCode(getOrganId(siteData, subFirm), shiftCode);
+        if (data == null) {
+            logger.error("Shift {} is not found", shiftCode);
+            action.fieldError("SHIFT", "CODE_NOT_FOUND");
+        }
+
+        if (data.isShiftClosed()) {
+            logger.error("Shift {} is closed", shiftCode);
+            action.fieldError("SHIFT", "SHIFT_CLOSED");
+        }
+
+        final POSShiftItem shiftItem = action.getModel(POSShiftItem.class);
+        if (shiftItem.invalid()) {
+            logger.error("Shift {} is required.", JSONObject.fromObject(shiftItem));
+            action.fieldError("SHIFT", "FIELD_IS_REQUIRED");
+        }
+
+        data.getItems().add(shiftItem);
+        data.calc();
+        shiftBO.update(data.getUuid(), data);
+
+        return new ObjectWebDataservice<>(shiftItem);
+    }
+}

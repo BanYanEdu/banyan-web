@@ -1,0 +1,95 @@
+package com.inet.calista.global.service.organization;
+
+import com.google.common.base.Strings;
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.calista.common.utils.ErrorCode;
+import com.inet.calista.common.utils.JsonUtils;
+import com.inet.calista.global.bo.contact.OrganizationInfoBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.exception.GlServiceException;
+import com.inet.calista.global.model.common.Address;
+import com.inet.calista.global.model.contact.OrganizationInfo;
+import com.inet.calista.global.service.GlAbstractService;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.cache.DependencyServiceManager;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import java.util.Map;
+
+/**
+ * UpdateService.
+ *
+ * @author thoangtran
+ * @version UpdateService 2018 04-16 15:14
+ */
+@Slf4j
+public class UpdateService extends GlAbstractService {
+  @Inject
+  private OrganizationInfoBo organizationBo;
+  @Override
+  protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+    try{
+      final OrganizationInfo organization = action.getModel(OrganizationInfo.class);
+      final String uuid = organization.getUuid();
+      if(Strings.isNullOrEmpty(uuid)){
+        putError(action, CommonConstant.UUID, ErrorCode.MUST_NOT_EMPTY);
+        return FAILURE_RESULT;
+      }
+    /*  if(!organizationBo.isBelongOwnerId(uuid, firmProfile.getOrganiId())){
+        putError(action, CommonConstant.UUID, CommonErrorCode.not_existed);
+        return FAILURE_RESULT;
+      }
+*/
+      if(Strings.isNullOrEmpty(organization.getName())){
+        putError(action, CommonConstant.NAME, ErrorCode.MUST_NOT_EMPTY);
+        return FAILURE_RESULT;
+      }
+
+      if(params.containsKey(CommonConstant.OFFICE_ADDRESS_STR)){
+        organization.setOfficeAddress(Address.transform(JsonUtils.toJsonObject(XParamUtils.getString(CommonConstant.OFFICE_ADDRESS_STR, params))));
+      }
+
+      organization.setOrganId(firmProfile.getOrganiId());
+      organization.setModifiedBy(SecurityUtil.getPrincipal());
+      organization.setModifiedDate(DateUtils.now().getTime());
+
+      organizationBo.saveOrUpdate(organization);
+
+      // UPDATE LOTUS
+      final FirmInformation firmInfo = new FirmInformation();
+      firmInfo.setEmail(organization.getPrimaryEmail());
+      firmInfo.setIndustry(organization.getIndustry());
+      firmInfo.setOrgName(organization.getName());
+      firmInfo.setParentID(organization.getMemberOfId());
+      firmInfo.setAddress1(organization.getAddress());
+      if(null != organization.getOfficeAddress()){
+        firmInfo.setCity(organization.getOfficeAddress().getProvinceCode());
+        firmInfo.setCountry(organization.getOfficeAddress().getCountryCode());
+        firmInfo.setDistrict(organization.getOfficeAddress().getDistrictCode());
+        firmInfo.setPostalcode(organization.getOfficeAddress().getPostcode());
+        firmInfo.setAddress1(organization.getOfficeAddress().getAddress());
+      }
+
+      DependencyServiceManager.INSTANCE.dependency("lotusOrganSynch", new Object[] { organization.getOrganId(), firmInfo });
+
+      return  new ObjectWebDataservice<>(organization);
+    } catch (Exception ex) {
+      GlServiceException iex = new GlServiceException("Error occurs during updating contact", ex);
+
+      // log error
+      log.error(iex.getMessage(), iex);
+      putServiceError(action);
+
+      throw iex;
+    }
+  }
+}

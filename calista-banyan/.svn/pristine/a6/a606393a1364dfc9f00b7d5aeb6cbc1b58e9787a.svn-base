@@ -1,0 +1,16 @@
+package com.inet.calista.crm.model.activity;
+
+/**
+ * ActivityType.
+ *
+ * @author thoangtran
+ * @version ActivityType 2018 04-06 14:34
+ */
+public enum ActivityType {
+  call,
+  meeting
+ /// mobile_call,
+  //onsite_meeting,
+  //onsite_service,
+  //group_event
+}

@@ -1,0 +1,12 @@
+package com.inet.calista.global.model.contact;
+
+/**
+ * OrganizationStatus.
+ *
+ * @author thoangtran
+ * @version OrganizationStatus 2018 04-06 09:35
+ */
+public enum OrganizationStatus {
+  ACTIVE,
+  INACTIVE
+}

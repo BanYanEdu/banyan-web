@@ -1,0 +1,255 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.bo;
+
+import com.inet.calista.global.model.BaseEmail;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.apache.shiro.util.StringUtils;
+
+import java.util.List;
+
+/**
+ * com.inet.calista.global.bo.
+ *
+ * @author Phong Tran
+ * @version : EmailAbstractBO.java Jun 20, 2019 09:02 phongtt $
+ * @since 1.0
+ */
+public abstract class EmailAbstractBO<T extends BaseEmail> extends GlbNoSqlBO<T> implements BeanInitiateInvoke {
+
+
+    /**
+     * @param contentBf
+     * @param collectionName
+     */
+    protected EmailAbstractBO(MagicContentBF contentBf, String collectionName) {
+        super(contentBf, collectionName);
+    }
+
+
+    @Override
+    public String add(final T template) throws WebOSBOException {
+        return super.add(template, "application", "organId", "emailCode", "language");
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @return
+     * @throws WebOSBOException
+     */
+    public long countByApp(String organId, String application) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("application").equal(application);
+        return super.count(query);
+    }
+
+    /**
+     * @param organId
+     * @param application
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByApp(String organId, String application) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("application").equal(application);
+        return super.query(query);
+    }
+
+    /**
+     * @param template
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean verifyTemplate(final T template) throws WebOSBOException {
+        boolean isVerify = true;
+
+        if (template == null ||
+                !StringUtils.hasLength(template.getApplication()) ||
+                !StringUtils.hasLength(template.getOrganId()) ||
+                !StringUtils.hasLength(template.getEmailCode()) ||
+                !StringUtils.hasLength(template.getEmailSubject()) ||
+                !StringUtils.hasLength(template.getEmailContent())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param template
+     * @param lstViolationDTO
+     * @throws WebOSBOException
+     */
+    public boolean verifyTemplate(final T template,
+                                  List<ViolationDTO> lstViolationDTO) throws WebOSBOException {
+        boolean isVerify = true;
+
+        if (template == null) {
+            lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_NULL", 0, ""));
+            isVerify = false;
+        } else {
+            if (!StringUtils.hasLength(template.getApplication())) {
+                lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_APPLICATION_MISSED", 0, ""));
+                isVerify = false;
+            }
+            if (!StringUtils.hasLength(template.getOrganId())) {
+                lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_ORGAN_MISSED", 0, ""));
+                isVerify = false;
+            }
+            if (!StringUtils.hasLength(template.getEmailCode())) {
+                lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_CODE_MISSED", 0, ""));
+                isVerify = false;
+            }
+            if (!StringUtils.hasLength(template.getEmailSubject())) {
+                lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_SUBJECT_MISSED", 0, ""));
+                isVerify = false;
+            }
+            if (!StringUtils.hasLength(template.getEmailContent())) {
+                lstViolationDTO.add(new ViolationDTO("TEMPLATE", "TEMPLATE_CONTENT_MISSED", 0, ""));
+                isVerify = false;
+            }
+        }
+
+        return isVerify;
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @param language
+     * @return
+     * @throws WebOSBOException
+     */
+    public QueryImpl<JSONDB> queryBuilder(String application, String organId, String code, String language) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("application").equal(application);
+        query.field("emailCode").equal(code);
+        query.field("language").equal(language);
+
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @param language
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadTemplate(String application, String organId, String code, String language) throws WebOSBOException {
+        return super.load(queryBuilder(application, organId, code, language));
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @param language
+     * @return
+     * @throws WebOSBOException
+     */
+    public boolean checkTemplate(String application, String organId, String code, String language) throws WebOSBOException {
+        return super.count(queryBuilder(application, organId, code, language)) > 0;
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<T> queryByType(String organId, String application, String language,
+                                    int type, String keyword,
+                                    int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(application)) {
+            query.field("application").equal(application);
+        }
+
+        if (StringUtils.hasLength(language)) {
+            query.field("language").equal(language);
+        }
+
+        switch (type) {
+            case 0:
+                query.field("inactive").equal(false);
+                break;
+            case 1:
+                query.field("inactive").equal(true);
+                break;
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.add(query.or(
+                    query.criteria("emailCode").like(keyword),
+                    query.criteria("emailSubject").like(keyword)
+            ));
+        }
+
+        if (offset >= 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param templateId
+     * @return
+     * @throws WebOSBOException
+     */
+    public T loadTemplateId(String organId, String templateId) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(templateId));
+
+        return super.load(query);
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.BeanInitiateInvoke#init()
+     */
+    @Override
+    public void init() {
+        ensureIndex("application");
+        ensureIndex("organId");
+        ensureIndex("organId,application");
+        ensureIndex("organId,application,language");
+        ensureIndex("organId,application,emailCode");
+        ensureIndex("organId,application,emailCode,language");
+    }
+}

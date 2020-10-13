@@ -1,0 +1,61 @@
+package com.inet.calista.global.tmplservice;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbExcelTemplate;
+import com.inet.xportal.document.bo.AbstractionDocumentBO;
+import com.inet.xportal.document.model.ObjectDocument;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.action.FileUploadAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.util.CollectionUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * CreateService.
+ *
+ * @author thoangtran
+ * @version CreateService 2019 07-02 14:00
+ */
+
+@Named("glexceltemplate_createservice")
+@XPortalDataService(roles = {NoSQLConstant.ROLE_SUBADMIN}, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/exceltmpl/create",
+    inherit = true, transaction = true, action = WebConstant.FILE_UPLOAD_ACTON, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class CreateService extends AbstractObjectDocumentService {
+  @Override
+  protected WebDataService service(AbstractBaseAction action, Map<String, Object> params) throws WebOSBOException {
+    GlbExcelTemplate template = action.getModel(GlbExcelTemplate.class);
+    validator(template, false);
+    template.setVersion(XParamUtils.getInteger("version", params, 1));
+
+    FileUploadAction fileUploadAction = (FileUploadAction)action;
+    if (CollectionUtils.isEmpty(fileUploadAction.getFileUpload())) {
+      action.getViolation().add(new ViolationDTO("FILE_ID", "FILE_ID", 1, "FILE_ID_MISSED"));
+      log.error("File is required.");
+      throw new WebOSBOException("Bad request!");
+    }
+    ObjectDocument objectDocument = this.saveDocument(fileUploadAction, 0, getReference(params), getFolder(params));
+    template.setContentUid(objectDocument.getUuid());
+    template.setMimetype(objectDocument.getMimetype());
+    template.setUuid(templateBo.add(template));
+    return new ObjectWebDataservice<>(template);
+  }
+
+
+  @Override
+  protected AbstractionDocumentBO getDocXBO() {
+    return documentBO;
+  }
+}

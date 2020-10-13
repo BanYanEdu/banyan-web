@@ -1,0 +1,257 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.inject.Inject;
+
+import org.apache.shiro.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.inet.calista.collatask.bo.project.ActivityBO;
+import com.inet.calista.collatask.bo.task.TaskBO;
+import com.inet.calista.collatask.constants.CollaTaskJsonConstants;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.model.project.Activity;
+import com.inet.calista.collatask.model.project.Activity.Action;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.service.CollabarationTaskService;
+import com.inet.calista.collatask.util.ErrorCode;
+import com.inet.calista.common.service.exception.ValidationException;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.calista.collatask.data.task.Process;
+
+import net.sf.json.JSONObject;
+
+/**
+ * TaskService.
+ *
+ * @author Duyen Tang
+ * @version $Id: TaskService.java Apr 6, 2018 11:21:10 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class TaskService extends CollabarationTaskService {
+	private static final Logger LOG = LoggerFactory.getLogger(TaskService.class);
+	
+	@Inject
+	private TaskBO taskBo;
+	
+	@Inject
+	protected ActivityBO projActivityBo;
+
+	/**
+	 * Load task information
+	 * 
+	 * @param params
+	 *            the given parameter
+	 * @return the task
+	 * @throws ValidationException
+	 *             if submission invalid
+	 */
+	protected Task loadTask(String orgCode, Map<String, Object> params) throws ValidationException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+		}
+
+		// load task from given UUID
+		Task task = taskBo.findByUuid(orgCode, uuid);
+
+		if (task == null) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+		}
+
+		return task;
+	}
+
+	/**
+	 * Load task information
+	 * 
+	 * @param params
+	 *            the given parameter
+	 * @return the task
+	 * @throws ValidationException
+	 *             if submission invalid
+	 */
+	protected Task loadTask(String orgCode, Map<String, Object> params, boolean include, String... fields) throws ValidationException {
+		String uuid = XParamUtils.getString(CollaTaskJsonConstants.UUID, params);
+		if (Strings.isNullOrEmpty(uuid)) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.must_not_empty));
+		}
+
+		// load task from given UUID
+		Task task = taskBo.findByUuid(orgCode, uuid, include, fields);
+
+		if (task == null) {
+			throw new ValidationException(createViolationDto(CollaTaskJsonConstants.UUID, ErrorCode.invalid));
+		}
+
+		return task;
+	}
+
+	/**
+	 * Update member for social activity on task
+	 * 
+	 * @param action
+	 *            the given {@link AbstractBaseAction} instance
+	 * @param task
+	 *            the given {@link Task} information
+	 */
+	protected void updateSocialMembers(AbstractBaseAction action, Task task) {
+		try {
+			action.getRequestParams().put("application", WebContext.INSTANCE.cache().getApplication());
+			action.getRequestParams().put("contextID", task.getUuid());
+			action.getRequestParams().put("codeshared", task.getUuid());
+
+			Set<String> memberUnames = new HashSet<>();
+			List<JSONObject> members = new ArrayList<>();
+			// add creator to check list
+			memberUnames.add(task.getCreatorUname());
+
+			// add watcher
+			if (!CollectionUtils.isEmpty(task.getWatchers())) {
+				task.getWatchers().forEach(watcher -> {
+					if (!memberUnames.contains(watcher.getUname())) {
+						memberUnames.add(watcher.getUname());
+
+						members.add(new JSONObject().accumulate("member", watcher.getUname())
+								.accumulate("display", watcher.getName())
+								.accumulate("policy", SOCIAL_ACTIVITY_POLOCY_FRIEND));
+					}
+				});
+			}
+
+			// add coordinators
+			if (!CollectionUtils.isEmpty(task.getCoordinators())) {
+				task.getCoordinators().forEach(coordinators -> {
+					if (!memberUnames.contains(coordinators.getUname())) {
+						memberUnames.add(coordinators.getUname());
+
+						members.add(new JSONObject().accumulate("member", coordinators.getUname())
+								.accumulate("display", coordinators.getName())
+								.accumulate("policy", SOCIAL_ACTIVITY_POLOCY_FRIEND));
+					}
+				});
+			}
+
+			// add processor
+			if (!CollectionUtils.isEmpty(task.getProcesses())) {
+				task.getProcesses().forEach(process -> {
+					if (!memberUnames.contains(process.getReceiverUname())) {
+						memberUnames.add(process.getReceiverUname());
+
+						members.add(new JSONObject().accumulate("member", process.getReceiverUname())
+								.accumulate("display", process.getReceiverName())
+								.accumulate("policy", SOCIAL_ACTIVITY_POLOCY_FRIEND));
+					}
+				});
+			}
+
+			action.getRequestParams().put("element", members);
+			LOG.debug("Update activity [{}] with members [{}]", task.getName(), members);
+
+			action.serviceExecute("socialactivityscope", false);
+		} catch (Throwable ex) {
+			action.getViolation().clear();
+			// ignore this error
+			LOG.error("Error occurs during deleting activity when delete task", ex);
+		}
+	}
+
+	/**
+	 * Add activity for project
+	 * 
+	 * @param task
+	 *            the given {@link Task} information
+	 */
+	protected void addProjectActivity(Action action, Task task, String note) {
+		try {
+			if (!Strings.isNullOrEmpty(task.getProjectUuid())) {
+				projActivityBo.add(
+						new Activity(task.getProjectUuid(), getUsername(), getFullname(), System.currentTimeMillis(),
+								action.name(), ReferenceType.task.name(), task.getUuid(), task.getName(), note));
+			}
+		} catch (Exception ex) {
+			// skip this exception
+			LOG.warn("Could not add activity for project", ex);
+		}
+	}
+
+	/**
+	 * Check login user can edit on task or not
+	 * 
+	 * @param task
+	 *            the given task
+	 * @return the result
+	 */
+	protected boolean canUpdate(Task task) {
+		if (!Status.waiting.name().equals(task.getStatus()) && !Status.processing.name().equals(task.getStatus())) {
+			return false;
+		}
+
+		// check on creator
+		if (task.getCreatorUname().equals(getUsername())) {
+			return true;
+		}
+
+		// check on process
+		for (Process process : task.getProcesses()) {
+			if (process.getReceiverUname().equals(getUsername()) && Process.Status.isProcessing(process.getStatus())) {
+				return true;
+			}
+		}
+		;
+
+		return false;
+	}
+
+	/**
+	 * Check login user can process on task or not
+	 * 
+	 * @param task
+	 *            the given task
+	 * @return the result
+	 */
+	public static boolean canProcess(Task task) {
+		if (!Status.waiting.name().equals(task.getStatus()) && !Status.processing.name().equals(task.getStatus())) {
+			return false;
+		}
+
+		// check on process
+		/*
+		 * for (Process process : task.getProcesses()) { if
+		 * (process.getReceiverUname().equals(getUsername()) &&
+		 * Process.Status.isProcessing(process.getStatus())) { return true; } };
+		 */
+		if (task.getAssignee().getReceiverUname().equals(getUsername())
+				&& Process.Status.isProcessing(task.getAssignee().getStatus())) {
+			return true;
+		}
+
+		return false;
+	}
+}

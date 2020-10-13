@@ -1,0 +1,19 @@
+package com.inet.calista.crm.model.marketing;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Recipients.
+ *
+ * @author thoangtran
+ * @version Recipients 2019 01-30 10:52
+ */
+@Getter
+@Setter
+public class Recipient {
+  private String type;
+  private String recipient;
+  private String firstName;
+
+}

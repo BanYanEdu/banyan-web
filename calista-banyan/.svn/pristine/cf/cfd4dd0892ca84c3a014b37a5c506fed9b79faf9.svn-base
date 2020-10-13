@@ -1,0 +1,70 @@
+package com.inet.jobportal.service.candidate.jobpost;
+
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * JobPostAggregateDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPostAggregateDS.java Match 26, 2019 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportaljobpostaggregate")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description="Job Post Aggregate service")
+@XPortalPageRequest(uri="jobportal/candidate/jobpost/aggregate",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobPostAggregateDS extends JobPortalAbsractService {
+    @Inject
+    private JobPostBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String jobCode = XParamUtils.getString("jobCode", params,"");
+        String organId = XParamUtils.getString("organId", params,"");
+        String job_cat_01 = XParamUtils.getString("job_cat_01", params,"");
+
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        // match before put to calculator
+        final QueryImpl<JSONDB> firstMatch = new QueryImpl<>();
+        firstMatch.field("jobCategories").equal(job_cat_01);
+
+        query.pipeline("", firstMatch.getQueryObject());
+
+
+//        query.field("searchable").equal(true);
+//        if (!jobCode.equals("")) { query.field("code").equal(jobCode); }
+//        if (!organId.equals("")) { query.field("or/ganId").equal(organId); }
+
+        //Sorting
+        query.order("-modifiedDate");
+
+        SearchDTO<JobPost> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

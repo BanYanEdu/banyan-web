@@ -1,0 +1,46 @@
+package com.inet.calista.crm.model.common;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * Communication.
+ *
+ * @author thoangtran
+ * @version Communication 2019 01-25 15:50
+ */
+@Getter
+@Setter
+public class Communication {
+  private String type; // TYPE = PHONE , EMAIL , SMS ....
+  private String value;  // email, phone number, .....
+  private String entityId; // ID OF contact or company
+  private String entityType;   // CONTACT |  COMPANY
+  private String entityName;
+
+  public static Communication transform(final JSONObject jsonObject) throws JSONException{
+
+    if (jsonObject == null) return null;
+    final Communication communication = new Communication();
+    if(jsonObject.has("type")) {
+      communication.setType(jsonObject.getString("type"));
+    }
+    if(jsonObject.has("value")) {
+      communication.setValue(jsonObject.getString("value"));
+    }
+
+    if(jsonObject.has("entityId")) {
+      communication.setEntityId(jsonObject.getString("entityId"));
+    }
+    if(jsonObject.has("entityType")) {
+      communication.setEntityType(jsonObject.getString("entityType"));
+    }
+    if(jsonObject.has("entityName")) {
+      communication.setEntityName(jsonObject.getString("entityName"));
+    }
+
+    return communication;
+  }
+}

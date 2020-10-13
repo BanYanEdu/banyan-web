@@ -1,0 +1,12 @@
+package com.inet.calista.crm.model.essentials;
+
+/**
+ * EntityType.
+ *
+ * @author thoangtran
+ * @version EntityType 2019 01-25 16:35
+ */
+public enum  EntityType {
+  organization,
+  personal
+}

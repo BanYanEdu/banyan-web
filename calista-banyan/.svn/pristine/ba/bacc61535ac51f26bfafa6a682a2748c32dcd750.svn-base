@@ -1,0 +1,92 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbEmail;
+import com.inet.xportal.nosql.web.NoSQLConstant;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+
+/**
+ * 
+ * FirmEmailTmplService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: FirmEmailTmplService.java Feb 11, 2020 9:20:02 AM $
+ *
+ * @since 1.0
+ */
+@Named("glfirmemaillist")
+@XPortalDataService(roles = { NoSQLConstant.ROLE_SUBADMIN }, description = CalistaConstant.ROLE_SUB_ADMIN_DESC)
+@XPortalPageRequest(uri = "gl/firm/email/list", 
+	inherit = true, 
+	result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class FirmEmailTmplService extends EmailAbstraction 
+{
+	/**
+	 * 
+	 * @param organId
+	 * @param action
+	 * @param params
+	 * @return
+	 * @throws WebOSBOException
+	 */
+	@Override
+	protected GlbEmail loadTemplate(String organId,
+			final AbstractBaseAction action, 
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		GlbEmail template = new GlbEmail();
+		template.setOrganId(organId);
+		return template;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.inet.calista.global.subfirmservice.EmailAbstraction#service(com.inet.calista.global.model.GlbEmail, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+	 */
+	@Override
+	protected WebDataService service(GlbEmail template,
+			final AbstractBaseAction action, 
+			final Map<String, Object> params) throws WebOSBOException 
+	{
+		SearchDTO<GlbEmail> result = templateBO.query(template.getOrganId(), 
+				XParamUtils.getString("application", params, action.getApplication()), 
+				XParamUtils.getString("language", params, StringUtils.EMPTY_STRING));
+		
+		if (result == null)
+			result = new SearchDTO<>();
+		
+		return new ObjectWebDataservice<>(result);
+	}
+}

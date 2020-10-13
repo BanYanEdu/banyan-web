@@ -1,0 +1,111 @@
+package com.inet.jobportal.bo.employer;
+
+import com.inet.jobportal.AppConstants;
+import com.inet.jobportal.model.candidate.JobAppStatus;
+import com.inet.jobportal.model.common.Note;
+import com.inet.jobportal.model.employer.SavedCandidate;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.bo.MagicContentBO;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Job Portal SavedCandidate BO.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedCandidateBO.java Jan 10, 2019 3:24:24 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("SavedCandidateBO")
+public class SavedCandidateBO extends MagicContentBO<SavedCandidate> implements BeanInitiateInvoke {
+    private static final Logger logger = LoggerFactory.getLogger(SavedCandidate.class);
+
+    @Inject
+    public SavedCandidateBO(@ContentContext(context = AppConstants.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "jobportal_employer_saved_candidate");
+    }
+
+    @Override
+    public String add(SavedCandidate item) throws WebOSBOException {
+        return super.add(item);
+    }
+
+    @Override
+    public void update(String uuid, SavedCandidate item) throws WebOSBOException {
+        super.update(uuid, item);
+    }
+
+    public SearchDTO<SavedCandidate> search(Query<JSONDB> query) throws WebOSBOException {
+        return super.query((QueryImpl<JSONDB>) query);
+    }
+
+    public void updateStatus(String uuid, JobAppStatus status) throws WebOSBOException {
+//        String uuid = status.getStatusLinkId();
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+        SavedCandidate savedCandidate = this.search(query).getItems().get(0);
+
+        savedCandidate.setStatus(status);
+        super.update(uuid, savedCandidate);
+    }
+
+    public void addNoteAtCreate(String username, String organId, Note note) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("username").equal(username);
+        query.field("organId").equal(organId);
+        SavedCandidate savedCandidate= this.search(query).getItems().get(0);
+
+        List<Note> notes = savedCandidate.getNotes();
+        if (notes != null) {
+            notes.add(note);
+        } else {
+            notes = new ArrayList<>();
+            notes.add(note);
+        }
+
+        savedCandidate.setNotes(notes);
+        super.update(savedCandidate.getUuid(), savedCandidate);
+    }
+
+    public void addNote(String uuid, Note note) throws WebOSBOException {
+        Query<JSONDB> query = new QueryImpl<JSONDB>().field("uuid").equal(uuid);
+//        query.field("organId").equal(organId);
+        SavedCandidate savedCandidate= this.search(query).getItems().get(0);
+
+        List<Note> notes = savedCandidate.getNotes();
+        if (notes != null) {
+            notes.add(note);
+        } else {
+            notes = new ArrayList<>();
+            notes.add(note);
+        }
+
+        savedCandidate.setNotes(notes);
+        super.update(savedCandidate.getUuid(), savedCandidate);
+    }
+
+    @Override
+    public void init() {
+        // index this data from database
+        ensureIndex("uuid");
+        ensureIndex("username");
+        ensureIndex("organId");
+        //ensureIndex("description");
+    }
+
+    @Override
+    protected Class<SavedCandidate> getClassConvetor() {
+        return SavedCandidate.class;
+    }
+}

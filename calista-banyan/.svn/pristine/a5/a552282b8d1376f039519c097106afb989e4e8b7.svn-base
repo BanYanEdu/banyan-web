@@ -1,0 +1,456 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.common.utils;
+
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * com.inet.calista.common.utils.
+ *
+ * @author Phong Tran
+ * @version $Id: DateUtils.java Oct 25, 2018 11:19 phongtt $
+ * @since 1.0
+ */
+public class DateUtils {
+    public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+    public static final String VI_DATE_FORMAT = "dd/MM/yyyy";
+    public static final String VI_DATE_TIME_FORMAT = "dd/MM/yyyy HH:mm:ss";
+    public static final String DB_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    protected static final Logger logger = LoggerFactory.getLogger(DateUtils.class);
+    public static Map<Integer, String> dayOfWeeks;
+
+    static {
+        dayOfWeeks = new HashMap<>();
+        dayOfWeeks.put(1, "SUN");
+        dayOfWeeks.put(2, "MON");
+        dayOfWeeks.put(3, "TUE");
+        dayOfWeeks.put(4, "WED");
+        dayOfWeeks.put(5, "THU");
+        dayOfWeeks.put(6, "FRI");
+        dayOfWeeks.put(7, "SAT");
+    }
+
+
+    /**
+     * @param date
+     * @return
+     */
+    public static boolean isSunday(Date date) {
+        // get current calendar.
+        Calendar calendar = Calendar.getInstance();
+        // set current date.
+        calendar.setTime(date);
+
+        int distance = calendar.get(Calendar.DAY_OF_WEEK) - calendar.getFirstDayOfWeek();
+
+        return (distance == 0);
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static boolean isSaturday(Date date) {
+        // get current calendar.
+        Calendar calendar = Calendar.getInstance();
+        // set current date.
+        calendar.setTime(date);
+
+        int distance = calendar.get(Calendar.DAY_OF_WEEK) - calendar.getFirstDayOfWeek();
+
+        return (distance == 6);
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static Date getDate(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 1);
+
+        return cal.getTime();
+    }
+
+    /**
+     * @param day
+     * @param month
+     * @param year
+     * @return
+     */
+    public static Date getDate(int day, int month, int year) {
+        Calendar cal = Calendar.getInstance();
+
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, month - 1);
+        cal.set(Calendar.DAY_OF_MONTH, day);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 1);
+
+        return getDate(cal.getTime());
+    }
+
+    /**
+     * @param year
+     * @return
+     */
+    public static Date beginOfYear(int year) {
+        Calendar cal = Calendar.getInstance();
+        if (year > 0)
+            cal.set(Calendar.YEAR, year);
+
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, 0);
+
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 1);
+
+        return cal.getTime();
+    }
+
+    /**
+     * @param year
+     * @return
+     */
+    public static Date endOfYear(int year) {
+        Calendar cal = Calendar.getInstance();
+        if (year > 0)
+            cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, cal.getMaximum(Calendar.MONTH));
+        cal.set(Calendar.DAY_OF_YEAR, cal.getMaximum(Calendar.DAY_OF_YEAR) - 1);
+
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
+
+        return cal.getTime();
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static String dayOfWeeks(long date) {
+        return dayOfWeeks.get(dayOfWeek(date));
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static int dayOfWeek(long date) {
+        final Calendar cal = Calendar.getInstance();
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+        return cal.get(Calendar.DAY_OF_WEEK);
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static long beginDate(long date) {
+        final Calendar cal = Calendar.getInstance();
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        return cal.getTimeInMillis();
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static long endDate(long date) {
+        final Calendar cal = Calendar.getInstance();
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
+
+        return cal.getTimeInMillis();
+    }
+
+    /**
+     * @param date
+     * @return
+     */
+    public static long getTime(long date) {
+        final Calendar cal = Calendar.getInstance();
+        if (date > 0) {
+            cal.setTimeInMillis(date);
+        }
+
+        long longTime = 0;
+        longTime = (longTime + cal.get(Calendar.HOUR_OF_DAY)) * 60;
+        longTime = (longTime + cal.get(Calendar.MINUTE)) * 60;
+        longTime = (longTime + cal.get(Calendar.SECOND)) * 1000;
+        longTime = (longTime + cal.get(Calendar.MILLISECOND));
+
+        return longTime;
+    }
+
+    /**
+     * @return
+     */
+    public static Date now() {
+        return new Date();
+    }
+
+    /**
+     * Parse given {@link String} with given format to {@link Date}
+     *
+     * @param date   the given date as {@link String}
+     * @param format the given format
+     * @return the date
+     */
+    public static Date parse(String date, String format) {
+        if (!StringUtils.hasLength(date)) {
+            return null;
+        }
+
+        if (!StringUtils.hasLength(format)) {
+            format = DEFAULT_DATETIME_FORMAT;
+        }
+
+        // transform simple date format
+        SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+
+        try {
+            return dateFormat.parse(date);
+        } catch (ParseException ex) {
+            logger.warn("Could not parse [{" + date + "}] to date with given format [{" + format + "}] to date", ex);
+            return null;
+        }
+    }
+
+
+    /**
+     * Parse given {@link String} with given format to {@link Date}
+     *
+     * @param date the given date as {@link String}
+     * @return the date
+     */
+    public static Date parse(String date) {
+        return parse(date, DEFAULT_DATETIME_FORMAT);
+    }
+
+    /**
+     * * Parse given {@link Long} with given format to {@link Date}
+     *
+     * @param time the given date as {@link Long}
+     * @return the date
+     */
+    public static Date parse(long time) {
+        if (time <= 0) {
+            return null;
+        }
+        return new Date(time);
+    }
+
+    /**
+     * Format given {@link Date} to {@link String} with given format
+     *
+     * @param date   the given {@link Date}
+     * @param format the given format
+     * @return the date as {@link String}
+     */
+    public static String format(Date date, String format) {
+        if (date == null) {
+            return null;
+        }
+        if (!StringUtils.hasLength(format)) {
+            format = DEFAULT_DATETIME_FORMAT;
+        }
+        // transform simple date format
+        SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        StringBuffer buffer = new StringBuffer(dateFormat.format(date));
+
+        return buffer.insert(buffer.length() - 2, ':').toString();
+    }
+
+    /**
+     * Format given {@link Date} to {@link String} with given format
+     *
+     * @param date the given {@link Date}
+     * @return the date as {@link String}
+     */
+    public static String format(Date date) {
+        return format(date, DEFAULT_DATETIME_FORMAT);
+    }
+
+    /**
+     * Format given {@link Date} to {@link String} with given format
+     *
+     * @param date the given {@link Long}
+     * @return the date as {@link String}
+     */
+    public static String format(long date) {
+        if (date <= 0) return "";
+        return format(new Date(date), DEFAULT_DATETIME_FORMAT);
+    }
+
+    /**
+     * Return the first time in given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    public static Date startTimeOf(Date date) {
+        return startTime(date.getTime()).getTime();
+    }
+
+    /**
+     * Return the first time in given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    public static long startTimeInMillisOf(Date date) {
+        return startTime(date.getTime()).getTimeInMillis();
+    }
+
+    /**
+     * Return the first time in given date
+     *
+     * @param date the given {@link long}
+     * @return the result
+     */
+    public static long startTimeInMillisOf(long date) {
+        return startTime(date).getTimeInMillis();
+    }
+
+    /**
+     * Return the end time of given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    private static Calendar startTime(long date) {
+        // get calendar instance
+        Calendar calendar = Calendar.getInstance();
+
+        // set time
+        if (date > 0) {
+            calendar.setTimeInMillis(date);
+        }
+
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar;
+    }
+
+    /**
+     * Return the end time of given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    public static Date endTimeOf(Date date) {
+        return endTime(date.getTime()).getTime();
+    }
+
+    /**
+     * Return the end time of given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    public static long endTimeInMillisOf(Date date) {
+        return endTime(date.getTime()).getTimeInMillis();
+    }
+
+    /**
+     * Return the end time of given date
+     *
+     * @param date the given {@link long}
+     * @return the result
+     */
+    public static long endTimeInMillisOf(long date) {
+        return endTime(date).getTimeInMillis();
+    }
+
+    /**
+     * Return the end time of given date
+     *
+     * @param date the given {@link Date}
+     * @return the result
+     */
+    private static Calendar endTime(long date) {
+        // get calendar instance
+        Calendar calendar = Calendar.getInstance();
+
+        // set time
+        if (date > 0) {
+            calendar.setTimeInMillis(date);
+        }
+
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar;
+    }
+
+    /**
+     * Return year in given date
+     *
+     * @param date the given date
+     * @return the year
+     */
+    public static int year(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar.get(Calendar.YEAR);
+    }
+}

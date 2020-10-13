@@ -1,0 +1,84 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.inventory.algorithm;
+
+/**
+ * com.inet.calista.erp.inventory.algorithm.
+ *
+ * @author Phong Tran
+ * @version $Id: Gausse.java Oct 22, 2018 15:02 phongtt $
+ * @since 1.0
+ */
+public class Gausse {
+    private final static double EPSILON = 1e-10;
+
+    /**
+     * @param var
+     * @param con
+     * @param n
+     * @param m
+     * @return
+     */
+    public static double[] solve(double[][] var, double[] con, int n, int m) {
+        for (int p = 0; p < n; p++) {
+            int max = p;
+            for (int i = p + 1; i < m; i++) {
+                if (Math.abs(var[i][p]) > Math.abs(var[max][p])) {
+                    max = i;
+                }
+            }
+            double[] temp = var[p];
+            var[p] = var[max];
+            var[max] = temp;
+            double t = con[p];
+            con[p] = con[max];
+            con[max] = t;
+
+            if (Math.abs(var[p][p]) <= EPSILON) {
+                throw new RuntimeException("Matrix is greater than epsilon!");
+            }
+
+            // Transfer elements matrix A & B
+            for (int i = p + 1; i < m; i++) {
+                double alpha = var[i][p] / var[p][p];
+                con[i] -= alpha * con[p];
+                for (int j = p; j < n; j++) {
+                    var[i][j] -= alpha * var[p][j];
+                }
+            }
+        }
+
+        // Replace
+        double[] x = new double[n];
+        for (int i = n - 1; i >= 0; i--) {
+            double sum = 0.0;
+            for (int j = i + 1; j < n; j++) {
+                sum += var[i][j] * x[j];
+            }
+            x[i] = (con[i] - sum) / var[i][i];
+        }
+
+        /*
+        for (int i = 0; i < n; i++)
+            System.out.println("x" + i + " " + x[i]);
+        */
+
+        return x;
+    }
+}

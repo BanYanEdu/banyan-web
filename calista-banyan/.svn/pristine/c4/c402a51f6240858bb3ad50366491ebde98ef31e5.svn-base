@@ -1,0 +1,355 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.bo;
+
+import com.inet.base.util.DateUtils;
+import com.inet.base.util.StringUtils;
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.xportal.module.web.api.MngmFactoryManager;
+import com.inet.xportal.module.web.model.FirmInformation;
+import com.inet.xportal.nosql.web.bo.LetterTemplateAbstraction;
+import com.inet.xportal.nosql.web.bo.SiteBO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.web.context.WebContext;
+import com.inet.xportal.web.data.OrganizationDTO;
+import org.apache.shiro.util.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * CommerceNotifyBO.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceNotifyBO.java Dec 05, 2017 16:43 phongtt $
+ * @since 1.0
+ */
+@Named("ECMNotifyBO")
+public class ECMNotifyBO extends LetterTemplateAbstraction<Object> {
+    protected static final Logger logger = LoggerFactory.getLogger(ECMNotifyBO.class);
+
+    /**
+     * @return
+     */
+    private SiteDataModel siteProfile() {
+        return WebContext.INSTANCE.cache()
+                .getBean(SiteBO.class)
+                .loadByContext();
+    }
+
+    /**
+     * @param variables
+     * @param siteData
+     * @param firmInfo
+     * @param order
+     */
+    private void variablesBuilder(final Map variables,
+                                  final SiteDataModel siteData,
+                                  final FirmInformation firmInfo,
+                                  final ECMOrder order) {
+        if (variables != null && firmInfo != null && order != null) {
+            //Ecommerce system information
+            variables.put("siteName", siteData.getName());
+            variables.put("siteAddress1", siteData.getAddress1());
+            variables.put("siteAddress2", siteData.getAddress2());
+            variables.put("sitePhone", siteData.getPhone());
+            variables.put("siteFax", siteData.getFax());
+
+            //Vendor information
+            variables.put("orgName", firmInfo.getOrgName());
+            variables.put("orgAddress1", firmInfo.getAddress1());
+            variables.put("orgAddress2", firmInfo.getAddress2());
+            variables.put("orgPhone", firmInfo.getPhone());
+            variables.put("orgFax", firmInfo.getFax());
+
+            //ECMBuyer information
+            if (order.getBuyer() != null) {
+                variables.put("buyerName", order.getBuyer().getFullName());
+                variables.put("buyerAddress", order.getBuyer().getAddress());
+                variables.put("buyerPhone", order.getBuyer().getPhone());
+                variables.put("buyerEmail", order.getBuyer().getEmail());
+            }
+
+            //Order information
+            variables.put("orderCode", order.getCode());
+            variables.put("orderStatus", order.getStatus());
+            variables.put("orderTotalAmount", order.getTotalAmount());
+
+            variables.put("orderCreate", "");
+            if (order.getCreateDate() > 0) {
+                variables.put("orderCreate", order.getCreateDate());
+                variables.put("orderCreate_dmy", DateUtils.format(order.getCreateDate(), "dd/MM/yyyy"));
+                variables.put("orderCreate_Hm", DateUtils.format(order.getCreateDate(), "HH:mm"));
+            }
+        }
+    }
+
+    /**
+     * @param variables
+     * @param order
+     */
+    private void variablesEmail(final Map variables,
+                                final SiteDataModel siteData,
+                                final FirmInformation firmInfo,
+                                final ECMOrder order) {
+        if (variables != null && order != null) {
+            variablesBuilder(variables, siteData, firmInfo, order);
+
+            variables.put("orderItems", order.getItems());
+        }
+    }
+
+    /**
+     * @param variables
+     * @param order
+     */
+    private void variablesUnify(final Map variables,
+                                final SiteDataModel siteData,
+                                final FirmInformation firmInfo,
+                                final ECMOrder order) {
+        if (variables != null && order != null) {
+            variablesBuilder(variables, siteData, firmInfo, order);
+        }
+    }
+
+    /**
+     * @param variables
+     * @param order
+     */
+    private void variablesSms(final Map variables,
+                              final SiteDataModel siteData,
+                              final FirmInformation firmInfo,
+                              final ECMOrder order) {
+        if (variables != null && order != null) {
+            variablesBuilder(variables, siteData, firmInfo, order);
+
+        }
+    }
+
+    /**
+     * @param organ
+     * @param order
+     * @param category
+     * @param language
+     */
+    public void notifyService(final OrganizationDTO organ,
+                              final ECMOrder order,
+                              String category,
+                              String language) {
+        final SiteDataModel siteData = siteProfile();
+        logger.debug("SiteNotify is {}", siteData);
+
+        if (siteData != null) {
+            final FirmInformation firmInfo = MngmFactoryManager.INSTANCE
+                    .service()
+                    .organization(siteData, organ.getOrganId());
+
+            logger.debug("firm {} for organ {} is loading ......", firmInfo, organ.getOrganId());
+
+            if (firmInfo != null) {
+                logger.debug("sms notify is beginning ......");
+                final Map<String, Object> variablesSms = new HashMap<>();
+                variablesSms(variablesSms, siteData, firmInfo, order);
+                logger.debug("variablesSms builder {}", variablesSms);
+                smsNotify(siteData, variablesSms,
+                        firmInfo.getPhone(),
+                        (order.getBuyer() != null) ? order.getBuyer().getPhone() : "",
+                        category, language);
+
+
+                logger.debug("email notify is beginning ......");
+                final Map<String, Object> variablesEmail = new HashMap<>();
+                variablesEmail(variablesEmail, siteData, firmInfo, order);
+                logger.debug("variablesEmail builder {}", variablesEmail);
+                emailNotify(siteData, variablesEmail,
+                        firmInfo.getEmail(),
+                        (order.getBuyer() != null) ? order.getBuyer().getEmail() : "",
+                        category, language);
+
+                logger.debug("unify notify is beginning ......");
+                final Map<String, Object> variablesUnify = new HashMap<>();
+                variablesUnify(variablesUnify, siteData, firmInfo, order);
+                logger.debug("variablesUnify builder {}", variablesUnify);
+                pushNotify(siteData, variablesUnify,
+                        firmInfo.getEmail(),
+                        (order.getBuyer() != null) ? order.getBuyer().getUsername() : "",
+                        category, language);
+            }
+        }
+    }
+
+    /**
+     * @param siteData
+     * @param variables
+     * @param phoneVendor
+     * @param phoneBuyer
+     * @param category
+     * @param language
+     */
+    public void smsNotify(final SiteDataModel siteData, final Map variables,
+                          String phoneVendor, String phoneBuyer,
+                          String category, String language) {
+        boolean smsToVendor = false;
+        boolean smsToBuyer = false;
+
+        if (ECMConstant.ORDER_NEW.equals(category) || ECMConstant.ORDER_COMPLETE.equals(category)) {
+            smsToVendor = StringUtils.hasLength(phoneVendor);
+            smsToBuyer = StringUtils.hasLength(phoneBuyer);
+        } else if (ECMConstant.ORDER_NEW_VENDOR.equals(category) || ECMConstant.ORDER_COMPLETE_VENDOR.equals(category)) {
+            smsToVendor = StringUtils.hasLength(phoneVendor);
+        } else if (ECMConstant.ORDER_NEW_BUYER.equals(category) || ECMConstant.ORDER_COMPLETE_BUYER.equals(category)) {
+            smsToBuyer = StringUtils.hasLength(phoneBuyer);
+        }
+
+        logger.debug("sms send? ==> {} for vendor phone is {}", smsToVendor, phoneVendor);
+        if (smsToVendor) {
+            String vendorCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_NEW_VENDOR;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_COMPLETE_VENDOR;
+            }
+
+            logger.debug("sms notify category {} with language {}", vendorCategory, language);
+            smsNotify(siteData, vendorCategory, phoneVendor, variables);
+        }
+
+        logger.debug("sms send? ==> {} for buyer phone is {}", smsToBuyer, phoneBuyer);
+        if (smsToBuyer) {
+            String buyerCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_NEW_BUYER;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_COMPLETE_BUYER;
+            }
+
+            logger.debug("sms notify category {} with language {}", buyerCategory, language);
+            smsNotify(siteData, buyerCategory, phoneBuyer, variables);
+        }
+    }
+
+    /**
+     * @param siteData
+     * @param variables
+     * @param emailVendor
+     * @param emailBuyer
+     * @param category
+     * @param language
+     */
+    public void emailNotify(final SiteDataModel siteData, final Map variables,
+                            String emailVendor, String emailBuyer,
+                            String category, String language) {
+        boolean mailToVendor = false;
+        boolean mailToBuyer = false;
+
+        if (ECMConstant.ORDER_NEW.equals(category) || ECMConstant.ORDER_COMPLETE.equals(category)) {
+            mailToVendor = StringUtils.hasLength(emailVendor);
+            mailToBuyer = StringUtils.hasLength(emailBuyer);
+        } else if (ECMConstant.ORDER_NEW_VENDOR.equals(category) || ECMConstant.ORDER_COMPLETE_VENDOR.equals(category)) {
+            mailToVendor = StringUtils.hasLength(emailVendor);
+        } else if (ECMConstant.ORDER_NEW_BUYER.equals(category) || ECMConstant.ORDER_COMPLETE_BUYER.equals(category)) {
+            mailToBuyer = StringUtils.hasLength(emailBuyer);
+        }
+
+        logger.debug("email send? ==> {} for vendor mail is {}", mailToVendor, emailVendor);
+        if (mailToVendor) {
+            String vendorCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_NEW_VENDOR;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_COMPLETE_VENDOR;
+            }
+
+            logger.debug("email notify category {} with language {}", vendorCategory, language);
+            letterNotify(siteData, language, vendorCategory, emailVendor, variables);
+        }
+
+        logger.debug("email send? ==> {} for buyer mail is {}", mailToBuyer, emailBuyer);
+        if (mailToBuyer) {
+            String buyerCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_NEW_BUYER;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_COMPLETE_BUYER;
+            }
+
+            logger.debug("email notify category {} with language {}", buyerCategory, language);
+            letterNotify(siteData, language, buyerCategory, emailBuyer, variables);
+        }
+    }
+
+
+    /**
+     * @param siteData
+     * @param variables
+     * @param accountVendor
+     * @param accountBuyer
+     * @param category
+     * @param language
+     */
+    public void pushNotify(final SiteDataModel siteData, final Map variables,
+                           String accountVendor, String accountBuyer,
+                           String category, String language) {
+        boolean unifyToVendor = false;
+        boolean unifyToBuyer = false;
+
+        if (ECMConstant.ORDER_NEW.equals(category) || ECMConstant.ORDER_COMPLETE.equals(category)) {
+            unifyToVendor = StringUtils.hasLength(accountVendor);
+            unifyToBuyer = StringUtils.hasLength(accountBuyer);
+        } else if (ECMConstant.ORDER_NEW_VENDOR.equals(category) || ECMConstant.ORDER_COMPLETE_VENDOR.equals(category)) {
+            unifyToVendor = StringUtils.hasLength(accountVendor);
+        } else if (ECMConstant.ORDER_NEW_BUYER.equals(category) || ECMConstant.ORDER_COMPLETE_BUYER.equals(category)) {
+            unifyToBuyer = StringUtils.hasLength(accountBuyer);
+        }
+
+        logger.debug("unify send? ==> {} for vendor account is {}", unifyToVendor, accountVendor);
+        if (unifyToVendor) {
+            String vendorCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_NEW_VENDOR;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                vendorCategory = ECMConstant.ORDER_COMPLETE_VENDOR;
+            }
+
+            logger.debug("push notify category {} with language {}", vendorCategory, language);
+            pushNotify(language, category, "eCommerce", "",
+                    CollectionUtils.asList(accountVendor),
+                    variables);
+        }
+
+        logger.debug("unify send? ==> {} for buyer account is {}", unifyToBuyer, accountBuyer);
+        if (unifyToBuyer) {
+            String buyerCategory = category;
+            if (ECMConstant.ORDER_NEW.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_NEW_BUYER;
+            } else if (ECMConstant.ORDER_COMPLETE.equals(category)) {
+                buyerCategory = ECMConstant.ORDER_COMPLETE_BUYER;
+            }
+
+            logger.debug("push notify category {} with language {}", buyerCategory, language);
+            pushNotify(language, category, "eCommerce", "",
+                    CollectionUtils.asList(accountBuyer),
+                    variables);
+        }
+    }
+}

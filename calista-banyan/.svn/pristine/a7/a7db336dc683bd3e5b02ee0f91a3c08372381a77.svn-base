@@ -1,0 +1,251 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.model;
+
+import java.util.List;
+
+import com.inet.calista.collatask.data.Executor;
+import com.inet.calista.collatask.data.Field;
+import com.inet.calista.common.model.BaseModel;
+
+/**
+ * CustomQuery.
+ *
+ * @author Duyen Tang
+ * @version $Id: CustomQuery.java Apr 10, 2018 9:11:31 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class CustomQuery extends BaseModel {
+  private String name;
+  // the reference type of query
+  private String type;
+  // the scope of query
+  private String scope;
+  private boolean defaultQuery;
+  
+  private String authUname;
+  private String authName;
+  private String orgCode;
+  
+  private List<Executor> sharedFors;
+  
+  // custom field in query
+  private List<Field> fields;
+  
+  // the query object as String
+  private String queryObject;
+  
+  private String application;
+  private String path;
+  
+  /**
+   * @return the name
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * @return the type
+   */
+  public String getType() {
+    return type;
+  }
+
+  /**
+   * @param type the type to set
+   */
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  /**
+   * @return the scope
+   */
+  public String getScope() {
+    return scope;
+  }
+
+  /**
+   * @param scope the scope to set
+   */
+  public void setScope(String scope) {
+    this.scope = scope;
+  }
+
+  /**
+   * @return the authUname
+   */
+  public String getAuthUname() {
+    return authUname;
+  }
+
+  /**
+   * @param authUname the authUname to set
+   */
+  public void setAuthUname(String authUname) {
+    this.authUname = authUname;
+  }
+
+  /**
+   * @return the authName
+   */
+  public String getAuthName() {
+    return authName;
+  }
+
+  /**
+   * @param authName the authName to set
+   */
+  public void setAuthName(String authName) {
+    this.authName = authName;
+  }
+
+  /**
+   * @return the orgCode
+   */
+  public String getOrgCode() {
+    return orgCode;
+  }
+
+  /**
+   * @param orgCode the orgCode to set
+   */
+  public void setOrgCode(String orgCode) {
+    this.orgCode = orgCode;
+  }
+
+  /**
+   * @return the sharedFors
+   */
+  public List<Executor> getSharedFors() {
+    return sharedFors;
+  }
+
+  /**
+   * @param sharedFors the sharedFors to set
+   */
+  public void setSharedFors(List<Executor> sharedFors) {
+    this.sharedFors = sharedFors;
+  }
+
+  /**
+   * @return the fields
+   */
+  public List<Field> getFields() {
+    return fields;
+  }
+
+  /**
+   * @param fields the fields to set
+   */
+  public void setFields(List<Field> fields) {
+    this.fields = fields;
+  }
+
+  /**
+   * @return the defaultQuery
+   */
+  public boolean isDefaultQuery() {
+    return defaultQuery;
+  }
+
+  /**
+   * @param defaultQuery the defaultQuery to set
+   */
+  public void setDefaultQuery(boolean defaultQuery) {
+    this.defaultQuery = defaultQuery;
+  }
+
+  /**
+   * @return the queryObject
+   */
+  public String getQueryObject() {
+    return queryObject;
+  }
+
+  /**
+   * @param queryObject the queryObject to set
+   */
+  public void setQueryObject(String queryObject) {
+    this.queryObject = queryObject;
+  }
+
+  /**
+   * @return the application
+   */
+  public String getApplication() {
+    return application;
+  }
+
+  /**
+   * @param application the application to set
+   */
+  public void setApplication(String application) {
+    this.application = application;
+  }
+
+  /**
+   * @return the path
+   */
+  public String getPath() {
+    return path;
+  }
+
+  /**
+   * @param path the path to set
+   */
+  public void setPath(String path) {
+    this.path = path;
+  }
+
+  /**
+   * Scope.
+   *
+   * @author Duyen Tang
+   * @version $Id: CustomQuery.java Apr 10, 2018 1:58:27 PM tttduyen $
+   *
+   * @since 1.0
+   */
+  public enum Scope {
+    personal,
+    company;
+    
+    /**
+     * Check given value is valid scope or not
+     * 
+     * @param value the given value
+     * @return valid or not
+     */
+    public static boolean isValid(String value) {
+      try {
+        Scope.valueOf(value);
+        
+        return true;
+      } catch (Exception ex) {
+        return false;
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+package com.inet.jobportal.service.employer.jobpost;
+
+import com.inet.jobportal.bo.employer.JobPostBO;
+import com.inet.jobportal.model.employer.JobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.Query;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * JobPostSearchDataservice.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: JobPostSearchDS.java Dec 23, 2018 9:28:01 AM nguyen_dv $
+ *
+ * @since 1.0
+ */
+@Named("jobportaljobpostsearch")
+@XPortalDataService(roles = {"jobportal_employer_jobpost"}, description="Job Portal - Job Post")
+@XPortalPageRequest(uri="jobportal/employer/jobpost/search",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class JobPostSearchDS extends JobPortalAbsractService {
+    @Inject
+    private JobPostBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String organId = firmProfile.getOrganiId();
+        String jobCode = XParamUtils.getString("jobCode", params,"");
+        String uuid = XParamUtils.getString("uuid", params,"");
+        Boolean inactive = XParamUtils.getBoolean("inactive", params);
+
+        Query<JSONDB> query = new QueryImpl<JSONDB>();
+        query.field("organId").equal(organId);
+        if (!jobCode.equals("")) { query.field("code").equal(jobCode); }
+        if (!uuid.equals("")) { query.field("uuid").equal(uuid); }
+        if (inactive != null) { query.field("inactive").equal(inactive); }
+
+        SearchDTO<JobPost> result = bo.search(query);
+        if (result == null)
+            result = new SearchDTO<>();
+
+        return new ObjectWebDataservice<>(result);
+    }
+}

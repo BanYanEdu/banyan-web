@@ -1,0 +1,212 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.cms;
+
+import com.inet.calista.ecommerce.model.ECMItem;
+import com.inet.calista.ecommerce.service.common.ProductContentBase;
+import com.inet.xportal.cms.web.bo.CMSItemBO;
+import com.inet.xportal.cms.web.model.CMSItemModel;
+import com.inet.xportal.nosql.web.data.PairValueDTO;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.data.ViolationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import java.util.Map;
+
+/**
+ * CommerceCMSAbstraction.
+ *
+ * @author Phong Tran
+ * @version $Id: CommerceCMSAbstraction.java Jan 30, 2018 11:09 phongtt $
+ * @since 1.0
+ */
+public abstract class CommerceCMSAbstraction extends ProductContentBase {
+    /**
+     * @param action
+     * @param obj
+     * @param errMsg
+     * @param errField
+     * @param errCode
+     */
+    protected final void validated(final AbstractBaseAction action, final Object obj, String errField, String errCode, String errMsg) {
+        boolean validated = obj != null;
+
+        if (validated) {
+            if (obj instanceof String) {
+                validated = StringUtils.hasLength((String) obj);
+            }
+        }
+
+        if (!validated) {
+            errors(action, errField, errCode, errMsg);
+        }
+    }
+
+    /**
+     * @param action
+     * @param errMsg
+     * @param errField
+     * @param errCode
+     */
+    protected final void errors(final AbstractBaseAction action, String errField, String errCode, String errMsg) {
+        logger.error(errMsg);
+        action.getViolation().add(new ViolationDTO(errField, errField, 1, errCode));
+        throw new WebOSBOException("Bad request!");
+    }
+
+
+    /**
+     * @return
+     */
+    protected final CMSItemBO cmsItemBO() {
+        return productBO.getCmsItemBO();
+    }
+
+    /**
+     * @param cmsfirm
+     * @param summary
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected final int getTabIndex(final CMSFirm cmsfirm,
+                                    final ECMItem summary,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+        String menuID = XParamUtils.getString("code", params, StringUtils.EMPTY_STRING);
+
+        validated(action, menuID, "TABCONTEXT_ID", "TABCONTEXT_ID_MISSED", "Tab Context ID is required.");
+
+        /*
+        // adjust value from tab-group
+        ECMUtil.tabgroupAdjustment(action.getSiteID(),
+                getCMSPrefix(cmsfirm),
+                getLanguage(action, params),
+                summary,
+                false);
+         */
+
+        if (CollectionUtils.isEmpty(summary.getCmsTab().getElements())) {
+            logger.warn("There is no menu context for {} application.", summary.getName());
+            /*action.getViolation().add(new ViolationDTO("MENU_CONTEXT", "MENU_CONTEXT", 1, "MENU_CONTEXT_EMPTY"));
+            throw new WebOSBOException("Bad request!");*/
+        } else {
+            final PairValueDTO tabItem = new PairValueDTO();
+            tabItem.setName(menuID);
+
+            int idx = summary.getCmsTab().getElements().indexOf(tabItem);
+            if (idx < 0) {
+                logger.warn("Tab Context {} is not found.", menuID);
+                /*action.getViolation().add(new ViolationDTO("TABCONTEXT_ID", "TABCONTEXT_ID", 1, "TABCONTEXT_NOT_FOUND"));
+                throw new WebOSBOException("Bad request!");*/
+            }
+
+            return idx;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @param cmsfirm
+     * @param orgItem
+     * @param summary
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected CMSItemModel loadItem(final CMSFirm cmsfirm,
+                                    final OrganizationDTO orgItem,
+                                    final ECMItem summary,
+                                    int idx,
+                                    final AbstractBaseAction action,
+                                    final Map<String, Object> params) throws WebOSBOException {
+        if (idx > 0) {
+            String itemID = summary.getCmsTab().getElements().get(idx).getUuid();
+            if (!StringUtils.hasLength(itemID)) {
+                logger.error("CMS Item is not assigned.");
+                action.getViolation().add(new ViolationDTO("ITEM_ID", "ITEM_ID", 1, "ITEM_NOT_ASSIGNED"));
+                throw new WebOSBOException("Bad request!");
+            }
+
+            final CMSItemModel item = cmsItemBO().loadByOwner(itemID,
+                    action.getSiteID(),
+                    getCMSPrefix(cmsfirm),
+                    XParamUtils.getString("code", params, getOwnerId(orgItem)));
+            if (item == null) {
+                logger.error("CMS Item {} is not found.", itemID);
+                action.getViolation().add(new ViolationDTO("ITEM_ID", "ITEM_ID", 1, "ITEM_NOT_FOUND"));
+                throw new WebOSBOException("Bad request!");
+            }
+
+            return item;
+        }
+
+        return new CMSItemModel();
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.cms.web.dataservice.CMSItemAbstraction#service(com.inet.xportal.cms.web.model.CMSItemModel, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected final WebDataService service(final CMSFirm cmsfirm,
+                                           final OrganizationDTO orgItem,
+                                           final ECMItem summary,
+                                           final AbstractBaseAction action,
+                                           final Map<String, Object> params) throws WebOSBOException {
+        // get tab group index from request
+        int idx = getTabIndex(cmsfirm, summary, action, params);
+
+        // do business of this request
+        return service(loadItem(cmsfirm, orgItem, summary, idx, action, params),
+                cmsfirm,
+                orgItem,
+                summary,
+                idx,
+                action, params);
+    }
+
+    /**
+     * @param cmsItem
+     * @param cmsfirm
+     * @param orgItem
+     * @param summary
+     * @param idx
+     * @param action
+     * @param params
+     * @return
+     * @throws WebOSBOException
+     */
+    protected abstract WebDataService service(final CMSItemModel cmsItem,
+                                              final CMSFirm cmsfirm,
+                                              final OrganizationDTO orgItem,
+                                              final ECMItem summary,
+                                              int idx,
+                                              final AbstractBaseAction action,
+                                              final Map<String, Object> params) throws WebOSBOException;
+}

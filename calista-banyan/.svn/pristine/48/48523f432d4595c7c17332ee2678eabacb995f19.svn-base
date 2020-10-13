@@ -1,0 +1,25 @@
+package com.inet.calista.global.dto;
+
+import com.inet.calista.global.model.GLOrgan;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * OrganizationDto.
+ *
+ * @author thoangtran
+ * @version OrganizationDto 2018 04-16 16:45
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+public class OrganizationDto{
+    private GLOrgan info;
+    private GLOrgan memberOf;
+
+    public OrganizationDto(GLOrgan info) {
+    this.info = info;
+  }
+}

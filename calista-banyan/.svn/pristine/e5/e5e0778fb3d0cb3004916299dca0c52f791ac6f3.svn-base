@@ -1,0 +1,38 @@
+package com.inet.calista.crm.model;
+
+import com.google.common.base.Strings;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Date;
+
+/**
+ * NoSqlModel.
+ *
+ * @author thoangtran
+ * @version NoSqlModel 2018 04-04 13:35
+ */
+@Getter
+@Setter
+public abstract class NoSqlModel<T extends NoSqlModel<T>> extends com.inet.calista.common.model.NoSqlModel<T> {
+  // ~ class properties ===========
+  private long createdDate = new Date().getTime();
+  private String createdBy;
+  private String modifiedBy;
+  private long modifiedDate;
+
+  protected String  uuid;
+  protected String orgCode;
+
+
+  /**
+   * Validate tenant belong
+   * @param orgCode
+   * @return
+   */
+  public boolean isBelongOrg(String orgCode){
+    if(Strings.isNullOrEmpty(this.orgCode) || Strings.isNullOrEmpty(orgCode))
+      return false;
+    return this.orgCode.equals(orgCode);
+  }
+}

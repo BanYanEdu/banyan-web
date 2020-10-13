@@ -1,0 +1,31 @@
+/*****************************************************************
+   Copyright 2017 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto;
+
+/**
+ * Situation.
+ *
+ * @author Duyen Tang
+ * @version $Id: Situation.java Dec 30, 2017 10:53:17 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public interface Situation {
+  String NONE_READ = "none_read";
+  String RECEIVE_IN_DAY = "receive_in_day";
+  String LATE_IN_DAY = "late_in_day";
+  String LATED = "lated";
+}

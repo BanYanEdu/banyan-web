@@ -1,0 +1,64 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.data;
+
+/**
+ * com.inet.xportal.ecommerce.data.
+ *
+ * @author Phong Tran
+ * @version $Id: PmtDTO.java Feb 28,018 12:10 phongtt $
+ * @since 1.0
+ */
+public class PmtDTO {
+    /*
+    private CommercePromotion promotion = new CommercePromotion();
+    private RulePromotion rule = new RulePromotion();
+    private Object bizData;
+
+    public PmtDTO() {
+    }
+
+    public PmtDTO(final CommercePromotion promotion, final RulePromotion rule) {
+        this.promotion = promotion;
+        this.rule = rule;
+    }
+
+    public PmtDTO(final CommercePromotion promotion, final RulePromotion rule, final Object bizData) {
+        this.promotion = promotion;
+        this.rule = rule;
+        this.bizData = bizData;
+    }
+
+    public CommercePromotion getPromotion() {
+        return promotion;
+    }
+
+    public void setPromotion(CommercePromotion promotion) {
+        this.promotion = promotion;
+    }
+
+    public RulePromotion getRule() {
+        return rule;
+    }
+
+    public void setRule(RulePromotion rule) {
+        this.rule = rule;
+    }
+    */
+}

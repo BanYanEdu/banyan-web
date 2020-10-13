@@ -1,0 +1,59 @@
+package com.inet.calista.crm.model.admin.configuration;
+
+import com.inet.calista.common.model.NoSqlModel;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * BusinessHour.
+ *
+ * @author thoangtran
+ * @version BusinessHour 2018 04-06 10:27
+ */
+public class BusinessHour extends NoSqlModel<BusinessHour> {
+
+  private String name;
+  private String timeZone;
+  private boolean main; // default selection
+  private Set<Integer> workingDays = new HashSet<>();
+  private Set<List> hodidays = new HashSet<>();
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public String getTimeZone() {
+    return timeZone;
+  }
+
+  public void setTimeZone(String timeZone) {
+    this.timeZone = timeZone;
+  }
+
+  public boolean isMain() {
+    return main;
+  }
+
+  public void setMain(boolean main) {
+    this.main = main;
+  }
+
+  public Set<Day> getWorkingDays() {
+    return Day.getDays(this.workingDays.iterator());
+  }
+
+  public void setWorkingDays(Set<Integer> workingDays) {
+    this.workingDays = workingDays;
+  }
+
+  @Override
+  protected boolean equals(BusinessHour other) {
+    return false;
+  }
+}

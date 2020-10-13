@@ -1,0 +1,17 @@
+package com.inet.calista.crm.service.constant;
+
+/**
+ * NotificationConstants.
+ *
+ * @author thoangtran
+ * @version NotificationConstants 2018 05-21 14:01
+ */
+public interface NotificationConstants {
+  String NOTIFY_MOBILE_PREFIX = "MOBILE_";
+  String CRM_CONTACT_CONVERSATION_CATEGORY = "CRM_CONTACT_CONV";
+  String CRM_CONTACT_CONVERSATION_TYPE = "CRM_CONTACT";
+
+  String CRM_ORGAN_CONVERSATION_CATEGORY = "CRM_ORGAN_CONV";
+  String CRM_ORGAN_CONVERSATION_TYPE = "CRM_ORGAN";
+
+}

@@ -1,0 +1,65 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.subfirmservice;
+
+import java.util.Map;
+
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.calista.global.model.GlbOrganization;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * 
+ * OrganLoadService.
+ *
+ * @author Hien Nguyen
+ * @version $Id: OrganLoadService.java Feb 11, 2020 2:49:07 PM $
+ *
+ * @since 1.0
+ */
+@Named("glorganprofileload")
+@XPortalDataService(
+        engage = {"pluginfirmprofileview"},
+        description = CalistaConstant.ROLE_COMMUNITY_DESC)
+@XPortalPageRequest(uri = "gl/organ/profile/load",
+        inherit = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class OrganLoadService extends OrganizationAbstraction 
+{
+    /*
+     * (non-Javadoc)
+     * @see com.inet.calista.global.subfirmservice.OrganizationAbstraction#service(java.lang.String, com.inet.calista.global.model.GlbOrganization, com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(String organId,
+                                     final GlbOrganization organ,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException 
+    {
+        return new ObjectWebDataservice<>(organ);
+    }
+}

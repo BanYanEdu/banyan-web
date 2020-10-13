@@ -1,0 +1,110 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.service.task;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.apache.shiro.util.CollectionUtils;
+
+import com.inet.calista.collatask.bo.FollowUpBo;
+import com.inet.calista.collatask.bo.task.TaskBo;
+import com.inet.calista.collatask.constants.ReferenceType;
+import com.inet.calista.collatask.constants.Roles;
+import com.inet.calista.collatask.dto.SearchCriteria;
+import com.inet.calista.collatask.dto.task.FollowedTaskDto;
+import com.inet.calista.collatask.dto.task.QuickSearchDto;
+import com.inet.calista.collatask.model.FollowUp;
+import com.inet.calista.collatask.model.task.Task;
+import com.inet.calista.collatask.model.task.Task.Status;
+import com.inet.calista.collatask.service.SearchService;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+
+/**
+ * QuickSearchService.
+ *
+ * @author Duyen Tang
+ * @version $Id: QuickSearchService.java Jan 2, 2018 9:47:23 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("colla_task_quicksearchservice")
+@XPortalDataService(roles = {Roles.TASK}, description = "")
+@XPortalPageRequest(uri = "colla/tasks/qsearch",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class QuickSearchService extends SearchService<QuickSearchDto> {
+  @Inject
+  private TaskBo taskBo;
+  @Inject
+  private FollowUpBo fuBo;
+  
+  @Override
+  protected Class<QuickSearchDto> getModelClass() {
+    return QuickSearchDto.class;
+  }
+
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+      Map<String, Object> params) throws WebOSBOException {
+    // get criteria
+    SearchCriteria<QuickSearchDto> criteria = getCriteria(site, subFirm, action, params);
+    
+    criteria.getCriteria().setStatuses(Arrays.asList(Status.waiting.name(), Status.processing.name()));
+    
+    // search task from given conditions
+    SearchDTO<Task> result = taskBo.quickSearch(criteria);
+    
+    if (!CollectionUtils.isEmpty(result.getItems())) {
+      // get all task UUID
+      List<String> taskUuids = result.getItems().stream().map(Task::getUuid).collect(Collectors.toList());
+      
+      // find follow up
+      List<FollowUp> fues = fuBo.findBy(criteria.getOrgCode(), criteria.getUsername(), taskUuids, ReferenceType.task.name());
+      
+      if (CollectionUtils.isEmpty(fues)) {
+        return new ObjectWebDataservice<>(result);
+      }
+      
+      Map<String, FollowUp> fuMap = fues.stream().collect(Collectors.toMap(FollowUp::getRefUuid, Function.identity()));
+      
+      List<FollowedTaskDto> items = new ArrayList<>();
+      result.getItems().forEach(item -> {
+        items.add(new FollowedTaskDto(item, fuMap.get(item.getUuid())));
+      });
+      
+      return new ObjectWebDataservice<>(new SearchDTO<>(items, result.getTotal()));
+    }
+    
+    return new ObjectWebDataservice<>(result);
+  }
+
+}

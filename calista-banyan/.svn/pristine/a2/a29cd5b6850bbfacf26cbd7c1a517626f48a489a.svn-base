@@ -1,0 +1,79 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.retail;
+
+import com.inet.calista.pos.common.POSConstant;
+
+/**
+ * com.inet.calista.pos.retail.model.
+ *
+ * @author Phong Tran
+ * @version $Id: POSConstant.java Jan 11, 2019 10:24 phongtt $
+ * @since 1.0
+ */
+public interface POSRetailConstant extends POSConstant {
+    public static final String POS_RETAIL_MODULE = "POS_RETAIL_MODULE";
+
+
+    public static final String ROLE_SALE = "$pos_sale";
+    public static final String ROLE_SALE_DESCRIPTION = "pos.sale.service";
+    public static final String ROLE_SALESMAN = "$pos_salesman";
+    public static final String ROLE_SALESMAN_DESCRIPTION = "pos.salesman.service";
+    public static final String ROLE_PURCHASE = "$pos_purchase";
+    public static final String ROLE_PURCHASE_DESCRIPTION = "pos.purchase.service";
+    public static final String ROLE_STOCK_RECEIPT = "$pos_stock_receipt";
+    public static final String ROLE_STOCK_RECEIPT_DESCRIPTION = "pos.stock.receipt.service";
+    public static final String ROLE_STOCK_ISSUE = "$pos_stock_issue";
+    public static final String ROLE_STOCK_ISSUE_DESCRIPTION = "pos.stock.issue.service";
+    public static final String ROLE_STOCK_TRANSFER = "$pos_stock_transfer";
+    public static final String ROLE_STOCK_TRANSFER_DESCRIPTION = "pos.stock.transfer.service";
+    public static final String ROLE_STOCK_REPORT = "$pos_stock_report";
+    public static final String ROLE_STOCK_REPORT_DESCRIPTION = "pos.stock.report.service";
+
+
+    public static final String COUNTER_PRICELIST = "PRICELIST";
+    public static final String COUNTER_PRICELIST_PREFIX = "PRL";
+
+    public static final String COUNTER_ORDER = "ORDER";
+    public static final String COUNTER_ORDER_PREFIX = "ORD";
+    public static final String COUNTER_BILL = "BILL";
+    public static final String COUNTER_BILL_PREFIX = "BILL";
+    public static final String COUNTER_SALE_RETAIL = "SALERETAIL";
+    public static final String COUNTER_SALE_RETAIL_PREFIX = "SRT";
+    public static final String COUNTER_PURCHASE = "PURCHASE";
+    public static final String COUNTER_PURCHASE_PREFIX = "PUR";
+    public static final String COUNTER_ISSUE = "ISSUE";
+    public static final String COUNTER_ISSUE_PREFIX = "ISS";
+    public static final String COUNTER_RECEIPT = "RECEIPT";
+    public static final String COUNTER_RECEIPT_PREFIX = "REC";
+    public static final String COUNTER_TRANSFER = "TRANSFER";
+    public static final String COUNTER_TRANSFER_PREFIX = "TRS";
+    public static final String COUNTER_SKU = "SKU";
+    public static final String COUNTER_SKU_PREFIX = "SKU";
+    public static final String COUNTER_BARCODE = "EAN13";
+    public static final String COUNTER_BARCODE_PREFIX = "893";
+
+    public static final String PRICELIST_SALE_POS_RETAIL = "SALEPOSRETAIL";
+    public static final String SKU = "SKU";
+    public static final String BARCODE_VN = "893";
+
+
+    public static final String PROMOTION_TYPE = "PROMOTION";
+    public static final String PROMOTION_NAMESPACE_RETAIL = "POSRETAIL";
+}

@@ -1,0 +1,104 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.crm.service.activity.conversation;
+
+
+import com.google.common.base.Strings;
+import com.inet.calista.crm.bo.essentials.EntityBo;
+import com.inet.calista.crm.constant.CommonConstant;
+import com.inet.calista.crm.model.essentials.Entity;
+import com.inet.calista.crm.service.constant.ErrorCode;
+import com.inet.calista.crm.service.constant.NotificationConstants;
+import com.inet.calista.crm.service.constant.Roles;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.Map;
+
+/**
+ * CreateContactConversationService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CreateContactConversationService.java Apr 12, 2018 9:50:59 AM tttduyen $
+ *
+ * @since 1.0
+ */
+@Named("crm_activity_conversation_organization_createservice")
+@XPortalDataService(roles = {Roles.BIZ_COMMON}, description = "")
+@XPortalPageRequest(uri = "crm/activity/conversation/entity/create",
+        inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class CreateOrganizationConversationService extends CreateConversationService {
+  @Inject
+  private EntityBo entityBo;
+  
+  @Override
+  protected WebDataService service(SiteDataModel site, SubFirmProfile subFirm, AbstractBaseAction action,
+                                   Map<String, Object> params) throws WebOSBOException {
+    String uuid = XParamUtils.getString(CommonConstant.UUID, params);
+    if (Strings.isNullOrEmpty(uuid)) {
+      putError(action, CommonConstant.UUID, ErrorCode.must_not_empty);
+      return FAILURE_RESULT;
+    }
+    
+    // load task information
+    Entity contact = entityBo.load(uuid);
+    if (contact == null) {
+      putError(action, CommonConstant.UUID, ErrorCode.invalid);
+      return FAILURE_RESULT;
+    }
+
+    // send notification
+    sendConversation(
+        site.getUuid(),
+        action.getMultilangual(),
+        contact.getOrgCode(),
+        SecurityUtil.getPrincipal(),
+        SecurityUtil.getAlias(),
+        contact.getUuid(),
+        contact.getName(),
+        new ArrayList<>()
+        );
+    
+    return SUCCESS_RESULT;
+  }
+  
+
+  @Override
+  protected String getRefType() {
+    return "contact";
+  }
+  
+  @Override
+  protected String getConversationCategory() {
+    return NotificationConstants.CRM_CONTACT_CONVERSATION_CATEGORY;
+  }
+  
+  @Override
+  protected String getConversationType() {
+    return NotificationConstants.CRM_CONTACT_CONVERSATION_TYPE;
+  }
+}

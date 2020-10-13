@@ -1,0 +1,27 @@
+package com.inet.jobportal.model.candidate;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Working Record
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: WorkingRecord.java Mar 3, 2019 3:03:32 PM nguyen_dv $
+ *
+ * @since 1.0
+ */
+
+@Getter
+@Setter
+public class WorkingRecord {
+    private String uuid;
+    private String jobTitle;
+    private String companyName;
+    private String jobDescription;
+    private Integer monthFrom;
+    private Integer yearFrom;
+    private Integer monthTo;
+    private Integer yearTo;
+    private Boolean asCurrentJob;
+}

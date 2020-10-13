@@ -1,0 +1,43 @@
+package com.inet.calista.global.bo;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import com.inet.calista.common.CalistaConstant;
+import com.inet.xportal.document.bo.AbstractionDocumentBO;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.report.bo.ReportResultAbstraction;
+import com.inet.xportal.web.context.ContentContext;
+
+/**
+ * 
+ * GlbReportResultBO.
+ *
+ * @author Hien Nguyen
+ * @version $Id: GlbReportResultBO.java Feb 13, 2020 9:53:49 AM $
+ *
+ * @since 1.0
+ */
+@Named("GlbReportResultBO")
+public class GlbReportResultBO extends ReportResultAbstraction {
+	@Inject
+	private GlbDocumentBO documentBo;
+
+	/**
+	 * 
+	 * @param businessFacade
+	 */
+	@Inject
+	protected GlbReportResultBO(@ContentContext(context = CalistaConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+		super(businessFacade);
+	}
+
+	/**
+	 * @return the documentBo
+	 */
+	@Override
+	public AbstractionDocumentBO getDocBO() 
+	{
+		return documentBo;
+	}
+}

@@ -1,0 +1,77 @@
+package com.inet.calista.crm.model.common;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * Address.
+ *
+ * @author thoangtran
+ * @version Address 2018 04-05 17:26
+ */
+@Getter
+@Setter
+public class Address {
+  // class  properties ========
+  private String addressLine1;
+  private String addressLine2;
+
+  private String wardCode;
+  private String ward;
+  private String districtCode;
+  private String district;
+  private String cityCode;
+  private String city;
+  private String provinceCode;
+  private String province; // state / region
+  private String countryCode;
+  private String country;
+  private String postalCode; // zip code
+  private long lat;
+  private long lon;
+
+
+  public static Address transform(final JSONObject jsonObject) throws JSONException {
+
+    if (jsonObject == null) return null;
+    final Address address = new Address();
+    if(jsonObject.has("addressLine1")) {
+      address.setAddressLine1(jsonObject.getString("addressLine1"));
+    }
+    if(jsonObject.has("addressLine2")) {
+      address.setAddressLine2(jsonObject.getString("addressLine2"));
+    }
+
+    if(jsonObject.has("districtCode")) {
+      address.setDistrictCode(jsonObject.getString("districtCode"));
+    }
+    if(jsonObject.has("district")) {
+      address.setDistrict(jsonObject.getString("district"));
+    }
+    if(jsonObject.has("provinceCode")) {
+      address.setProvinceCode(jsonObject.getString("provinceCode"));
+    }
+    if(jsonObject.has("province")) {
+      address.setProvince(jsonObject.getString("province"));
+    }
+    if(jsonObject.has("cityCode")) {
+      address.setCityCode(jsonObject.getString("cityCode"));
+    }
+    if(jsonObject.has("city")) {
+      address.setCity(jsonObject.getString("city"));
+    }
+    if(jsonObject.has("countryCode")) {
+      address.setCountryCode(jsonObject.getString("countryCode"));
+    }
+    if(jsonObject.has("country")) {
+      address.setCountry(jsonObject.getString("country"));
+    }
+
+    if(jsonObject.has("postalCode")) {
+      address.setPostalCode(jsonObject.getString("postalCode"));
+    }
+    return address;
+  }
+}

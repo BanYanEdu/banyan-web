@@ -1,0 +1,34 @@
+package com.inet.calista.hrm.bo;
+
+import com.inet.calista.hrm.model.Node;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+/**
+ * NodeBo.
+ *
+ * @author thoangtran
+ * @version NodeBo 2018 10-08 10:46
+ */
+@Named("hrm_adm_nodeBo")
+public class NodeBo extends HRMBo<Node> implements BeanInitiateInvoke {
+    @Inject
+    protected NodeBo(@ContentContext(context = CONTENT_CONTEXT_NAME) MagicContentBF contentBf) {
+        super(contentBf, "hrm_adm_node");
+    }
+
+    @Override
+    protected Class<Node> getClassConvetor() {
+        return Node.class;
+    }
+
+    @Override
+    public void init() {
+        ensureIndex("code");
+        ensureIndex("name");
+    }
+}

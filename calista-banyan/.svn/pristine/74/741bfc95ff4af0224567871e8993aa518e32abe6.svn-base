@@ -1,0 +1,69 @@
+/*
+ * ****************************************************************
+ *    Copyright (c) 2018 by (duytan@inetcloud.vn)
+ *
+ *    Licensed under the iNet Solutions Corp.,;
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.inetcloud.vn/licenses
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *  ****************************************************************
+ */
+
+package com.inet.jobportal.service.candidate.saved_jobpost;
+
+import com.inet.jobportal.bo.candidate.SavedJobPostBO;
+import com.inet.jobportal.model.candidate.SavedJobPost;
+import com.inet.jobportal.service.JobPortalAbsractService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * SavedJobPostCreateDS.
+ *
+ * @author Nguyen Duy Tan
+ * @version $Id: SavedJobPostCreateDS.java Jan 10, 2019 11:50:38 AM nguyen_dv $
+ * @since 1.0
+ */
+@Named("jobportalsavedjobpostcreate")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description = "SavedJobPost Create service")
+@XPortalPageRequest(uri = "jobportal/candidate/savedjobpost/create",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SavedJobPostCreateDS extends JobPortalAbsractService {
+    @Inject
+    private SavedJobPostBO bo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        String username = SecurityUtil.getPrincipal();
+        SavedJobPost item = action.getModel(SavedJobPost.class);
+
+        if (username.equals(item.getUsername())) {
+            bo.add(item);
+            return new ObjectWebDataservice<>(item);
+        } else {
+            // TO BE MODIFIED
+            return new ObjectWebDataservice<>(item);
+        }
+    }
+}

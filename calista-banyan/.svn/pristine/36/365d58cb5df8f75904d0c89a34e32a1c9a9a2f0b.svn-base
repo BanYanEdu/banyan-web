@@ -1,0 +1,31 @@
+package com.inet.calista.crm.service.constant;
+
+/**
+ * ErrorCode.
+ *
+ * @author thoangtran
+ * @version ErrorCode 2018 04-04 16:26
+ */
+public enum ErrorCode {
+  service_error,
+  alias_do_not_match_for_login_user,
+  firm_refcode_do_not_math_for_login_user,
+  tenant_do_not_math_for_login_user,
+  firm_refcode_do_not_any_unit_belong,
+  not_belong_tenant,
+  /**
+   * Common error code
+   */
+  must_not_null,
+  must_not_empty,
+  invalid,
+  not_existed,
+  existed,
+  relation_existed,
+  must_be_greater_than_zero,
+  must_post_method,
+  permission_denied,
+  not_modify_allow,
+  not_delete_allow,
+
+}

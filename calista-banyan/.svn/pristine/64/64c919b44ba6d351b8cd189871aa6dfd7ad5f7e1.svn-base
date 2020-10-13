@@ -1,0 +1,64 @@
+package com.inet.calista.global.service.contact.profile;
+
+import com.inet.calista.common.utils.JsonUtils;
+import com.inet.calista.global.bo.contact.ContactInfoBo;
+import com.inet.calista.global.constant.CommonConstant;
+import com.inet.calista.global.model.common.Address;
+import com.inet.calista.global.model.contact.ContactInfo;
+import com.inet.calista.global.service.contact.UpdateService;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * UpdateService.
+ *
+ * @author thoangtran
+ * @version UpdateService 2018 04-14 11:38
+ */
+@Named("glcontactprofileupdate")
+@XPortalDataService(roles = {WebConstant.ROLE_USER}, description = "User role")
+@XPortalPageRequest(uri = "gl/contact/profile/update", transaction = true, inherit = true, result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+@Slf4j
+public class UpdateProfileService extends UpdateService {
+    @Inject
+    private ContactInfoBo contactInfoBo;
+
+    @Override
+    protected WebDataService service(final SiteDataModel site, final SubFirmProfile firmProfile, final AbstractBaseAction action, final Map<String, Object> params) throws WebOSBOException {
+        ContactInfo infoNew = action.getModel(ContactInfo.class);
+        infoNew.setUserCode(SecurityUtil.getPrincipal());
+
+        try {
+            if (params.containsKey(CommonConstant.ADDRESS_STR)) {
+                infoNew.setAddress(Address.transform(JsonUtils.toJsonObject(XParamUtils.getString(CommonConstant.ADDRESS_STR, params))));
+            }
+        } catch (Throwable ex) {
+            logger.error("address transform fail {}", ex);
+        }
+
+        ContactInfo contactInfo = contactInfoBo.loadByUserCode(infoNew.getUserCode());
+        if (contactInfo != null) {
+            infoNew.setUuid(contactInfo.getUuid());
+            infoNew.setAvatar(contactInfo.getAvatar());
+            contactInfoBo.update(infoNew.getUuid(), infoNew);
+        } else {
+            infoNew.setUuid(contactInfoBo.add(infoNew));
+        }
+
+        return new ObjectWebDataservice<>(infoNew);
+    }
+}

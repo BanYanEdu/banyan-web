@@ -1,0 +1,58 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.global.model;
+
+import org.apache.shiro.util.StringUtils;
+
+import com.inet.xportal.nosql.web.model.FileInfoModel;
+import com.inet.xportal.web.util.StringUUID;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * com.inet.calista.global.model.
+ *
+ * @author Phong Tran
+ * @version $Id: GLBinary.java Nov 05, 2018 16:51 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class GlbBinary extends FileInfoModel
+{
+    private String code = StringUUID.uniqueToken();
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.data.FileMeta#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj != null && obj instanceof GlbBinary)
+        {
+            if (StringUtils.hasLength(getCode())) {
+                if (getCode().equals(((GlbBinary) obj).getCode())) {
+                    return true;
+                }
+            }
+        }
+
+        return super.equals(obj);
+    }
+}

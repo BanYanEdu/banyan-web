@@ -1,0 +1,152 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.product;
+
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.platform.pos.service.product.
+ *
+ * @author Phong Tran
+ * @version $Id: BarcodeCreateService.java Jun 08, 2018 14:41 phongtt $
+ * @since 1.0
+ */
+@Named("posbarcodecreate")
+@XPortalDataService(roles = {POSConstant.ROLE_PRODUCT}, description = POSConstant.ROLE_PRODUCT_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/barcode/create",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class BarcodeCreateService extends POSProductAbstraction {
+
+    /*@Inject
+    private POSBarcodeBO barcodeBO;
+
+    @Inject
+    private POSScanCodeBO scanCodeBO;
+
+    @Inject
+    private ERPCounterBO counterBO;*/
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+        String outletId = StringUtils.EMPTY_STRING;
+
+        String prodId = XParamUtils.getString("prodId", params, StringUtils.EMPTY_STRING);
+
+        /*final POSItem existed = barcodeBO.getProductBO().loadById(organId, prodId);
+        if (existed == null) {
+            logger.error("product {} is not found.", prodId);
+            action.fieldError("PRODUCT", "PRODUCT_NOT_FOUND");
+        }
+
+        final POSBarcode barcode = new POSBarcode();
+        barcode.setProdCode(existed.getCode());
+        barcode.setOrganId(organId);
+
+        final JSONObject properties = new JSONObject();
+        for (String prop : params.keySet()) {
+            if (prop.startsWith("_")) {
+                properties.put(prop.substring(1), params.get(prop));
+            }
+        }
+        barcode.setProperties(properties);
+
+        if (CollectionUtils.isEmpty(barcode.getProperties().keySet())) {
+            logger.error("barcode properties is required!");
+            action.fieldError("BARCODE", "PROPERTIES_NOT_FOUND");
+        }
+
+        if (barcodeBO.propExists(organId, outletId, barcode.getProdCode(), params)) {
+            logger.error("barcode properties is duplicate!");
+            action.fieldError("BARCODE", "PROPERTIES_IS_DUPLICATE");
+        }
+
+        String sku = counterBO.builder(organId, POSConstant.COUNTER_SKU);
+        long num = 0;
+        boolean skuCounter = false;
+        if (StringUtils.hasLength(sku)) {
+            skuCounter = true;
+        } else {
+            num = barcodeBO.skuCount(organId, outletId) + 1;
+            sku = POSConstant.SKU + String.format("%09d", num);
+        }
+
+        while (barcodeBO.skuExists(organId, outletId, sku)) {
+            logger.debug("found sku {}.", sku);
+
+            if (skuCounter) {
+                counterBO.increase(organId, POSConstant.COUNTER_SKU);
+                sku = counterBO.builder(organId, POSConstant.COUNTER_SKU);
+            } else {
+                num += 1;
+                sku = POSConstant.SKU + String.format("%09d", num);
+            }
+        }
+
+        barcode.setSku(sku);
+        barcode.setUuid(barcodeBO.add(barcode));
+
+        if (skuCounter) {
+            counterBO.increase(organId, POSConstant.COUNTER_SKU);
+        }
+
+        existed.getCodeSKU().add(sku);
+        productBO.update(existed.getUuid(), existed);
+        scanCodeBO.scanCodeInit(organId, outletId, barcode.getProdCode());
+
+        String ean13 = counterBO.builder(organId, POSConstant.COUNTER_BARCODE);
+        if (StringUtils.hasLength(ean13)) {
+            while (barcodeBO.codeExists(organId, outletId, ean13)) {
+                logger.debug("found ean13 {}.", ean13);
+
+                counterBO.increase(organId, POSConstant.COUNTER_BARCODE);
+                ean13 = counterBO.builder(organId, POSConstant.COUNTER_BARCODE);
+            }
+
+            if (!barcode.getCodes().contains(ean13)) {
+                barcode.getCodes().add(ean13);
+                barcodeBO.update(barcode.getUuid(), barcode);
+            }
+        }
+
+        return new ObjectWebDataservice<>(barcode);*/
+
+        return new ObjectWebDataservice<>("FAIL");
+    }
+
+}

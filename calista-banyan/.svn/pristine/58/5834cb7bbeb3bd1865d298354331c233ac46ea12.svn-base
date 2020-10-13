@@ -1,0 +1,36 @@
+package com.inet.calista.crm.model.activity;
+
+import com.inet.calista.crm.model.NoSqlModel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Invitation.
+ *
+ * @author thoangtran
+ * @version Invitation 2018 04-06 14:55
+ */
+@Getter
+@Setter
+@EqualsAndHashCode
+public class Invitation extends NoSqlModel<Invitation> {
+  //~ class properties ===============================
+  private String eventId;
+  private String type = Type.user.name();
+  private String referId;
+  private String status = InvitationStatus.invite_not_sent.name();
+
+  private String createdBy;
+  private long createdDate  = -1;
+
+  @Override
+  protected boolean equals(Invitation other) {
+    return false;
+  }
+
+  public enum Type {
+    contact,
+    user,
+  }
+}

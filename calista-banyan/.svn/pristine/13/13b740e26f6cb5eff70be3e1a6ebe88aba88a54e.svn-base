@@ -1,0 +1,132 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.model;
+
+import com.inet.calista.ecommerce.data.ECMModule;
+import com.inet.calista.ecommerce.data.ECMSaleItem;
+import com.inet.calista.erp.book.model.ERPCashBook;
+import com.inet.calista.erp.book.model.ERPDiaryBook;
+import com.inet.calista.erp.book.model.ERPStockBook;
+import com.inet.calista.erp.sale.model.ERPSaleInvoice;
+import com.inet.xportal.web.exception.WebOSBOException;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.shiro.util.CollectionUtils;
+
+import java.util.List;
+
+/**
+ * com.inet.xportal.ecommerce.model.
+ *
+ * @author Phong Tran
+ * @version $Id: ECMSaleWeb.java Sep 20, 2018 17:03 phongtt $
+ * @since 1.0
+ */
+@Setter
+@Getter
+public class ECMSaleWeb extends ERPSaleInvoice<ECMSaleItem> {
+    private boolean reqExportInvoice;
+
+    private float totalPaidAmount;
+    private float totalPaidAmountEx;
+
+    private float totalRemainAmount;
+    private float totalRemainAmountEx;
+
+
+    /**
+     * @param data
+     */
+    public ECMSaleWeb copyData(final ECMSaleWeb data) {
+        this.setUuid(data.getUuid());
+        this.setOrganId(data.getOrganId());
+        this.setOutletId(data.getOutletId());
+
+        this.setModule(data.getModule());
+        this.setType(data.getType());
+        this.setCode(data.getCode());
+        this.setStatus(data.getStatus());
+
+        return this;
+    }
+
+    public ECMSaleWeb calc() {
+        super.calc();
+
+        this.setTotalPaidAmountEx(this.getTotalPaidAmount() * this.getRate());
+
+        //Calculator Remain amount
+        this.setTotalRemainAmount(this.getTotalPaidAmount() - this.getTotalPayment());
+        this.setTotalRemainAmountEx(this.getTotalRemainAmount() * this.getRate());
+
+        return this;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPStockBook> stockBooks() throws WebOSBOException {
+        final List<ERPStockBook> books = super.stockBooks();
+
+        if (!CollectionUtils.isEmpty(books)) {
+            for (ERPStockBook book : books) {
+                book.setOutletId(getOutletId());
+                book.setModule(ECMModule.SALE_ECM.name());
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<ERPDiaryBook> diaryBooks() throws WebOSBOException {
+        final List<ERPDiaryBook> books = super.diaryBooks();
+
+        if (!CollectionUtils.isEmpty(books)) {
+            for (ERPDiaryBook book : books) {
+                book.setOutletId(getOutletId());
+                book.setModule(ECMModule.SALE_ECM.name());
+
+                book.setTotalPaidAmount(getTotalPaidAmount());
+                book.setTotalPaidAmountEx(getTotalPaidAmountEx());
+
+                book.setTotalRemainAmount(getTotalRemainAmount());
+                book.setTotalRemainAmountEx(getTotalRemainAmountEx());
+            }
+        }
+
+        return books;
+    }
+
+    /**
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPCashBook cashBook() throws WebOSBOException {
+        final ERPCashBook book = super.cashBook();
+
+        book.setOutletId(getOutletId());
+        book.setModule(ECMModule.SALE_ECM.name());
+        return book;
+    }
+}

@@ -1,0 +1,168 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.pos.common.service.shift;
+
+import com.inet.calista.erp.common.api.ERPFactoryManager;
+import com.inet.calista.erp.system.bo.ERPCounterBO;
+import com.inet.calista.pos.common.POSConstant;
+import com.inet.calista.pos.common.bo.POSShiftBO;
+import com.inet.calista.pos.common.data.POSShiftItem;
+import com.inet.calista.pos.common.model.POSShift;
+import com.inet.calista.pos.common.service.common.POSAbstraction;
+import com.inet.xportal.nosql.web.model.SiteDataModel;
+import com.inet.xportal.nosql.web.model.SubFirmProfile;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.JSONUtils;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * com.inet.platform.pos.service.shift.
+ *
+ * @author Phong Tran
+ * @version $Id: ShiftOpenService.java May 08, 2018 10:44 phongtt $
+ * @since 1.0
+ */
+@Named("posshiftopen")
+@XPortalDataService(roles = {POSConstant.ROLE_CASHIER}, description = POSConstant.ROLE_CASHIER_DESCRIPTION)
+@XPortalPageRequest(uri = "pos/shift/open",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class ShiftOpenService extends POSAbstraction {
+    @Inject
+    private POSShiftBO shiftBO;
+
+    @Inject
+    private ERPCounterBO counterBO;
+
+    @Override
+    protected WebDataService service(final SiteDataModel siteData,
+                                     final SubFirmProfile subFirm,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String organId = getOrganId(siteData, subFirm);
+
+        final POSShift shift = shiftBO.loadOpenShift(organId, SecurityUtil.getPrincipal());
+        if (shift != null) {
+            logger.debug("User {} found openShift {}", SecurityUtil.getPrincipal(), shift);
+            return new ObjectWebDataservice<>(shift);
+        }
+
+        final POSShift data = action.getModel(POSShift.class);
+        data.setOrganId(organId);
+
+        boolean isDuplicate, useCounter;
+        String counter = StringUtils.EMPTY_STRING, code = data.getCode();
+        do {
+            isDuplicate = false;
+
+            counter = ERPFactoryManager.INSTANCE
+                    .counter()
+                    .builder(organId, POSConstant.COUNTER_SHIFT);
+
+            if (StringUtils.hasLength(counter)) {
+                useCounter = true;
+                data.setCode(counter);
+            } else {
+                useCounter = false;
+                data.setCode(code);
+            }
+
+            if (!StringUtils.hasLength(data.getCode())) {
+                logger.error("code is missed !.");
+                action.fieldError("SHIFT", "CODE_IS_MISSED");
+            }
+
+            final POSShift item = shiftBO.loadByCode(organId, data.getCode());
+            logger.debug("found item {} with code {}", item, data.getCode());
+
+            if (item != null) {
+                if (useCounter) {
+                    isDuplicate = true;
+                    ERPFactoryManager.INSTANCE
+                            .counter()
+                            .increase(organId, POSConstant.COUNTER_SHIFT);
+                } else {
+                    logger.error("Shift {} is duplicate.", data.getCode());
+                    action.fieldError("SHIFT", "CODE_IS_DUPLICATE");
+                }
+            }
+        } while (isDuplicate);
+
+        data.setOpenEmpId(SecurityUtil.getPrincipal());
+        data.setOpenEmpName(SecurityUtil.getAlias());
+        data.setOpenTime(XParamUtils.getLong("openTime", params, System.currentTimeMillis()));
+
+        String shiftItems = XParamUtils.getString("shiftItems", params, StringUtils.EMPTY_STRING);
+        if (StringUtils.hasLength(shiftItems)) {
+            final JSONObject json = JSONObject.fromObject("{items:" + shiftItems + "}");
+            final Object items = json.get("items");
+
+            if (items instanceof JSONArray) {
+                int size = ((JSONArray) items).size();
+                for (int index = 0; index < size; index++) {
+                    try {
+                        final POSShiftItem shiftItem = JSONUtils.magicObject(((JSONArray) items).getJSONObject(index), POSShiftItem.class);
+                        if (!shiftItem.invalid()) {
+                            data.getItems().add(shiftItem);
+                        }
+                    } catch (Throwable ex) {
+                        logger.error("magic object shift item index {} fail!", index, ex);
+                    }
+                }
+            }
+        } else {
+            final POSShiftItem shiftItem = action.getModel(POSShiftItem.class);
+            shiftItem.setUuid(UUID.randomUUID().toString());
+            if (!shiftItem.invalid()) {
+                data.getItems().add(shiftItem);
+            }
+        }
+
+        if (!CollectionUtils.isEmpty(data.getItems())) {
+            data.calc();
+        }
+
+        data.setUuid(shiftBO.add(data));
+
+        if (useCounter) {
+            ERPFactoryManager.INSTANCE
+                    .counter()
+                    .increase(organId, POSConstant.COUNTER_SHIFT);
+        }
+
+        return new ObjectWebDataservice<>(data);
+    }
+}

@@ -1,0 +1,124 @@
+package com.inet.calista.hrm.service.exception;
+
+import com.inet.xportal.web.exception.WebOSBOException;
+
+import java.io.IOException;
+
+/**
+ * iKeplerBussinessException.
+ *
+ * @author thoangtd
+ * @version $$Id: iKeplerBussinessException 6/2/16 10:19 AM thoangtd $$
+ * @since 1.0
+ */
+public class HRMBusinessException extends WebOSBOException {
+
+    /* the given new line. */
+    protected static final String NL = System.getProperty("line.separator");
+    /**
+     * The given serial version UID
+     */
+    private static final long serialVersionUID = 4346025681594705502L;
+
+
+    /**
+     * Create {@link HRMBusinessException} instance
+     *
+     * @param message the given message
+     */
+    public HRMBusinessException(String message) {
+        super(message);
+    }
+
+    /**
+     * Create {@link HRMBusinessException} instance
+     *
+     * @param message   the given message
+     * @param throwable the given {@link Throwable}
+     */
+    public HRMBusinessException(String message, Throwable throwable) {
+        super(message, throwable);
+    }
+
+    @Override
+    public String toString() {
+        // transform builder.
+        StringBuilder builder = new StringBuilder();
+
+
+        // build exception value.
+        for (Throwable e = this; e != null; e = e.getCause()) {
+            builder.append(NL);
+
+
+            builder.append(e == this ? "Exception:" : "Caused By:").append(NL)
+                    .append("----------").append(NL);
+
+
+            // check exception is error.
+            if (e instanceof AssertionError
+                    || e instanceof IllegalArgumentException
+                    || e instanceof IllegalStateException
+                    || e instanceof NullPointerException) {
+                builder.append("          **************************************************************").append(NL)
+                        .append("          **                                                          **").append(NL)
+                        .append("          **   PLEASE SEND THIS STACK TRACE TO SUPPORT@INETCLOUD.VN   **").append(NL)
+                        .append("          **           HELP US FIX BUGS OR IMPROVE PRODUCT            **").append(NL)
+                        .append("          **                                                          **").append(NL)
+                        .append("          **************************************************************").append(NL);
+            }
+
+
+            // append exception information.
+            try {
+                appendExceptionTo(builder, e);
+            } catch (IOException ioex) {
+                throw new AssertionError(ioex);
+            }
+
+
+            // show stack trace information.
+            StackTraceElement[] elements = e.getStackTrace();
+            if (elements != null && elements.length > 0) {
+                builder.append(">>> Stack trace: ").append(NL);
+
+
+                for (StackTraceElement element : elements) {
+                    builder.append(">>>        at ")
+                            .append(element.getClassName())
+                            .append('.')
+                            .append(element.getMethodName())
+                            .append('(')
+                            .append(element.getFileName())
+                            .append(':')
+                            .append(Math.max(1, element.getLineNumber()))
+                            .append(')')
+                            .append(NL);
+                }
+            }
+        }
+
+
+        // return document.
+        return builder.toString();
+    }
+
+    /**
+     * Appends the exception information to appendable object.
+     *
+     * @param out the specified appendable to append exception information to.
+     * @throws IOException if
+     */
+    protected void appendExceptionTo(Appendable out, Throwable e) throws IOException {
+        out.append("          **************************************************************").append(NL)
+                .append("          **************************************************************").append(NL)
+                .append("          ****                                                      ****").append(NL)
+                .append("          ****   THIS EXCEPTION THROWS BY CRM v1.0 APPLICATION  ****").append(NL)
+                .append("          ****                                                      ****").append(NL)
+                .append("          **************************************************************").append(NL)
+                .append("          **************************************************************").append(NL);
+
+        out.append(">>> Type: ").append(e.getClass().getName()).append(NL);
+        out.append(">>> Message: ").append(e.getMessage()).append(NL);
+    }
+}

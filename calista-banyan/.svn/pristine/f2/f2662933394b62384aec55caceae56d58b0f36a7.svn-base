@@ -1,0 +1,126 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.crm.service.activity.conversation;
+
+import com.inet.calista.collatask.constants.ConversationConstants;
+import com.inet.calista.crm.service.CRMAbstractService;
+import com.inet.calista.crm.service.constant.NotificationConstants;
+import com.inet.xportal.cloud.CloudCfgConstant;
+import com.inet.xportal.cloud.bo.ActivityNotifyBO;
+import com.inet.xportal.nosql.web.bo.VMLetterTemplateBO;
+import com.inet.xportal.web.context.WebContext;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * CreateConversationService.
+ *
+ * @author Duyen Tang
+ * @version $Id: CreateConversationService.java Apr 12, 2018 9:49:00 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public abstract class CreateConversationService extends CRMAbstractService {
+
+  /**
+   * Return {@link ActivityNotifyBO} instance
+   * 
+   * @return the given {@link ActivityNotifyBO} instance
+   */
+  protected VMLetterTemplateBO getVMLetterTemplateBo() {
+     return WebContext.INSTANCE.cache().getBean(VMLetterTemplateBO.class);
+  }
+  
+
+  /**
+   * Send conversation with given informations
+   * 
+   * @param siteUuid the given site UUID
+   * @param language the given language
+   * @param orgCode the given entity code
+   * @param authUname the given author user name
+   * @param authName the given author name
+   * @param uuid the given UUID
+   * @param name the name of conversation
+   * @param receivers the given receivers
+   */
+  protected void sendConversation(String siteUuid, String language, 
+      String orgCode, String authUname, String authName, String uuid, String name, List<String> receivers) {
+    // create parameters
+    final Map<String, String> convParams = new HashMap<String, String>();
+    convParams.put("uuid", uuid);
+    convParams.put(CloudCfgConstant.SOCIAL_CODE, uuid);
+    convParams.put(CloudCfgConstant.SOCIAL_SUBJECT, name);
+    convParams.put(CloudCfgConstant.SOCIAL_ORGID, orgCode);
+    convParams.put(CloudCfgConstant.SOCIAL_TYPE, "TASKNOTIFY");
+    convParams.put("referenceType", getRefType());
+    
+    // create variables
+    final Map<String, Object> variables = new HashMap<String, Object>();
+    variables.put("organId", orgCode);
+    variables.put("subject", name);
+    if(receivers == null || receivers.size() == 0) {
+      if(receivers == null)
+        receivers = new ArrayList<>();
+      receivers.add("COMPANY");
+    }
+    // post notify
+     /*getVMLetterTemplateBo().pushNotify(
+        siteUuid, orgCode, language, getConversationCategory(), variables, 
+        uuid, WebContext.INSTANCE.cache().getApplication(), getConversationType(),
+        authUname, authName, receivers, createNotifyUrlMap(), convParams);*/
+    getVMLetterTemplateBo().pushNotify(
+        uuid, authUname,orgCode,receivers, null);
+  }
+  
+  /**
+   * Create notify URL map
+   * 
+   * @return the given map of notify URL
+   */
+  protected Map<String, String> createNotifyUrlMap() {
+    Map<String, String> notifyUrlMap = new HashMap<>();
+    notifyUrlMap.put(CloudCfgConstant.SHORTCUT_URL, ConversationConstants.COLLATASK_CONVERSATION);
+    notifyUrlMap.put(CloudCfgConstant.MOBILE_SHORTCUT_URL,
+        NotificationConstants.NOTIFY_MOBILE_PREFIX + ConversationConstants.COLLATASK_CONVERSATION);
+    
+    return notifyUrlMap;
+  }
+
+  /**
+   * Return the reference type
+   * 
+   * @return the reference type
+   */
+  protected abstract String getRefType();
+  
+  /**
+   * Return the conversation category
+   * 
+   * @return the conversation category
+   */
+  protected abstract String getConversationCategory();
+  
+  /**
+   * Return the conversation type
+   * 
+   * @return the conversation type
+   */
+  protected abstract String getConversationType();
+}

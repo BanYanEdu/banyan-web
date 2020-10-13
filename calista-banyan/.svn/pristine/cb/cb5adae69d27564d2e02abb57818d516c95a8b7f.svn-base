@@ -1,0 +1,107 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2018 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.book.model;
+
+import com.inet.calista.erp.common.model.ERPBase;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.Calendar;
+
+/**
+ * com.inet.xportal.erp.book.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPDiaryBook.java Jul 07, 2018 11:32 phongtt $
+ * @since 1.0
+ */
+@Getter
+@Setter
+public class ERPDiaryBook extends ERPBase {
+    private String outletId;
+
+    //information Voucher
+    //ex: SALE-RETAIL, BILL-COFFEE, PURCHASE
+    private String module;
+    private String voucherCode;
+    private long voucherDate;
+    //analysis
+    private int year;
+    private int month;
+    private int week;
+    private int day;
+    private int hour;
+    private int minute;
+    private int second;
+    private String employeeId;
+    private String employeeName;
+    private String salesmanId;
+    private String salesmanName;
+    private String customerId;
+    private String customerName;
+    private String supplierId;
+    private String supplierName;
+    private String storageId;
+    private String storageName;
+    //Currency
+    private String currency;
+    private float rate;
+    private float totalAmount;
+    private float totalAmountEx;
+    private float totalDiscAmount;
+    private float totalDiscAmountEx;
+    private float totalVatAmount;
+    private float totalVatAmountEx;
+    private float totalPaymentAmount;
+    private float totalPaymentAmountEx;
+    private float totalPaidAmount;
+    private float totalPaidAmountEx;
+    private float totalRemainAmount;
+    private float totalRemainAmountEx;
+    //information product
+    private String prodId;
+    private String prodCode;
+    private String prodName;
+    private String scanCode;
+    private String sku;
+    private String group;
+    private String unit;
+
+    private float qty;
+    private float price;
+    private float discAmount;
+    private float vatAmount;
+    private float amount;
+
+    public void setVoucherDate(long voucherDate) {
+        this.voucherDate = voucherDate;
+        if (voucherDate > 0) {
+            final Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(voucherDate);
+
+            setYear(cal.get(Calendar.YEAR));
+            setMonth(cal.get(Calendar.MONTH) + 1);
+            setWeek(cal.get(Calendar.WEEK_OF_YEAR));
+            setDay(cal.get(Calendar.DAY_OF_MONTH));
+            setHour(cal.get(Calendar.HOUR));
+            setMinute(cal.get(Calendar.MINUTE));
+            setSecond(cal.get(Calendar.SECOND));
+        }
+    }
+}

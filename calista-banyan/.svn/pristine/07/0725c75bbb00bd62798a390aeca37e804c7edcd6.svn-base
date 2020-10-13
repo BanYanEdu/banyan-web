@@ -1,0 +1,132 @@
+/*****************************************************************
+   Copyright 2018 by Duyen Tang (tttduyen@inetcloud.vn)
+
+   Licensed under the iNet Solutions Corp.,;
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.inetcloud.vn/licenses
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ *****************************************************************/
+package com.inet.calista.collatask.dto.task;
+
+import java.util.List;
+
+import com.inet.calista.collatask.model.Attachment;
+import com.inet.calista.collatask.model.FollowUp;
+import com.inet.calista.collatask.model.project.Project;
+import com.inet.calista.collatask.model.task.Task;
+
+/**
+ * ViewDto.
+ *
+ * @author Duyen Tang
+ * @version $Id: ViewDto.java Jan 25, 2018 10:25:22 AM tttduyen $
+ *
+ * @since 1.0
+ */
+public class ViewDto {
+  private Task task;
+  private List<Attachment> attachments;
+  private FollowUp followUp;
+  private Project project;
+  private List<Task> children;
+
+  /**
+   * Create {@link ViewDto} instance from given information
+   * 
+   * @param task the given {@link Task} information
+   * @param attachments the given list of {@link Attachment}
+   */
+  public ViewDto(Task task, List<Attachment> attachments) {
+    this.task = task;
+    this.attachments = attachments;
+  }
+  
+  /**
+   * Create {@link ViewDto} instance from given information
+   * 
+   * @param task the given {@link Task} information
+   * @param attachments the given list of {@link Attachment}
+   * @param followUp the given {@link FollowUp}
+   * @param project the given project information
+   * @param children the given children
+   */
+  public ViewDto(Task task, List<Attachment> attachments, FollowUp followUp, Project project, List<Task> children) {
+    this.task = task;
+    this.attachments = attachments;
+    this.followUp = followUp;
+    this.project = project;
+    this.children = children;
+  }
+
+  /**
+   * @return the task
+   */
+  public Task getTask() {
+    return task;
+  }
+
+  /**
+   * @param task the task to set
+   */
+  public void setTask(Task task) {
+    this.task = task;
+  }
+
+  /**
+   * @return the attachments
+   */
+  public List<Attachment> getAttachments() {
+    return attachments;
+  }
+
+  /**
+   * @param attachments the attachments to set
+   */
+  public void setAttachments(List<Attachment> attachments) {
+    this.attachments = attachments;
+  }
+
+  
+  public FollowUp getFollowUp() {
+	return followUp;
+}
+
+public void setFollowUp(FollowUp followUp) {
+	this.followUp = followUp;
+}
+
+/**
+   * @return the project
+   */
+  public Project getProject() {
+    return project;
+  }
+
+  /**
+   * @param project the project to set
+   */
+  public void setProject(Project project) {
+    this.project = project;
+  }
+
+  /**
+   * @return the children
+   */
+  public List<Task> getChildren() {
+    return children;
+  }
+
+  /**
+   * @param children the children to set
+   */
+  public void setChildren(List<Task> children) {
+    this.children = children;
+  }
+}

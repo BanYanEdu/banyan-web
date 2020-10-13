@@ -1,0 +1,145 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.ecommerce.service.saleecm;
+
+import com.inet.calista.ecommerce.ECMConstant;
+import com.inet.calista.ecommerce.bo.ECMOrderBO;
+import com.inet.calista.ecommerce.bo.ECMSaleWebBO;
+import com.inet.calista.ecommerce.data.ECMOrderItem;
+import com.inet.calista.ecommerce.data.ECMOrderStatus;
+import com.inet.calista.ecommerce.data.ECMSaleItem;
+import com.inet.calista.ecommerce.model.ECMOrder;
+import com.inet.calista.ecommerce.model.ECMSaleWeb;
+import com.inet.calista.erp.ERPConstant;
+import com.inet.xportal.sphere.model.CMSFirm;
+import com.inet.xportal.web.WebConstant;
+import com.inet.xportal.web.action.AbstractBaseAction;
+import com.inet.xportal.web.annotation.XPortalDataService;
+import com.inet.xportal.web.annotation.XPortalPageRequest;
+import com.inet.xportal.web.data.OrganizationDTO;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.ObjectWebDataservice;
+import com.inet.xportal.web.interfaces.WebDataService;
+import com.inet.xportal.web.util.SecurityUtil;
+import com.inet.xportal.web.util.XParamUtils;
+import org.apache.shiro.util.StringUtils;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Map;
+
+/**
+ * com.inet.xportal.ecommerce.subfrmservice.saleecm.
+ *
+ * @author Phong Tran
+ * @version $Id: SaleOrderCreateService.java Oct 04, 2018 17:02 phongtt $
+ * @since 1.0
+ */
+@Named("commercesaleordercreate")
+@XPortalDataService(roles = {ECMConstant.ROLE_SALE}, description = ECMConstant.ROLE_SALE_DESCRIPTION)
+@XPortalPageRequest(uri = "commerce/sale/order/create",
+        inherit = true,
+        transaction = true,
+        result = WebConstant.ACTION_XSTREAM_JSON_RESULT)
+public class SaleOrderCreateService extends ECMSaleRetailAbstraction {
+    @Inject
+    private ECMOrderBO orderBO;
+
+    @Inject
+    private ECMSaleWebBO saleInfoBO;
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.web.interfaces.DataServiceMarker#service(com.inet.xportal.web.action.AbstractBaseAction, java.util.Map)
+     */
+    @Override
+    protected WebDataService service(final CMSFirm cmsfirm,
+                                     final OrganizationDTO orgItem,
+                                     final AbstractBaseAction action,
+                                     final Map<String, Object> params) throws WebOSBOException {
+        String orders = XParamUtils.getString("orders", params, StringUtils.EMPTY_STRING);
+
+        String orderComplete = StringUtils.EMPTY_STRING;
+        for (String orderId : orders.split(ERPConstant.SPLIT_REGEX_CHR)) {
+            final ECMOrder order = orderBO.loadByCode(orgItem.getOrganId(), orderId);
+            logger.debug("found CommerceOrder {} with code {}", order, orderId);
+            if (order != null) {
+                try {
+                    ECMSaleWeb saleInfo = null;
+
+                    if (StringUtils.hasLength(order.getRefCode())) {
+                        saleInfo = saleInfoBO.loadByCode(orgItem.getOrganId(), order.getRefCode());
+                        logger.debug("found ECMSaleWeb {} with refCode {}", saleInfo, order.getRefCode());
+                    }
+
+                    if (saleInfo == null) {
+                        saleInfo = new ECMSaleWeb();
+
+                        saleInfo.setCode(saleInfoBO.counterGenerate(
+                                orgItem.getOrganId(), StringUtils.EMPTY_STRING,
+                                XParamUtils.getString("saleCode", params, StringUtils.EMPTY_STRING)));
+                    }
+
+                    saleInfo.setModule(saleInfoBO.getModule());
+                    saleInfo.setOrganId(orgItem.getOrganId());
+                    saleInfo.setCurrencyId(order.getCurrencyId());
+                    saleInfo.setRate(order.getRate());
+
+                    saleInfo.setRefModule(orderBO.getModule());
+                    saleInfo.setRefType(order.getType());
+                    saleInfo.setRefCode(order.getCode());
+
+                    saleInfo.setEmployeeId(SecurityUtil.getPrincipal());
+                    saleInfo.setEmployeeName(SecurityUtil.getAlias());
+
+                    saleInfo.getItems().clear();
+                    for (ECMOrderItem item : order.getItems()) {
+                        final ECMSaleItem saleItem = new ECMSaleItem();
+                        saleItem.setUuid(item.getUuid());
+                        saleItem.setItemData(item.getItemData());
+
+                        saleItem.calc();
+                        saleInfo.getItems().add(saleItem);
+                    }
+
+                    invoiceCheck(saleInfo, action);
+
+                    saleInfo.calc();
+                    if (StringUtils.hasLength(saleInfo.getUuid())) {
+                        saleInfoBO.update(saleInfo.getUuid(), saleInfo);
+                    } else {
+                        saleInfo.setUuid(saleInfoBO.add(saleInfo));
+                    }
+
+                    order.setStatus(ECMOrderStatus.COMPLETED.name());
+                    order.setRefModule(saleInfoBO.getModule());
+                    order.setRefType(saleInfo.getType());
+                    order.setRefCode(saleInfo.getCode());
+                    orderBO.update(order.getUuid(), order);
+
+                    orderComplete += orderId + ";";
+                } catch (Throwable ex) {
+                    logger.error("Order {} completed fail!", order.getCode(), ex);
+                }
+            }
+        }
+
+        return new ObjectWebDataservice<>(orderComplete);
+    }
+}

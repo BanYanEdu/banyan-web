@@ -1,0 +1,465 @@
+/*
+ * ****************************************************************
+ *      Copyright (c) 2019 by Phongtt (phongtt@inetcloud.vn)
+ *
+ *      Licensed under the iNet Solutions Corp.,
+ *      You may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *          http://www.inetcloud.vn/licenses
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ * ****************************************************************
+ */
+
+package com.inet.calista.erp.masterdata.bo;
+
+import com.inet.calista.common.utils.DateUtils;
+import com.inet.calista.erp.ERPConstant;
+import com.inet.calista.erp.common.bo.ERPBaseBO;
+import com.inet.calista.erp.masterdata.data.ERPPriceItem;
+import com.inet.calista.erp.masterdata.model.ERPPriceList;
+import com.inet.xportal.nosql.web.bf.MagicContentBF;
+import com.inet.xportal.nosql.web.data.SearchDTO;
+import com.inet.xportal.web.context.ContentContext;
+import com.inet.xportal.web.exception.WebOSBOException;
+import com.inet.xportal.web.interfaces.BeanInitiateInvoke;
+import com.inet.xportal.xdb.business.BaseDBStore;
+import com.inet.xportal.xdb.persistence.JSONDB;
+import com.inet.xportal.xdb.query.impl.QueryImpl;
+import com.inet.xportal.xdb.query.impl.UpdateImpl;
+import org.apache.shiro.util.CollectionUtils;
+import org.apache.shiro.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * com.inet.calista.erp.masterdata.bo.
+ *
+ * @author Phong Tran
+ * @version $Id: ERPPriceList.java Jan 04, 2019 15:04 phongtt $
+ * @since 1.0
+ */
+@Named("ERPPriceListBO")
+public class ERPPriceListBO extends ERPBaseBO<ERPPriceList> implements BeanInitiateInvoke {
+    protected static final Logger logger = LoggerFactory.getLogger(ERPPriceListBO.class);
+
+    // this map will help object convert all children data
+    static Map<String, Class<?>> childrenConvert;
+
+    static {
+        childrenConvert = new HashMap<>();
+        childrenConvert.put("items", ERPPriceItem.class);
+    }
+
+    @Inject
+    protected ERPPriceListBO(@ContentContext(context = ERPConstant.DB_CONTEXT) MagicContentBF businessFacade) {
+        super(businessFacade, "erp_md_price_list");
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.MagicContentBO#getClassConvetor()
+     */
+    @Override
+    protected Class<ERPPriceList> getClassConvetor() {
+        return ERPPriceList.class;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.inet.xportal.nosql.web.bo.SQLMagicBase#childrenConvertMap()
+     */
+    @Override
+    protected Map<String, Class<?>> childrenConvertMap() {
+        return childrenConvert;
+    }
+
+    @Override
+    public void init() {
+        //============== index ===============//
+        ensureIndex("organId");
+        ensureIndex("outletId");
+        ensureIndex("code");
+
+        ensureIndex("organId,code");
+        ensureIndex("organId,code,items");
+
+        ensureIndex("organId,outletId,code");
+        ensureIndex("organId,outletId,code,items");
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> queryPolicy(String organId, String type, String keyword, int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("code").like(keyword),
+                    query.criteria("name").like(keyword),
+                    query.criteria("brief").like(keyword)
+            ));
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> organPolicy(String organId, String type, long date) throws WebOSBOException {
+        return super.query(organPolicyBuilder(organId, type, date, false));
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> organPolicyInDay(String organId, String type, long date) throws WebOSBOException {
+        return super.query(organPolicyBuilder(organId, type, date, true));
+    }
+
+
+    /**
+     * @param organId
+     * @param type
+     * @param date
+     * @param ignoreHours
+     * @return
+     * @throws WebOSBOException
+     */
+    private QueryImpl<JSONDB> organPolicyBuilder(String organId, String type, long date, boolean ignoreHours) throws WebOSBOException {
+        int currentDay = DateUtils.dayOfWeek(date);
+        long currentTime = DateUtils.getTime(date);
+
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+        query.and(query.or(
+                query.criteria("active").doesNotExist(),
+                query.criteria("active").equal(true)
+        ));
+
+        final QueryImpl<JSONDB> useDates = new QueryImpl<>();
+        final QueryImpl<JSONDB> useWeeks = new QueryImpl<>();
+        final QueryImpl<JSONDB> useHours = new QueryImpl<>();
+
+        if (ignoreHours) {
+            query.and(
+                    useDates.or(
+                            useDates.criteria("useDates").equal(false),
+                            useDates.and(
+                                    useDates.criteria("useDates").equal(true),
+                                    useDates.criteria("fromDate").lessThanOrEq(date),
+                                    useDates.criteria("toDate").greaterThanOrEq(date)
+                            )
+                    ),
+                    useWeeks.or(
+                            useWeeks.criteria("useWeeks").equal(false),
+                            useWeeks.and(
+                                    useWeeks.criteria("useWeeks").equal(true),
+                                    useWeeks.criteria("dayofweek").equal(currentDay)
+                            )
+                    )
+            );
+        } else {
+            query.and(
+                    useDates.or(
+                            useDates.criteria("useDates").equal(false),
+                            useDates.and(
+                                    useDates.criteria("useDates").equal(true),
+                                    useDates.criteria("fromDate").lessThanOrEq(date),
+                                    useDates.criteria("toDate").greaterThanOrEq(date)
+                            )
+                    ),
+                    useWeeks.or(
+                            useWeeks.criteria("useWeeks").equal(false),
+                            useWeeks.and(
+                                    useWeeks.criteria("useWeeks").equal(true),
+                                    useWeeks.criteria("dayofweek").equal(currentDay)
+                            )
+                    ),
+                    useHours.or(
+                            useHours.criteria("useHours").equal(false),
+                            useHours.and(
+                                    useHours.criteria("useHours").equal(true),
+                                    useHours.criteria("fromHours").lessThanOrEq(currentTime),
+                                    useHours.criteria("toHours").greaterThanOrEq(currentTime)
+                            )
+                    )
+            );
+        }
+
+        query.order("priority");
+
+        logger.debug("organPolicyBuilder {}", query);
+
+        return query;
+    }
+
+    /**
+     * @param organId
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceList priceListDefault(String organId, String type) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+        query.field("def").equal(true);
+
+        return super.load(query);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @throws WebOSBOException
+     */
+    public void isDefaultPriceList(String organId, String type, String code) throws WebOSBOException {
+        final ERPPriceList priceList = loadByInfo(organId, code);
+        if (priceList != null) {
+            priceList.setDef(true);
+            super.update(priceList.getUuid(), priceList);
+
+            clearDefault(organId, type, code);
+        }
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @throws WebOSBOException
+     */
+    public void clearDefault(String organId, String type, String code) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("type").equal(type);
+        query.field("def").equal(true);
+
+        if (StringUtils.hasLength(code)) {
+            query.field("code").notEqual(code);
+        }
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+        update.set("def", false);
+
+        super.update(update, query);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @param products
+     * @param currencyId
+     * @param adjusted
+     * @param amount
+     * @throws WebOSBOException
+     */
+    public void adjustedPercent(String organId, String code,
+                                List<String> products, String currencyId,
+                                String adjusted, float amount) throws WebOSBOException {
+
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @param products
+     * @param currencyId
+     * @param adjusted
+     * @param amount
+     * @throws WebOSBOException
+     */
+    public void adjustedAmount(String organId, String code,
+                               List<String> products, String currencyId,
+                               String adjusted, float amount) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("code").equal(code);
+
+        query.field("items.prodCode").exists();
+
+        if (!CollectionUtils.isEmpty(products)) {
+            query.field("items.prodCode").in(products);
+        }
+
+        if (StringUtils.hasLength(currencyId)) {
+            query.field("items.currencyId").equal(currencyId);
+        }
+
+        final UpdateImpl<JSONDB> update = new UpdateImpl<>();
+
+        boolean isAdjusted = false;
+        switch (adjusted) {
+            case "increase":
+                update.inc("items.$[].price", amount);
+
+                isAdjusted = true;
+                break;
+            case "decrease":
+                update.inc("items.$[].price", amount * (-1));
+
+                isAdjusted = true;
+                break;
+            case "equal":
+                update.set("items.$[].price", amount);
+
+                isAdjusted = true;
+                break;
+        }
+
+        logger.debug("adjust data update {} by query {} ", update.getOps().toString(), query);
+
+        if (isAdjusted) {
+            super.update(update, query);
+        }
+    }
+
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public List<String> productsExists(String organId, String code) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+        query.field("items.prodCode").exists();
+
+        if (StringUtils.hasLength(code)) {
+            query.field("code").equal(code);
+        }
+
+        return super.distinct("items.prodCode", query);
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> queryPriceList(String organId, String keyword,
+                                                  int offset, int limit) throws WebOSBOException {
+        return queryPriceList(organId, keyword, null, offset, limit);
+    }
+
+    /**
+     * @param organId
+     * @param keyword
+     * @param products
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> queryPriceList(String organId, String keyword,
+                                                  final List<String> products,
+                                                  int offset, int limit) throws WebOSBOException {
+        return queryPriceList(organId, StringUtils.EMPTY_STRING, keyword, products, offset, limit);
+    }
+
+    /**
+     * @param organId
+     * @param type
+     * @param keyword
+     * @param products
+     * @param offset
+     * @param limit
+     * @return
+     * @throws WebOSBOException
+     */
+    public SearchDTO<ERPPriceList> queryPriceList(String organId, String type, String keyword,
+                                                  final List<String> products,
+                                                  int offset, int limit) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.field("organId").equal(organId);
+
+        if (StringUtils.hasLength(type)) {
+            query.field("type").equal(type);
+        }
+
+        if (StringUtils.hasLength(keyword)) {
+            query.and(query.or(
+                    query.criteria("items.prodCode").like(keyword),
+                    query.criteria("items.prodName").like(keyword),
+                    query.criteria("items.currencyId").like(keyword)
+            ));
+        }
+
+        if (!CollectionUtils.isEmpty(products)) {
+            query.field("items.prodCode").equal(products);
+        }
+
+        if (offset > 0) {
+            query.offset(offset);
+        }
+
+        if (limit > 0) {
+            query.limit(limit);
+        }
+
+        query.order("code");
+
+        return super.query(query);
+    }
+
+    /**
+     * @param organId
+     * @param code
+     * @return
+     * @throws WebOSBOException
+     */
+    public ERPPriceList loadByInfo(String organId, String code) throws WebOSBOException {
+        final QueryImpl<JSONDB> query = new QueryImpl<>();
+        query.retrievedFields(true, "items");
+
+        query.field("organId").equal(organId);
+        query.and(query.or(
+                query.criteria("code").equal(code),
+                query.criteria(BaseDBStore.ID_KEY).equal(BaseDBStore.getId(code))
+        ));
+
+
+        return super.load(query);
+    }
+}
