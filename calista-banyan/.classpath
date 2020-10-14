@@ -107,5 +107,6 @@
 	<classpathentry kind="lib" path="lib/icloud-xdb-4.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/cloud-social-lib-4.4.0.jar"/>
 	<classpathentry kind="lib" path="lib/cloud-thesis-lib-2.0.0.jar"/>
+	<classpathentry kind="lib" path="lib/calista-platform-2.0.0.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
